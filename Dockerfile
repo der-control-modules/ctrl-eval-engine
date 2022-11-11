@@ -1,12 +1,11 @@
-FROM python:3.11-slim
+FROM julia:1.8
 
-ADD pnnl_web_proxy.pem /etc/ssl/certs/pnnl_web_proxy.pem
-RUN pip --cert /etc/ssl/certs/pnnl_web_proxy.pem install --upgrade pip
+ADD pnnl_web_proxy.pem /usr/local/share/ca-certificates/pnnl_web_proxy.crt
+RUN dpkg-reconfigure ca-certificates
 
-COPY requirements.txt /app/
 WORKDIR /app
-RUN pip --cert /etc/ssl/certs/pnnl_web_proxy.pem install --no-cache-dir -r requirements.txt
-RUN cat /etc/ssl/certs/pnnl_web_proxy.pem >> /usr/local/lib/python3.11/site-packages/certifi/cacert.pem
+COPY app/Project.toml app/Manifest.toml /app/
+RUN julia --project=. -e "using Pkg; Pkg.instantiate()"
 
 COPY .aws/config /root/.aws/config
 
