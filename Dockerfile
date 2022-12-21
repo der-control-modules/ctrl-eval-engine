@@ -9,4 +9,4 @@ RUN julia --project=. -e "using Pkg; Pkg.instantiate()"
 
 COPY .aws/config /root/.aws/config
 
-COPY app/* /app/
+ADD app /app

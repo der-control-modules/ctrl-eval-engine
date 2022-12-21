@@ -13,6 +13,7 @@ JOB_ID, EXT = splitext(inputFilename)
 
 # Abort if file uploaded is not input
 if dir != "input" || EXT != ".json"
+    @warn "Uploaded file isn't an input. Ignored."
     exit(0)
 end
 
@@ -26,19 +27,20 @@ inputFileStat = stat(inputPath)
 
 # Abort if input data is empty
 if inputFileStat.size == 0
-    @error "Input data is empty"
-    exit(-1)
+    error("Input data is empty")
 end
 
 @info "Getting output metadata..."
-outputPath = S3Path("s3://$BUCKET_NAME/$JOB_ID/output.json")
+outputPath = S3Path("s3://$BUCKET_NAME/output/$JOB_ID.json")
 outputFileStat = stat(outputPath)
 
 # Abort if output data is newer than input
 if outputFileStat.mtime > inputFileStat.mtime
+    @warn "Corresponding output file is newer than the input.\nAbort."
     exit(0)
 end
 
+@info "Starting evaluation..."
 open(`julia --project=. evaluation_engine.jl $JOB_ID`) do evaluationStdout
     logString = ""
     logBuffer = String[]
