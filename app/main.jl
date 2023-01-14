@@ -57,5 +57,12 @@ open(`julia --project=. evaluation_engine.jl $JOB_ID`) do evaluationStdout
         end
         sleep(2)
     end
+
+    # Upload last batch of logs
+    if !isempty(logBuffer)
+        logString *= join(logBuffer)
+        empty!(logBuffer)
+        s3_put(BUCKET_NAME, "$JOB_ID/$LOG_FILENAME", logString)
+    end
 end
 
