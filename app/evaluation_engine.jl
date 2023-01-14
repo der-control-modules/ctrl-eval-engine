@@ -65,7 +65,7 @@ end
 Evaluate the performance of the controller specified in `inputDict`
 """
 function evaluate_controller(inputDict; debug=false)
-    @info "Starting"
+    @info "Parsing and validating input data"
     setting = get_setting(inputDict)
     ess = get_ess(inputDict)
     useCases = get_use_cases(inputDict)
@@ -123,7 +123,12 @@ if length(ARGS) == 1
     JOB_ID = ARGS[1]
     BUCKET_NAME = get(ENV, "BUCKET_NAME", "long-running-jobs-test")
     inputDict = JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$JOB_ID.json"))))
-    outputDict = evaluate_controller(inputDict)
+    outputDict = try
+        evaluate_controller(inputDict)
+    catch e
+        @error("Something went wrong during evaluation")
+        Dict(:error => e)
+    end
     @info "Uploading output data"
     s3_put(BUCKET_NAME, "output/$JOB_ID.json", JSON.json(outputDict))
 elseif ARGS[1] == "debug"
