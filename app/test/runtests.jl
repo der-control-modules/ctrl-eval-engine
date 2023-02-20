@@ -1,10 +1,10 @@
-using Tests
-
 """
 Test sets for control evaluation engine and individual controllers
 """
-module ControlTests
+
+using Test
+
+include("../types.jl")
 
 include("simulator-tests.jl")
-
-end
+include("use-case-tests.jl")

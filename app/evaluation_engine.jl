@@ -3,35 +3,7 @@ using AWSS3
 using JSON
 using Dates
 
-include("simulator/main.jl")
-include("scheduler/main.jl")
-include("realtime-controller/main.jl")
-
-using .EnergyStorageSimulators
-using .EnergyStorageScheduling
-using .EnergyStorageRTControl
-
-struct SimSetting
-    simStart::Dates.DateTime
-    simEnd::Dates.DateTime
-end
-
-struct ScheduleHistory
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
-end
-
-struct OperationHistory
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
-    SOC::Vector{Float64}
-end
-
-mutable struct Progress
-    progressPct::Float64
-    schedule::ScheduleHistory
-    operation::OperationHistory
-end
+include("types.jl")
 
 function get_setting(inputDict::Dict)
     simStart = Dates.DateTime(inputDict["simStart"])
@@ -39,8 +11,24 @@ function get_setting(inputDict::Dict)
     SimSetting(simStart, simEnd)
 end
 
-function get_use_cases(inputDict::Dict)
-    return nothing
+include("simulator/main.jl")
+include("scheduler/main.jl")
+include("realtime-controller/main.jl")
+include("use-case/main.jl")
+
+using .EnergyStorageSimulators
+using .EnergyStorageScheduling
+using .EnergyStorageRTControl
+using .EnergyStorageUseCases
+
+
+"""
+    calculate_benefit_cost(operation, useCases)
+
+Calculate the benefits and costs given `operation` and `useCases`.
+"""
+function calculate_benefit_cost(operation::OperationHistory, useCases::AbstractVector{<:UseCase})
+    map(uc -> summarize_use_case(operation, uc), useCases)
 end
 
 
@@ -68,7 +56,7 @@ function evaluate_controller(inputDict; debug=false)
     @info "Parsing and validating input data"
     setting = get_setting(inputDict)
     ess = get_ess(inputDict)
-    useCases = get_use_cases(inputDict)
+    useCases = get_use_cases(inputDict["selectedUseCasesCharacteristics"])
     scheduler = EnergyStorageScheduling.get_scheduler(inputDict)
     rtController = EnergyStorageRTControl.get_rt_controller(inputDict)
 
@@ -86,15 +74,16 @@ function evaluate_controller(inputDict; debug=false)
             schedulePeriodEnd = min(t + scheduleDuration, setting.simEnd)
             operations = control(ess, rtController, (scheduledPowerKw, scheduleDuration), useCases, t)
             for (operationPowerKw, controlDuration) in operations
-                operate!(ess, operationPowerKw, controlDuration)
+                actualPowerKw = operate!(ess, operationPowerKw, controlDuration)
                 t += controlDuration
-                update_progress!(progress, t, setting, ess, operationPowerKw)
+                update_progress!(progress, t, setting, ess, actualPowerKw)
                 if t > setting.simEnd
                     break
                 end
             end
             if t < schedulePeriodEnd
-                @warn "Gap from end of control at $t to end of scheduling period $schedulePeriodEnd"
+                @warn "Gap detected from end of control at $t to end of scheduling period $schedulePeriodEnd. ESS stays idle."
+                operate!(ess, 0.0, schedulePeriodEnd - t)
                 t = schedulePeriodEnd
                 update_progress!(progress, t, setting, ess, 0.0)
             end
@@ -106,8 +95,13 @@ function evaluate_controller(inputDict; debug=false)
         end
     end
 
-    @warn "Sample warning message"
-    output = Dict(:schedule => progress.schedule, :operation => progress.operation)
+    useCaseResults = calculate_benefit_cost(progress.operation, useCases)
+
+    output = Dict(
+        :schedule => progress.schedule,
+        :operation => progress.operation,
+        :useCase => useCaseResults
+    )
     return output
 end
 

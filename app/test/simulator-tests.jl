@@ -1,6 +1,6 @@
 
-include("../simulator/es-simulator.jl")
-using EnergyStorageSimulator
+include("../simulator/main.jl")
+using .EnergyStorageSimulators
 
 @testset "Simulators" begin
 end
