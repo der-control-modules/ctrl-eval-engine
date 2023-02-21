@@ -29,3 +29,8 @@ mutable struct Progress
     schedule::ScheduleHistory
     operation::OperationHistory
 end
+
+
+mutable struct InvalidInput <: Exception
+    msg::String
+end
