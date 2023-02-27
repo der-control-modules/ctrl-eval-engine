@@ -9,6 +9,40 @@ struct LiIonBatterySpecs
     D::NTuple{3,Float64} # degradation coefficients
 end
 
+Δd(s, p, D::NTuple{3,Float64}, durationHour::Real=1) = exp(D[1] * s + D[2] * p + D[3] * p^2) * durationHour
+
+function LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D::NTuple{3,Float64}, R; lifespanCutoff=0.8, cyclesPerDay=1, depthOfDischarge=0.8)
+    Cp = -1 - C0 * E / P
+    Cn = C0 * E / P - ηRT
+    tCharge = depthOfDischarge / (C0 - Cn * P)
+    tDischarge = -depthOfDischarge / (C0 + Cp * P)
+    tIdlePerCycle = 24 / cyclesPerDay - tCharge - tDischarge
+
+    d_NCycles = cycleLife * (
+        (Δd(0.5 + depthOfDischarge / 2, -P / E, D) - Δd(0.5 - depthOfDischarge / 2, -P / E, D)) / (C0 - Cn * P) / D[1] +
+        (Δd(0.5 - depthOfDischarge / 2, P / E, D) - Δd(0.5 + depthOfDischarge / 2, P / E, D)) / (C0 + Cp * P) / D[1] +
+        (Δd(0.5 + C0 * tIdlePerCycle, 0, D) - Δd(0.5, 0, D)) / C0 / D[1]
+    )
+
+    Hp = (1 / lifespanCutoff - C0 / P * E - Cp) / d_NCycles
+    Hn = R * Hp / Cp * Cn
+    LiIonBatterySpecs(P, E, C0, Cp, Cn, Hp, Hn, D)
+end
+
+function LFP_LiIonBatterySpecs(P, E, ηRT, cycleLife; lifespanCutoff=0.8, cyclesPerDay=1, depthOfDischarge=0.8)
+    C0 = -2.309E-03
+    D = (4.638901, -0.06408468, 2.067501)
+    R = 1 / 1.1
+    LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D, R; lifespanCutoff, cyclesPerDay, depthOfDischarge)
+end
+
+function NMC_LiIonBatterySpecs(P, E, ηRT, cycleLife; lifespanCutoff=0.8, cyclesPerDay=1, depthOfDischarge=0.8)
+    C0 = -4.13E-03
+    D = (4.837429, -0.75372186, 1.184455)
+    R = 1 / 1.32
+    LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D, R; lifespanCutoff, cyclesPerDay, depthOfDischarge)
+end
+
 mutable struct LiIonBatteryStates
     SOC::Float64 # state of charge
     d::Float64 # degradation
@@ -26,19 +60,18 @@ SOH(ess::LiIonBattery) = ess.specs.C_p / (ess.specs.C_p + ess.specs.H_p * ess.st
 
 p_max(ess::LiIonBattery, durationHour::Real) = min(
     ess.specs.powerCapacityKw,
-    -(SOC(ess) + ess.specs.C0) * ess.specs.energyCapacityKwh / durationHour
+    -(SOC(ess) + ess.specs.C0 * durationHour) * ess.specs.energyCapacityKwh
     /
-    (ess.specs.C_p + ess.specs.H_p * ess.states.d)
+    ((ess.specs.C_p + ess.specs.H_p * ess.states.d) * durationHour)
 )
 
 p_min(ess::LiIonBattery, durationHour::Real) = max(
     -ess.specs.powerCapacityKw,
-    (1 - SOC(ess) - ess.specs.C0) * ess.specs.energyCapacityKwh / durationHour
+    (1 - SOC(ess) - ess.specs.C0 * durationHour) * ess.specs.energyCapacityKwh
     /
-    (ess.specs.C_n + ess.specs.H_n * ess.states.d)
+    ((ess.specs.C_n + ess.specs.H_n * ess.states.d) * durationHour)
 )
 
-Δd(s, p, D::NTuple{3,Float64}, durationHour::Real) = exp(D[1] * s + D[2] * p + D[3] * p^2) * durationHour
 
 """
     _operate!(ess, powerKw, durationHour)

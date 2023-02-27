@@ -7,7 +7,7 @@ module EnergyStorageSimulators
 
 using Dates
 
-export EnergyStorageSystem, MockSimulator, operate!, get_ess, SOC
+export EnergyStorageSystem, MockSimulator, operate!, get_ess, SOC, p_max, p_min
 using ..Main: InvalidInput
 
 abstract type EnergyStorageSystem end
@@ -17,23 +17,37 @@ include("li-ion-battery.jl")
 
 function get_ess(input::Dict)
     powerCapKw = if lowercase(input["powerCapacityUnit"]) == "kw"
-        parse(Float64, input["powerCapacityValue"])
+        float(input["powerCapacityValue"])
     elseif lowercase(input["powerCapacityUnit"]) == "mw"
-        parse(Float64, input["powerCapacityValue"]) * 1000
+        float(input["powerCapacityValue"]) * 1000
     else
         throw(InvalidInput(string("ESS parameter - Unsupported powerCapacityUnit: ", input["powerCapacityUnit"])))
     end
 
     energyCapKwh = if input["calculationType"] == "duration"
-        powerCapKw * parse(Float64, input["duration"])
+        powerCapKw * float(input["duration"])
     else
-        parse(Float64, input["energyCapacity"])
+        float(input["energyCapacity"])
     end
 
-    return MockSimulator(
-        MockES_Specs(powerCapKw, energyCapKwh, 0.9),
-        MockES_States(0.5)
-    )
+    ηRT = float(input["roundtripEfficiency"])
+
+    cycleLife = float(input["cycleLife"])
+
+    ess = if input["batteryType"] == "lfp-lithium-ion"
+        LiIonBattery(LFP_LiIonBatterySpecs(powerCapKw, energyCapKwh, ηRT, cycleLife), LiIonBatteryStates(0.5, 0))
+    elseif input["batteryType"] == "nmc-lithium-ion"
+        LiIonBattery(NMC_LiIonBatterySpecs(powerCapKw, energyCapKwh, ηRT, cycleLife), LiIonBatteryStates(0.5, 0))
+    elseif input["batteryType"] ∈ ("mock", "vanadium-flow")
+        MockSimulator(
+            MockES_Specs(powerCapKw, energyCapKwh, ηRT),
+            MockES_States(0.5)
+        )
+    else
+        throw(InvalidInput(string("ESS Parameter - Unsupported batteryType: ", input["batteryType"])))
+    end
+
+    return ess
 end
 
 """
@@ -46,10 +60,10 @@ function operate!(ess::EnergyStorageSystem, powerKw::Real, duration::Dates.Perio
     durationHour = /(promote(duration, Hour(1))...)
 
     if powerKw > p_max(ess, durationHour)
-        @warn "Operation attempt exceeds power upper bound. Falling back to bound." powerKw upper_bound=p_max(ess, durationHour)
+        @warn "Operation attempt exceeds power upper bound. Falling back to bound." powerKw upper_bound = p_max(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
         powerKw = p_max(ess, durationHour)
     elseif powerKw < p_min(ess, durationHour)
-        @warn "Operation attempt exceeds power lower bound. Falling back to bound." powerKw lower_bound=p_min(ess, durationHour)
+        @warn "Operation attempt exceeds power lower bound. Falling back to bound." powerKw lower_bound = p_min(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
         powerKw = p_min(ess, durationHour)
     end
 
@@ -60,8 +74,18 @@ end
 """
     SOH(ess::EnergyStorageSystem)
 
-Calculate the state of health of an ESS.
+Calculate the state of health (SOH) of an ESS.
 """
 SOH(ess::EnergyStorageSystem) = 1
+
+function p_max(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+    durationHour = /(promote(duration, Hour(1))...)
+    p_max(ess, durationHour)
+end
+
+function p_min(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+    durationHour = /(promote(duration, Hour(1))...)
+    p_min(ess, durationHour)
+end
 
 end
