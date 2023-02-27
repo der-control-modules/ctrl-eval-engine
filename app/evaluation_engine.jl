@@ -57,7 +57,7 @@ function evaluate_controller(inputDict; debug=false)
     setting = get_setting(inputDict)
     ess = get_ess(inputDict["selectedBatteryCharacteristics"])
     useCases = get_use_cases(inputDict["selectedUseCasesCharacteristics"])
-    scheduler = EnergyStorageScheduling.get_scheduler(inputDict)
+    scheduler = EnergyStorageScheduling.get_scheduler(inputDict["selectedControlTypeCharacteristics"])
     rtController = EnergyStorageRTControl.get_rt_controller(inputDict)
 
     t = setting.simStart

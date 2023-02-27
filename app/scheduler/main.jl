@@ -17,8 +17,10 @@ struct Schedule
 end
 
 Base.iterate(s::Schedule, index=1) = index > length(s.powerKw) ? nothing : ((s.powerKw[index], s.resolution), index + 1)
-Base.eltype(::Type{Schedule}) = Tuple{Float64, Dates.TimePeriod}
+Base.eltype(::Type{Schedule}) = Tuple{Float64,Dates.TimePeriod}
 Base.length(s::Schedule) = length(s.powerKw)
+
+using ..EnergyStorageSimulators
 
 include("mock-scheduler.jl")
 
@@ -28,7 +30,7 @@ include("mock-scheduler.jl")
 Create a scheduler of appropriate type from the input dictionary
 """
 function get_scheduler(inputDict::Dict)
-    return MockScheduler(Hour(1), Hour(6))
+    return MockScheduler(Hour(1), Hour(6), get(inputDict, "sleepSeconds", 0))
 end
 
 end
