@@ -57,7 +57,7 @@ end
 SOC(ess::LiIonBattery) = ess.states.SOC
 energy_state(ess::LiIonBattery) = ess.states.SOC * ess.specs.energyCapacityKwh
 
-e_max(specs::LiIonBattery) = specs.energyCapacityKwh
+e_max(ess::LiIonBattery) = ess.specs.energyCapacityKwh
 e_min(_::LiIonBattery) = 0
 
 SOH(ess::LiIonBattery) = ess.specs.C_p / (ess.specs.C_p + ess.specs.H_p * ess.states.d)
