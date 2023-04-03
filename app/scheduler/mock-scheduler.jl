@@ -6,17 +6,17 @@ struct MockScheduler <: Scheduler
 end
 
 """
-    schedule(ess, mockScheduler, useCases, t)
+    schedule(ess, scheduler, useCases, tStart)
 
-Schedule the operation of `ess` with `mockScheduler` given `useCases`
+Schedule the operation of `ess` with `scheduler` given `useCases` starting from `tStart`
 """
-function schedule(ess, mockScheduler::MockScheduler, _, tStart::Dates.DateTime)
-    scheduleLength = Int(ceil(mockScheduler.interval, mockScheduler.resolution) / mockScheduler.resolution)
+function schedule(ess, scheduler::MockScheduler, _, tStart::Dates.DateTime)
+    scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
     currentSchedule = rand(scheduleLength) .* (
-        p_max(ess, mockScheduler.interval) - p_min(ess, mockScheduler.interval)
-    ) .+ p_min(ess, mockScheduler.interval)
+        p_max(ess, scheduler.interval) - p_min(ess, scheduler.interval)
+    ) .+ p_min(ess, scheduler.interval)
 
-    sleep(mockScheduler.sleepSeconds)
+    sleep(scheduler.sleepSeconds)
     @debug "Schedule updated" tStart currentSchedule
-    return Schedule(currentSchedule, mockScheduler.resolution)
+    return Schedule(currentSchedule, scheduler.resolution)
 end

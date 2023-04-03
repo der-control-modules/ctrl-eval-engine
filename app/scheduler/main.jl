@@ -23,6 +23,7 @@ Base.length(s::Schedule) = length(s.powerKw)
 using ..EnergyStorageSimulators
 
 include("mock-scheduler.jl")
+include("optimization-scheduler.jl")
 
 """
     get_scheduler(inputDict::Dict)
