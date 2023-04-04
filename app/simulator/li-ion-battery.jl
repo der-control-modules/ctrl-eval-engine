@@ -21,7 +21,7 @@ function LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D::NTuple{3,Float64}, R; l
     d_NCycles = cycleLife * (
         (Δd(0.5 + depthOfDischarge / 2, -P / E, D) - Δd(0.5 - depthOfDischarge / 2, -P / E, D)) / (C0 - Cn * P) / D[1] +
         (Δd(0.5 - depthOfDischarge / 2, P / E, D) - Δd(0.5 + depthOfDischarge / 2, P / E, D)) / (C0 + Cp * P) / D[1] +
-        (Δd(0.5 + C0 * tIdlePerCycle, 0, D) - Δd(0.5, 0, D)) / C0 / D[1]
+        (Δd(0.5 + depthOfDischarge / 2 + C0 * tIdlePerCycle, 0, D) - Δd(0.5 + depthOfDischarge / 2, 0, D)) / C0 / D[1]
     )
 
     Hp = (1 / lifespanCutoff - C0 / P * E - Cp) / d_NCycles
@@ -80,6 +80,23 @@ p_min(ess::LiIonBattery, durationHour::Real) = max(
     ((ess.specs.C_n + ess.specs.H_n * ess.states.d) * durationHour)
 )
 
+"""
+    ΔSOC(ess::LiIonBattery, p_p, p_n, durationHour::Real=1)
+
+Calculate the change of SOC of `ess` given `p_p` and `p_n`, where
+`p_p` is non-negative (discharging) power, `p_n` is the non-positive (charging) power,
+and they shouldn't be non-zero simultaneously.
+
+Note: both `p_p` and `p_n` should be normalized by the energy capacity.
+"""
+function ΔSOC(ess::LiIonBattery, p_p, p_n, durationHour::Real=1)
+    durationHour * (
+        ess.specs.C0 + 
+        p_p * (ess.specs.C_p + ess.specs.H_p * ess.states.d) +
+        p_n * (ess.specs.C_n + ess.specs.H_n * ess.states.d)
+    )
+end
+
 
 """
     _operate!(ess, powerKw, durationHour)
@@ -88,10 +105,6 @@ Operate `ess` with `powerKw` for `durationHour` hours
 """
 function _operate!(ess::LiIonBattery, powerKw::Real, durationHour::Real)
     pNorm = powerKw / ess.specs.energyCapacityKwh
+    ess.states.SOC += ΔSOC(ess, max(pNorm, 0), min(pNorm, 0), durationHour)
     ess.states.d += Δd(SOC(ess), pNorm, ess.specs.D, durationHour)
-    ess.states.SOC += ess.specs.C0 + (
-        pNorm > 0
-        ? pNorm * (ess.specs.C_p + ess.specs.H_p * ess.states.d)
-        : pNorm * (ess.specs.C_n + ess.specs.H_n * ess.states.d)
-    ) * durationHour
 end
