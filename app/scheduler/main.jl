@@ -24,6 +24,7 @@ using ..EnergyStorageSimulators
 
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
+include("mock-python-scheduler.jl")
 
 """
     get_scheduler(inputDict::Dict)
