@@ -34,3 +34,12 @@ end
 mutable struct InvalidInput <: Exception
     msg::String
 end
+
+abstract type BatteryInput end
+
+struct LiIonBatteryInput <: BatteryInput
+    powerCapacityKw::Float64
+    energyCapacityKwh::Float64
+    roundtripEfficiency::Float64
+    cycleLife::Float64
+end

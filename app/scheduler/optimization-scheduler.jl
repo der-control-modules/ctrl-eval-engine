@@ -99,7 +99,7 @@ function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime
     sol_r_p = JuMP.value.(r_p)
     sol_r_n = JuMP.value.(r_n)
     sol_r_c = JuMP.value.(r_c)
-    currentSchedule = JuMP.value.(out)
+    sol_out = JuMP.value.(out)
     sol_eng = JuMP.value.(eng)
     sol_spn = JuMP.value.(spn)
     sol_con = JuMP.value.(con)
@@ -108,6 +108,7 @@ function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime
     #     p_max(ess, scheduler.interval) - p_min(ess, scheduler.interval)
     # ) .+ p_min(ess, scheduler.interval)
 
-    @debug "Schedule updated" tStart currentSchedule
-    return Schedule(currentSchedule, scheduler.resolution)
+    currentSchedule = Schedule(sol_out, tStart, scheduler.resolution)
+    @debug "Schedule updated" currentSchedule
+    return currentSchedule
 end

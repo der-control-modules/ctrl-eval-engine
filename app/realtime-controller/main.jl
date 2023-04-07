@@ -6,19 +6,43 @@ The `EnergyStorageRTControl` provides type and functions related to the realtime
 module EnergyStorageRTControl
 
 using Dates
+using ..EnergyStorageScheduling
 
 export get_rt_controller, control
 
 abstract type RTController end
 
-struct ControlOperations
+struct ControlSequence
     powerKw::Vector{Float64}
     resolution::Dates.TimePeriod
 end
 
-Base.iterate(ops::ControlOperations, index=1) = index > length(ops.powerKw) ? nothing : ((ops.powerKw[index], ops.resolution), index + 1)
-Base.eltype(::Type{ControlOperations}) = Tuple{Float64, Dates.TimePeriod}
-Base.length(ops::ControlOperations) = length(ops.powerKw)
+Base.iterate(ops::ControlSequence, index=1) = index > length(ops.powerKw) ? nothing : ((ops.powerKw[index], ops.resolution), index + 1)
+Base.eltype(::Type{ControlSequence}) = Tuple{Float64,Dates.TimePeriod}
+Base.length(ops::ControlSequence) = length(ops.powerKw)
+
+"""
+    control(ess, controller, schedulePeriod, useCases, t, spProgress=nothing)
+
+Return a control sequence of `ess`
+for the `schedulePeriod`
+according to `controller`
+considering `useCases`,
+where `t` is the current timestamp and
+`spProgress` is the cumulative progress in the `schedulePeriod` leading up to `t`.
+
+The returned control sequence, which may or may not cover the entire/remaining time in `schedulePeriod`, 
+will be executed before calling this function again with updated ESS states and `spProgress`.
+"""
+control(
+    ess,
+    controller::RTController,
+    schedulePeriod::SchedulePeriod,
+    useCases,
+    t=start_time(schedulePeriod),
+    spProgress=nothing
+) = control(ess, controller, schedulePeriod, useCases, t, spProgress)
+
 
 include("mock-rt-controller.jl")
 

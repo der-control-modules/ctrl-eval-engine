@@ -12,11 +12,15 @@ Schedule the operation of `ess` with `scheduler` given `useCases` starting from 
 """
 function schedule(ess, scheduler::MockScheduler, _, tStart::Dates.DateTime)
     scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
-    currentSchedule = rand(scheduleLength) .* (
-        p_max(ess, scheduler.interval) - p_min(ess, scheduler.interval)
-    ) .+ p_min(ess, scheduler.interval)
+    currentSchedule = Schedule(
+        rand(scheduleLength) .* (
+            p_max(ess, scheduler.interval) - p_min(ess, scheduler.interval)
+        ) .+ p_min(ess, scheduler.interval),
+        tStart,
+        scheduler.resolution
+    )
 
     sleep(scheduler.sleepSeconds)
-    @debug "Schedule updated" tStart currentSchedule
-    return Schedule(currentSchedule, scheduler.resolution)
+    @debug "Schedule updated" currentSchedule
+    return currentSchedule
 end

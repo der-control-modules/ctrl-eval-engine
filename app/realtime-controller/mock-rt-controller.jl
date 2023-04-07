@@ -3,20 +3,14 @@ struct MockController <: RTController
     resolution::Dates.Period
 end
 
-"""
-    control(ess, mockController, schedule, useCases, t)
-
-Return the series of operation of `ess` for the duration of the schedule according to `mockController` given `schedule` and `useCases`.
-`t` is the timestamp.
-"""
-function control(_, mockController::MockController, schedule::Tuple{Float64,Dates.TimePeriod}, _, tStart)
-    tEnd = tStart + ceil(schedule[2], mockController.resolution) - mockController.resolution
+function control(_, mockController::MockController, schedulePeriod::SchedulePeriod, _, t, _)
+    tEnd = t + ceil(end_time(schedulePeriod) - t, mockController.resolution) - mockController.resolution
     controlOps = [
-        schedule[1]
-        for _ in tStart:mockController.resolution:tEnd
+        average_power(schedulePeriod)
+        for _ in t:mockController.resolution:tEnd
     ]
-    @debug "RT control updated" controlOps
-    return ControlOperations(
+    @debug "Control sequence updated" controlOps
+    return ControlSequence(
         controlOps,
         mockController.resolution
     )

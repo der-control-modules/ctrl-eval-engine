@@ -7,17 +7,47 @@ module EnergyStorageScheduling
 
 using Dates
 
-export get_scheduler, schedule
+export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, start_time, end_time, average_power
 
 abstract type Scheduler end
 
 struct Schedule
     powerKw::Vector{Float64}
+    tStart::Dates.DateTime
     resolution::Dates.TimePeriod
 end
 
-Base.iterate(s::Schedule, index=1) = index > length(s.powerKw) ? nothing : ((s.powerKw[index], s.resolution), index + 1)
-Base.eltype(::Type{Schedule}) = Tuple{Float64,Dates.TimePeriod}
+struct SchedulePeriod
+    powerKw::Float64
+    tStart::Dates.DateTime
+    duration::Dates.TimePeriod
+end
+
+duration(sp::SchedulePeriod) = sp.duration
+start_time(sp::SchedulePeriod) = sp.tStart
+end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
+average_power(sp::SchedulePeriod) = sp.powerKw
+
+struct SchedulePeriodProgress
+    t::Vector{Dates.DateTime}
+    powerKw::Vector{Float64}
+end
+
+SchedulePeriodProgress(sp::SchedulePeriod) = SchedulePeriodProgress([start_time(sp)], [])
+
+Base.iterate(s::Schedule, index=1) =
+    index > length(s.powerKw) ?
+    nothing :
+    (
+        SchedulePeriod(
+            s.powerKw[index],
+            s.tStart + s.resolution * (index - 1),
+            s.resolution
+        ),
+        index + 1
+    )
+
+Base.eltype(::Type{Schedule}) = SchedulePeriod
 Base.length(s::Schedule) = length(s.powerKw)
 
 using ..EnergyStorageSimulators

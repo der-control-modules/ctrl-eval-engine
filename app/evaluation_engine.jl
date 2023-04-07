@@ -12,14 +12,14 @@ function get_setting(inputDict::Dict)
 end
 
 include("simulator/main.jl")
+include("use-case/main.jl")
 include("scheduler/main.jl")
 include("realtime-controller/main.jl")
-include("use-case/main.jl")
 
 using .EnergyStorageSimulators
+using .EnergyStorageUseCases
 using .EnergyStorageScheduling
 using .EnergyStorageRTControl
-using .EnergyStorageUseCases
 
 
 """
@@ -39,13 +39,23 @@ function update_progress!(progress::Progress, t::Dates.DateTime, setting::SimSet
     push!(progress.operation.SOC, SOC(ess))
 end
 
-function update_progress!(scheduleHistory::ScheduleHistory, t::Dates.DateTime, currentSchedule::EnergyStorageScheduling.Schedule)
-    for (scheduledPowerKw, scheduleDuration) in currentSchedule
-        t += scheduleDuration
-        push!(scheduleHistory.t, t)
-        push!(scheduleHistory.powerKw, scheduledPowerKw)
+function update_progress!(scheduleHistory::ScheduleHistory, currentSchedule::EnergyStorageScheduling.Schedule)
+    for schedulePeriod in currentSchedule
+        push!(scheduleHistory.t, end_time(schedulePeriod))
+        push!(scheduleHistory.powerKw, average_power(schedulePeriod))
     end
 end
+
+
+function update_schedule_period_progress!(spp::SchedulePeriodProgress, actualPowerKw, duration)
+    if !isempty(spp.powerKw) && spp.powerKw[end] == actualPowerKw
+        spp.t[end] += duration
+    else
+        push!(spp.powerKw, actualPowerKw)
+        push!(spp.t, spp.t[end] + duration)
+    end
+end
+
 
 """
     evaluate_controller(inputDict)
@@ -69,23 +79,21 @@ function evaluate_controller(inputDict; debug=false)
 
     while t < setting.simEnd
         currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t)
-        update_progress!(progress.schedule, t, currentSchedule)
-        for (scheduledPowerKw, scheduleDuration) in currentSchedule
-            schedulePeriodEnd = min(t + scheduleDuration, setting.simEnd)
-            operations = control(ess, rtController, (scheduledPowerKw, scheduleDuration), useCases, t)
-            for (operationPowerKw, controlDuration) in operations
-                actualPowerKw = operate!(ess, operationPowerKw, controlDuration)
-                t += controlDuration
-                update_progress!(progress, t, setting, ess, actualPowerKw)
-                if t > setting.simEnd
-                    break
+        update_progress!(progress.schedule, currentSchedule)
+        for schedulePeriod in currentSchedule
+            schedulePeriodEnd = min(end_time(schedulePeriod), setting.simEnd)
+            spProgress = SchedulePeriodProgress(schedulePeriod)
+            while t < schedulePeriodEnd
+                controlSequence = control(ess, rtController, schedulePeriod, useCases, t, spProgress)
+                for (powerSetpointKw, controlDuration) in controlSequence
+                    actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
+                    update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
+                    t += controlDuration
+                    update_progress!(progress, t, setting, ess, actualPowerKw)
+                    if t > schedulePeriodEnd
+                        break
+                    end
                 end
-            end
-            if t < schedulePeriodEnd
-                @warn "Gap detected from end of control at $t to end of scheduling period $schedulePeriodEnd. ESS stays idle."
-                operate!(ess, 0.0, schedulePeriodEnd - t)
-                t = schedulePeriodEnd
-                update_progress!(progress, t, setting, ess, 0.0)
             end
         end
         if debug
@@ -122,6 +130,9 @@ end
 outputDict = try
     evaluate_controller(inputDict; debug)
 catch e
+    if debug
+        throw(e)
+    end
     if isa(e, InvalidInput)
         @error("Invalid input")
     else
