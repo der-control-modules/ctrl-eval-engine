@@ -6,6 +6,7 @@ The `EnergyStorageScheduling` provides type and functions related to the schedul
 module EnergyStorageScheduling
 
 using Dates
+using ..Main: InvalidInput
 
 export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, start_time, end_time, average_power
 
@@ -61,8 +62,16 @@ include("mock-python-scheduler.jl")
 
 Create a scheduler of appropriate type from the input dictionary
 """
-function get_scheduler(inputDict::Dict)
-    return MockScheduler(Hour(1), Hour(6), get(inputDict, "sleepSeconds", 0))
+function get_scheduler(schedulerConfig::Dict)
+    schedulerType = schedulerConfig["type"]
+    scheduler = if schedulerType == "mock"
+        MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
+    elseif schedulerType == "optimization"
+        OptScheduler(Hour(1), Day(1))
+    else
+        throw(InvalidInput("Invalid scheduler type: $schedulerType"))
+    end
+    return scheduler
 end
 
 end
