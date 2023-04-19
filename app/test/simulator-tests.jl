@@ -1,6 +1,5 @@
 
-include("../simulator/main.jl")
-using .EnergyStorageSimulators
+using CtrlEvalEngine.EnergyStorageSimulators
 
 @testset "Simulators" begin
 end

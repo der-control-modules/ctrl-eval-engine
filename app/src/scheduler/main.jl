@@ -6,7 +6,7 @@ The `EnergyStorageScheduling` provides type and functions related to the schedul
 module EnergyStorageScheduling
 
 using Dates
-using ..Main: InvalidInput
+using CtrlEvalEngine: InvalidInput
 
 export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, start_time, end_time, average_power
 

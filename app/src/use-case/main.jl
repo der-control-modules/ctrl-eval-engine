@@ -10,7 +10,7 @@ export UseCase, get_use_cases, summarize_use_case
 abstract type UseCase end
 
 using Dates
-using ..Main: OperationHistory
+using CtrlEvalEngine: OperationHistory
 
 include("energy-arbitrage.jl")
 

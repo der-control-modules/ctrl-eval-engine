@@ -1,6 +1,6 @@
 
-include("../use-case/main.jl")
-using .EnergyStorageUseCases
+using CtrlEvalEngine.EnergyStorageUseCases
+import CtrlEvalEngine:OperationHistory
 using Dates
 
 @testset "Use Cases" begin
@@ -69,7 +69,7 @@ using Dates
         )
     ) == 1.0 * 0.5 + 2.0 * 0.25 + 2.0 * -0.75 + 3.0 + 4.0 * 0.75
 
-    @test begin
+    begin
         tOperation = [
             DateTime("2022-01-01T00:30"),
             DateTime("2022-01-01T01:14"),
@@ -78,7 +78,7 @@ using Dates
             DateTime("2022-01-01T02:50"),
             DateTime("2022-01-01T03:45")
         ]
-        EnergyStorageUseCases.calculate_net_income(
+        irregularOperationIncomeMatches = EnergyStorageUseCases.calculate_net_income(
             OperationHistory(
                 tOperation,
                 ones(length(tOperation) - 1),
@@ -89,5 +89,6 @@ using Dates
                 ones(24)
             )
         ) ≈ 3.25
+        @test irregularOperationIncomeMatches
     end
 end
