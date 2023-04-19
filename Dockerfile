@@ -1,4 +1,4 @@
-FROM julia:1.8
+FROM public.ecr.aws/docker/library/julia:1.8
 
 ADD pnnl_web_proxy.pem /usr/local/share/ca-certificates/pnnl_web_proxy.crt
 RUN update-ca-certificates
