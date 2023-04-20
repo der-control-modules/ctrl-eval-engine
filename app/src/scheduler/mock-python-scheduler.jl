@@ -14,5 +14,5 @@ function schedule(ess, scheduler::MockPyScheduler, useCases, tStart::Dates.DateT
     scheduleLength = Int(ceil(mockScheduler.interval, mockScheduler.resolution) / mockScheduler.resolution)
     currentSchedule = py_mock_scheduler.mock_schedule(scheduleLength)
     sleep(scheduler.sleepSeconds)
-    return Schedule(currentSchedule, scheduler.resolution)
+    return Schedule(currentSchedule, tStart, scheduler.resolution)
 end

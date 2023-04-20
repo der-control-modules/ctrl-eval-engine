@@ -51,7 +51,8 @@ Base.iterate(s::Schedule, index=1) =
 Base.eltype(::Type{Schedule}) = SchedulePeriod
 Base.length(s::Schedule) = length(s.powerKw)
 
-using ..EnergyStorageSimulators
+using CtrlEvalEngine.EnergyStorageSimulators
+using CtrlEvalEngine.EnergyStorageUseCases
 
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
@@ -67,7 +68,7 @@ function get_scheduler(schedulerConfig::Dict)
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
     elseif schedulerType == "optimization"
-        OptScheduler(Hour(1), Day(1))
+        OptScheduler(Hour(1), Day(1), Day(1))
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end

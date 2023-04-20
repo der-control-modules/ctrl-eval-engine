@@ -1,18 +1,6 @@
 
-"""
-    EnergyPrice
-
-`EnergyPrice` represents the energy price `price` in \$/kWh over a period of time with corresponding timestamps `t`.
-`length(t)` should equal to `length(price) + 1`.
-"""
-struct EnergyPrice
-    t::Vector{Dates.DateTime}
-    value::Vector{Float64} # unit: $/kWh
-end
-
-
 struct EnergyArbitrage <: UseCase
-    energyPrice::EnergyPrice
+    energyPrice::TimeSeriesPrice
 end
 
 """
@@ -21,29 +9,27 @@ end
 Construct an `EnergyArbitrage` object from `input` dictionary or array
 """
 EnergyArbitrage(input::Dict) = EnergyArbitrage(
-    EnergyPrice(
+    TimeSeriesPrice(
         DateTime.(input["t"]),
         Float64.(input["actualPriceData"])
     )
 )
 
 EnergyArbitrage(input::AbstractVector) = EnergyArbitrage(
-    EnergyPrice(
+    TimeSeriesPrice(
         [DateTime(row["date"]) for row in input],
         [Float64(row["lmp"]) for row in input]
     )
 )
 
-function calculate_net_income(operation::OperationHistory, price::EnergyPrice)
-    @assert price.t[1] ≤ operation.t[1] && price.t[end] ≥ operation.t[end] "The time range of price should enclose that of `operation`"
+function calculate_net_income(operation, price::TimeSeriesPrice)
+    @assert price.t[1] ≤ start_time(operation) && price.t[end] ≥ end_time(operation) "The time range of price should enclose that of `operation`"
     netIncome = 0
-    iPrice = findfirst(price.t .> operation.t[1]) - 1
+    iPrice = findfirst(price.t .> start_time(operation)) - 1
     tEndPrice = price.t[iPrice+1]
 
-    for (iPower, p) in enumerate(operation.powerKw)
+    for (tStart, tEndPower, p) in operation
         # For each operation period
-        tStart = operation.t[iPower]
-        tEndPower = operation.t[iPower+1]
         while tStart < tEndPower && tEndPrice ≤ tEndPower
             # [tStart ----- (tEndPrice|tEndPower)] or
             # [tStart ----- tEndPrice] ----- tEndPower
@@ -66,8 +52,8 @@ end
 
 import Base: *
 
-*(operation::OperationHistory, price::EnergyPrice) = calculate_net_income(operation, price)
-*(price::EnergyPrice, operation::OperationHistory) = calculate_net_income(operation, price)
+*(operation::OperationHistory, price::TimeSeriesPrice) = calculate_net_income(operation, price)
+*(price::TimeSeriesPrice, operation::OperationHistory) = calculate_net_income(operation, price)
 
 
 """

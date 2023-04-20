@@ -24,6 +24,24 @@ struct OperationHistory
     SOC::Vector{Float64}
 end
 
+start_time(op::OperationHistory) = op.t[1]
+end_time(op::OperationHistory) = op.t[end]
+
+Base.iterate(op::OperationHistory, index=1) =
+    index > length(op.powerKw) || index + 1 > length(op.t) ?
+    nothing :
+    (
+        (
+            op.t[index],
+            op.t[index+1],
+            op.powerKw[index]
+        ),
+        index + 1
+    )
+
+Base.eltype(::Type{OperationHistory}) = Tuple{DateTime,DateTime,Float64}
+Base.length(op::OperationHistory) = min(length(op.powerKw), length(op.t) - 1)
+
 mutable struct Progress
     progressPct::Float64
     schedule::ScheduleHistory

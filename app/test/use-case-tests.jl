@@ -4,55 +4,55 @@ import CtrlEvalEngine:OperationHistory
 using Dates
 
 @testset "Use Cases" begin
-    @test EnergyStorageUseCases.calculate_net_income(
+    @test calculate_net_income(
         OperationHistory(
             DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
             [1.0, 1.0, 1.0, 1.0],
             zeros(4)
         ),
-        EnergyStorageUseCases.EnergyPrice(
+        EnergyStorageUseCases.TimeSeriesPrice(
             DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
             [1.0, 2.0, 3.0, 4.0]
         )
     ) == 10.0
 
-    @test EnergyStorageUseCases.calculate_net_income(
+    @test calculate_net_income(
         OperationHistory(
             DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
             [-1.0, -1.0, 1.0, 1.0],
             zeros(4)
         ),
-        EnergyStorageUseCases.EnergyPrice(
+        EnergyStorageUseCases.TimeSeriesPrice(
             DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
             [1.0, 2.0, 3.0, 4.0]
         )
     ) == 4.0
 
-    @test EnergyStorageUseCases.calculate_net_income(
+    @test calculate_net_income(
         OperationHistory(
             DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
             [-1.0, -1.0, 1.0, 1.0],
             zeros(5)
         ),
-        EnergyStorageUseCases.EnergyPrice(
+        EnergyStorageUseCases.TimeSeriesPrice(
             DateTime(2022, 1, 1):Minute(30):DateTime(2022, 1, 1, 4),
             [1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]
         )
     ) == 2.0
 
-    @test EnergyStorageUseCases.calculate_net_income(
+    @test calculate_net_income(
         OperationHistory(
             DateTime(2022, 1, 1):Minute(30):DateTime(2022, 1, 1, 4),
             [-1.0, 0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 0.0],
             zeros(9)
         ),
-        EnergyStorageUseCases.EnergyPrice(
+        EnergyStorageUseCases.TimeSeriesPrice(
             DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
             [1.0, 2.0, 3.0, 4.0]
         )
     ) == 2.0
 
-    @test EnergyStorageUseCases.calculate_net_income(
+    @test calculate_net_income(
         OperationHistory(
             [
                 DateTime("2022-01-01T00:30"),
@@ -63,7 +63,7 @@ using Dates
             [1.0, -1.0, 1.0],
             zeros(4)
         ),
-        EnergyStorageUseCases.EnergyPrice(
+        EnergyStorageUseCases.TimeSeriesPrice(
             DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
             [1.0, 2.0, 3.0, 4.0]
         )
@@ -78,13 +78,13 @@ using Dates
             DateTime("2022-01-01T02:50"),
             DateTime("2022-01-01T03:45")
         ]
-        irregularOperationIncomeMatches = EnergyStorageUseCases.calculate_net_income(
+        irregularOperationIncomeMatches = calculate_net_income(
             OperationHistory(
                 tOperation,
                 ones(length(tOperation) - 1),
                 zeros(length(tOperation))
             ),
-            EnergyStorageUseCases.EnergyPrice(
+            EnergyStorageUseCases.TimeSeriesPrice(
                 DateTime(2022, 1, 1):Minute(10):DateTime(2022, 1, 1, 4),
                 ones(24)
             )

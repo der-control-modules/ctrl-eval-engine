@@ -1,6 +1,6 @@
 
 struct Regulation <: UseCase
-    price::EnergyPrice
+    price::TimeSeriesPrice
 end
 
 function summarize_use_case(operation::OperationHistory, reg::Regulation)
