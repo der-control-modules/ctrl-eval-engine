@@ -1,4 +1,13 @@
+name = "CtrlEvalEngine"
+uuid = "4f7dfeec-d7c1-4bd6-b1cf-ac704c15d233"
+authors = ["Dexin Wang <dexin.wang@pnnl.gov>"]
+version = "0.1.0"
+
 [deps]
 AWSS3 = "1c724243-ef5b-51ab-93f4-b0a88ac62a95"
+Clp = "e2554f3b-3117-50c0-817c-e040a3ddf72d"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+TestReports = "dcd651b4-b50a-5b6b-8f22-87e9f253a252"

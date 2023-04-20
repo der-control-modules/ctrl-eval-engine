@@ -1,11 +1,4 @@
-FROM public.ecr.aws/docker/library/julia:1.8
-
-ADD pnnl_web_proxy.pem /usr/local/share/ca-certificates/pnnl_web_proxy.crt
-RUN update-ca-certificates
-
-WORKDIR /app
-COPY app/Project.toml app/Manifest.toml /app/
-RUN julia --project=. -e "using Pkg; Pkg.instantiate()"
+FROM public.ecr.aws/y1q8u1k0/base:latest
 
 COPY .aws/config /root/.aws/config
 

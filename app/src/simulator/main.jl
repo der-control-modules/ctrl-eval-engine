@@ -7,14 +7,19 @@ module EnergyStorageSimulators
 
 using Dates
 
-export EnergyStorageSystem, MockSimulator, operate!, get_ess, SOC, p_max, p_min
-using ..Main: InvalidInput
+export EnergyStorageSystem, MockSimulator, operate!, get_ess, SOC, p_max, p_min, e_max, e_min, energy_state, ηRT
+using CtrlEvalEngine: InvalidInput
 
 abstract type EnergyStorageSystem end
 
 include("mock-simulator.jl")
 include("li-ion-battery.jl")
 
+"""
+    get_ess(input::Dict)
+
+Construct the appropriate EnergyStorageSystem object based on `input`
+"""
 function get_ess(input::Dict)
     powerCapKw = if lowercase(input["powerCapacityUnit"]) == "kw"
         float(input["powerCapacityValue"])
@@ -78,11 +83,23 @@ Calculate the state of health (SOH) of an ESS.
 """
 SOH(ess::EnergyStorageSystem) = 1
 
+"""
+    p_max(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+
+Calculate the maximum power output (positive means discharging, negative means charging)
+of `ess` lasting for a time period of `duration`.
+"""
 function p_max(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
     durationHour = /(promote(duration, Hour(1))...)
     p_max(ess, durationHour)
 end
 
+"""
+    p_min(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+
+Calculate the minimum power output (negative means charging, positive means discharging)
+of `ess` lasting for a time period of `duration`.
+"""
 function p_min(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
     durationHour = /(promote(duration, Hour(1))...)
     p_min(ess, durationHour)
