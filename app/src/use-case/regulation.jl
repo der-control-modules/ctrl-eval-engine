@@ -1,8 +1,11 @@
 
 struct Regulation <: UseCase
-    price::TimeSeriesPrice
+    price::Vector{Float64}
+    resolution::Dates.TimePeriod
+    tStart::Dates.DateTime
+    perfermanceScore::Float64
 end
 
-function summarize_use_case(operation::OperationHistory, reg::Regulation)
-    return Dict(:RegulationIncome => operation * reg.price)
+function summarize_use_case(operation::OperationHistory, ucReg::Regulation)
+    return Dict(:RegulationIncome => operation * ucReg.price)
 end

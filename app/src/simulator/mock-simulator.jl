@@ -38,3 +38,5 @@ p_min(ess::MockSimulator, durationHour::Real) = max(
     -ess.specs.powerCapacityKw,
     (SOC(ess) - 1) * ess.specs.energyCapacityKwh / durationHour / ess.specs.efficiency
 )
+
+ηRT(ess::MockSimulator) = 1

@@ -53,6 +53,8 @@ struct LiIonBattery <: EnergyStorageSystem
     states::LiIonBatteryStates
 end
 
+ηRT(ess::LiIonBatterySpecs) = ess.C0 * ess.energyCapacityKwh / ess.powerCapacityKw - ess.C_n
+ηRT(ess::LiIonBattery) = ηRT(ess.specs)
 
 SOC(ess::LiIonBattery) = ess.states.SOC
 energy_state(ess::LiIonBattery) = ess.states.SOC * ess.specs.energyCapacityKwh

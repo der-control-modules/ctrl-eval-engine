@@ -3,7 +3,7 @@ using AWSS3
 using JSON
 using Dates
 
-export evaluate_controller
+export evaluate_controller, TimeSeries
 
 include("types.jl")
 

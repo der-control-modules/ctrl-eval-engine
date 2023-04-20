@@ -43,55 +43,29 @@ function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime
     @constraint(m, con .== 0)
     # end
 
-    if ~UOBS_regulation_flag
-        @constraint(m, r_p .== 0)
-        @constraint(m, r_n .== 0)
-    end
+    # if ~UOBS_regulation_flag
+    #     @constraint(m, r_p .== 0)
+    #     @constraint(m, r_n .== 0)
+    # end
 
-    if ~UOBS_spin_reserve_flag
-        @constraint(m, spn .== 0)
-    end
+    # if ~UOBS_spin_reserve_flag
+    #     @constraint(m, spn .== 0)
+    # end
+
+    rte = ηRT(ess)
 
     @constraints(m, begin
         pOut .== p_p .- p_n
         # energy state dynamics
-        eng[2:end] .== eng[1:end-1] .- p_p ./ eta_p + p_n .* eta_n
-        # regulation up
-        r_p .<= p_max(ess.specs) .- pOut
-        r_p .+ spn .≤ p_max(ess.specs) .- pOut
-        eng .- REG_Res .* r_p .+ spn ./ eta_p .≥ 0
-        # regulation down
-        r_n .<= -p_min(ess.specs) .+ pOut
-        eng .+ REG_Res .* r_n .* eta_n .<= e_max(ess)
-        # regulation
-        r_c .<= r_p
-        r_c .<= r_n
+        eng[2:end] .== eng[1:end-1] .- p_p ./ rte + p_n .* rte
         # TODO: PV generation dump
         pvp .== 0
     end)
 
     # Initialize objective function expression (to be maximized)
     objective_exp = mapreduce(uc -> objective_term(uc, m, scheduler, tStart), +, useCases)
-    objective_exp = @expression(m, -EnergyStorageOpt.get_energy_cost(float.(DA_Energy_price[i:i+K-1]), -pOut - pvp))
-    if ~UOBS_reg_separation_flag
-        # regulation capacity and service performance
-        objective_exp = @expression(m,
-            objective_exp
-            + sum(DA_Reg_price[(i-1)+k] * r_c[k] * Reg_Perf for k = 1:K)
-            + sum(DA_Reg_service_price[(i-1)+k] * r_c[k] * REG_Mil[T[k]] * Reg_Perf for k = 1:K)
-            + sum(DA_Spn_reserve_price[(i-1)+k] * spn[k] for k = 1:K)
-        )
 
-    else
-        # regulation up and down
-        objective_exp = @expression(m,
-            objective_exp
-            + sum(DA_Reg_up_price[(i-1)+k] * r_p[k] * Reg_Perf for k = 1:K)
-            + sum(DA_Reg_dn_price[(i-1)+k] * r_n[k] * Reg_Perf for k = 1:K)
-            + sum(DA_Spn_reserve_price[(i-1)+k] * spn[k] for k = 1:K)
-        )
-
-    end
+    foreach(uc -> add_constraints!(m, uc), useCases)
 
     @objective(m, Max, objective_exp)
     optimize!(m)
@@ -108,25 +82,45 @@ function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime
     if K < scheduleLength
         append!(sol_pOut, zeros(scheduleLength - K))
     end
-    # currentSchedule = rand(scheduleLength) .* (
-    #     p_max(ess, scheduler.interval) - p_min(ess, scheduler.interval)
-    # ) .+ p_min(ess, scheduler.interval)
 
     currentSchedule = Schedule(sol_pOut[1:scheduleLength], tStart, scheduler.resolution)
     @debug "Schedule updated" currentSchedule
     return currentSchedule
 end
 
-iterate_power(m::JuMP.Model, scheduler::OptScheduler, tStart::Dates.DateTime) = zip(
-    range(tStart, length=scheduler.optWindow, step=scheduler.resolution),
-    range(tStart + scheduler.resolution, length=scheduler.optWindow, step=scheduler.resolution),
-    .- m[:pOut] .- m[:pvp]
-)
+objective_term(ucEA::UseCase, m::JuMP.Model, scheduler::OptScheduler, tStart::Dates.DateTime) = 0
 
-function objective_term(uc::EnergyArbitrage, m, scheduler, tStart::Dates.DateTime)
-    calculate_net_income(iterate_power(m, scheduler, tStart), uc.energyPrice)
+objective_term(ucEA::EnergyArbitrage, m::JuMP.Model, scheduler::OptScheduler, tStart::Dates.DateTime) =
+    FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pOut] .+ m[:pvp]) * ucEA.price
+
+function objective_term(ucReg::Regulation, m::JuMP.Model, scheduler::OptScheduler, tStart::Dates.DateTime)
+    # regulation capacity and service performance
+    sum(DA_Reg_price[(i-1)+k] * r_c[k] * ucReg.perfermanceScore for k = 1:K)
+    +sum(DA_Reg_service_price[(i-1)+k] * r_c[k] * REG_Mil[T[k]] * Reg_Perf for k = 1:K)
+    +sum(DA_Spn_reserve_price[(i-1)+k] * spn[k] for k = 1:K)
+
+    # # regulation up and down
+    # objective_exp = @expression(m,
+    #     objective_exp
+    #     + sum(DA_Reg_up_price[(i-1)+k] * r_p[k] * Reg_Perf for k = 1:K)
+    #     + sum(DA_Reg_dn_price[(i-1)+k] * r_n[k] * Reg_Perf for k = 1:K)
+    #     + sum(DA_Spn_reserve_price[(i-1)+k] * spn[k] for k = 1:K)
+    # )
 end
 
-function objective_term(uc::Regulation, m, scheduler, tStart::Dates.DateTime)
-    calculate_net_income(iterate_power(m, scheduler, tStart), uc.price)
+function add_constraints!(m::JuMP.Model, ucReg::UseCase) end
+
+function add_constraints!(m::JuMP.Model, ucReg::Regulation)
+    @constraints(m, begin
+        # regulation up
+        r_p .<= p_max(ess.specs) .- pOut
+        r_p .+ spn .≤ p_max(ess.specs) .- pOut
+        eng .- REG_Res .* r_p .+ spn ./ rte .≥ 0
+        # regulation down
+        r_n .<= -p_min(ess.specs) .+ pOut
+        eng .+ REG_Res .* r_n .* rte .<= e_max(ess)
+        # regulation
+        r_c .<= r_p
+        r_c .<= r_n
+    end)
 end
