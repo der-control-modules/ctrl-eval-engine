@@ -1,14 +1,16 @@
 
 using JuMP
+using LinearAlgebra
 using Clp
 
 struct OptScheduler <: Scheduler
     resolution::Dates.Period
     interval::Dates.Period
     optWindow::Int64
+    regulationReserve::Float64
 end
 
-function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime)
+function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{UseCase}, tStart::Dates.DateTime)
     K = scheduler.optWindow
     scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
 
@@ -56,6 +58,14 @@ function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime
 
     @constraints(m, begin
         pOut .== p_p .- p_n
+        # regulation up
+        r_p .<= p_max(ess.specs) .- pOut
+        r_p .+ spn .≤ p_max(ess.specs) .- pOut
+        eng[1:end-1] .- scheduler.regulationReserve .* r_p .+ spn ./ rte .≥ 0
+        # regulation down
+        r_n .<= -p_min(ess.specs) .+ pOut
+        eng[1:end-1] .+ scheduler.regulationReserve .* r_n .* rte .<= e_max(ess)
+        # regulation
         # energy state dynamics
         eng[2:end] .== eng[1:end-1] .- p_p ./ rte + p_n .* rte
         # TODO: PV generation dump
@@ -63,7 +73,7 @@ function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime
     end)
 
     # Initialize objective function expression (to be maximized)
-    objective_exp = mapreduce(uc -> objective_term(uc, m, scheduler, tStart), +, useCases)
+    objective_exp = mapreduce(uc -> objective_term(m, uc, scheduler, tStart), +, useCases)
 
     foreach(uc -> add_constraints!(m, uc), useCases)
 
@@ -88,18 +98,17 @@ function schedule(ess, scheduler::OptScheduler, useCases, tStart::Dates.DateTime
     return currentSchedule
 end
 
-objective_term(ucEA::UseCase, m::JuMP.Model, scheduler::OptScheduler, tStart::Dates.DateTime) = 0
+objective_term(::JuMP.Model, ::UseCase, ::OptScheduler, ::Dates.DateTime) = 0
 
-objective_term(ucEA::EnergyArbitrage, m::JuMP.Model, scheduler::OptScheduler, tStart::Dates.DateTime) =
-    FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pOut] .+ m[:pvp]) * ucEA.price
+objective_term(m::JuMP.Model, ucEA::EnergyArbitrage, scheduler::OptScheduler, tStart::Dates.DateTime) =
+    FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pOut] .+ m[:pvp]) ⋅ ucEA.price
 
-function objective_term(ucReg::Regulation, m::JuMP.Model, scheduler::OptScheduler, tStart::Dates.DateTime)
+function objective_term(m::JuMP.Model, ucReg::Regulation, scheduler::OptScheduler, tStart::Dates.DateTime)
     # regulation capacity and service performance
-    sum(DA_Reg_price[(i-1)+k] * r_c[k] * ucReg.perfermanceScore for k = 1:K)
-    +sum(DA_Reg_service_price[(i-1)+k] * r_c[k] * REG_Mil[T[k]] * Reg_Perf for k = 1:K)
-    +sum(DA_Spn_reserve_price[(i-1)+k] * spn[k] for k = 1:K)
+    regOp = FixedIntervalTimeSeries(tStart, scheduler.resolution, [RegulationOperationPoint(x, 0) for x in m[:r_c]])
+    regulation_income(regOp, ucReg)
 
-    # # regulation up and down
+    # TODO: regulation up and down
     # objective_exp = @expression(m,
     #     objective_exp
     #     + sum(DA_Reg_up_price[(i-1)+k] * r_p[k] * Reg_Perf for k = 1:K)
@@ -112,15 +121,7 @@ function add_constraints!(m::JuMP.Model, ucReg::UseCase) end
 
 function add_constraints!(m::JuMP.Model, ucReg::Regulation)
     @constraints(m, begin
-        # regulation up
-        r_p .<= p_max(ess.specs) .- pOut
-        r_p .+ spn .≤ p_max(ess.specs) .- pOut
-        eng .- REG_Res .* r_p .+ spn ./ rte .≥ 0
-        # regulation down
-        r_n .<= -p_min(ess.specs) .+ pOut
-        eng .+ REG_Res .* r_n .* rte .<= e_max(ess)
-        # regulation
-        r_c .<= r_p
-        r_c .<= r_n
+        m[:r_c] .<= m[:r_p]
+        m[:r_c] .<= m[:r_n]
     end)
 end

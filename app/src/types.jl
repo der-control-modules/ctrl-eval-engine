@@ -1,12 +1,13 @@
 
 using Dates
+using LinearAlgebra
 
 struct SimSetting
     simStart::Dates.DateTime
     simEnd::Dates.DateTime
 end
 
-abstract type TimeSeries end
+abstract type TimeSeries{V} end
 
 """
     VariableIntervalTimeSeries
@@ -15,9 +16,9 @@ abstract type TimeSeries end
 The value of time series is defined as `value[i]` during the `i`th time period (from `t[i]` to `t[i + 1]`),
 where `1 ≤ i ≤ length(value)` and `length(t) == length(value) + 1`.
 """
-struct VariableIntervalTimeSeries{T} <: TimeSeries
+struct VariableIntervalTimeSeries{V} <: TimeSeries{V}
     t::Vector{Dates.DateTime}
-    value::Vector{T}
+    value::Vector{V}
     VariableIntervalTimeSeries(t, v) =
         length(t) == length(v) + 1 ? new{eltype(v)}(t, v) : error("Incompatible lengths")
 end
@@ -34,7 +35,7 @@ get_period(ts::VariableIntervalTimeSeries, t::DateTime) = begin
     end
 end
 
-struct FixedIntervalTimeSeries{R<:Dates.Period,V} <: TimeSeries
+struct FixedIntervalTimeSeries{R<:Dates.Period,V} <: TimeSeries{V}
     tStart::Dates.DateTime
     resolution::R
     value::Vector{V}
@@ -52,7 +53,7 @@ get_period(ts::FixedIntervalTimeSeries, t::DateTime) = begin
     end
 end
 
-function multiply_time_series(ts1::TimeSeries, ts2::TimeSeries)
+function dot_multiply_time_series(ts1::TimeSeries, ts2::TimeSeries)
     @assert start_time(ts1) < end_time(ts2) && start_time(ts2) < end_time(ts1) "The time ranges must overlap"
     tStart = max(start_time(ts1), start_time(ts2))
     tEnd = min(end_time(ts1), end_time(ts2))
@@ -77,8 +78,7 @@ function multiply_time_series(ts1::TimeSeries, ts2::TimeSeries)
     return netIncome
 end
 
-import Base: *
-*(ts1::TimeSeries, ts2::TimeSeries) = multiply_time_series(ts1, ts2)
+LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(ts1, ts2)
 
 
 struct ScheduleHistory
