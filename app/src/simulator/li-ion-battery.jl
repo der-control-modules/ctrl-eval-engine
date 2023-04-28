@@ -24,7 +24,7 @@ function LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D::NTuple{3,Float64}, R; l
         (Δd(0.5 + depthOfDischarge / 2 + C0 * tIdlePerCycle, 0, D) - Δd(0.5 + depthOfDischarge / 2, 0, D)) / C0 / D[1]
     )
 
-    Hp = (1 / lifespanCutoff - C0 / P * E - Cp) / d_NCycles
+    Hp = (-1 / lifespanCutoff - C0 / P * E - Cp) / d_NCycles
     Hn = R * Hp / Cp * Cn
     LiIonBatterySpecs(P, E, C0, Cp, Cn, Hp, Hn, D)
 end

@@ -3,7 +3,7 @@ using AWSS3
 using JSON
 using Dates
 
-export evaluate_controller, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries
+export evaluate_controller, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, InvalidInput
 
 include("types.jl")
 
@@ -39,12 +39,13 @@ function update_progress!(progress::Progress, t::Dates.DateTime, setting::SimSet
     progress.progressPct = min((t - setting.simStart) / (setting.simEnd - setting.simStart), 1.0) * 100.0
     push!(progress.operation.powerKw, powerKw)
     push!(progress.operation.SOC, SOC(ess))
+    push!(progress.operation.SOH, SOH(ess))
 end
 
 function update_progress!(scheduleHistory::ScheduleHistory, currentSchedule::EnergyStorageScheduling.Schedule)
     for schedulePeriod in currentSchedule
-        push!(scheduleHistory.t, end_time(schedulePeriod))
-        push!(scheduleHistory.powerKw, average_power(schedulePeriod))
+        push!(scheduleHistory.t, EnergyStorageScheduling.end_time(schedulePeriod))
+        push!(scheduleHistory.powerKw, EnergyStorageScheduling.average_power(schedulePeriod))
     end
 end
 
@@ -58,6 +59,52 @@ function update_schedule_period_progress!(spp::SchedulePeriodProgress, actualPow
     end
 end
 
+function generate_chart_data(progress::Progress)
+    [
+        Dict(
+            :title => "ESS Operation",
+            :height => "400px",
+            :xAxis => Dict(:label => "Time"),
+            :yAxisLeft => Dict(:label => "Power (kW)"),
+            :yAxisRight => Dict(:label => "SOC (%)"),
+            :data => [
+                Dict(
+                    :x => progress.schedule.t,
+                    :y => progress.schedule.powerKw,
+                    :type => "interval",
+                    :name => "Scheduled Power"
+                ),
+                Dict(
+                    :x => progress.operation.t,
+                    :y => progress.operation.powerKw,
+                    :type => "interval",
+                    :name => "Actual Power"
+                ),
+                Dict(
+                    :x => progress.operation.t,
+                    :y => progress.operation.SOC,
+                    :type => "instance",
+                    :name => "Actual SOC",
+                    :yAxis => "right"
+                ),
+            ]
+        ),
+        Dict(
+            :title => "Cumulative Degradation",
+            :height => "300px",
+            :xAxis => Dict(:label => "Time"),
+            :yAxisLeft => Dict(:label => "SOH (%)"),
+            :data => [
+                Dict(
+                    :x => progress.operation.t,
+                    :y => progress.operation.SOH,
+                    :type => "instance",
+                    :name => "ESS State of Health"
+                ),
+            ]
+        )
+    ]
+end
 
 """
     evaluate_controller(inputDict)
@@ -76,14 +123,14 @@ function evaluate_controller(inputDict; debug=false)
     progress = Progress(
         0.0,
         ScheduleHistory([t], Float64[]),
-        OperationHistory([t], Float64[], Float64[SOC(ess)])
+        OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)])
     )
 
     while t < setting.simEnd
         currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t)
         update_progress!(progress.schedule, currentSchedule)
         for schedulePeriod in currentSchedule
-            schedulePeriodEnd = min(end_time(schedulePeriod), setting.simEnd)
+            schedulePeriodEnd = min(EnergyStorageScheduling.end_time(schedulePeriod), setting.simEnd)
             spProgress = SchedulePeriodProgress(schedulePeriod)
             while t < schedulePeriodEnd
                 controlSequence = control(ess, rtController, schedulePeriod, useCases, t, spProgress)
@@ -108,9 +155,8 @@ function evaluate_controller(inputDict; debug=false)
     useCaseResults = calculate_benefit_cost(progress.operation, useCases)
 
     output = Dict(
-        :schedule => progress.schedule,
-        :operation => progress.operation,
-        :useCase => useCaseResults
+        :metrics => useCaseResults,
+        :timeCharts => generate_chart_data(progress)
     )
     return output
 end

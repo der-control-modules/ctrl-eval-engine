@@ -7,8 +7,14 @@ struct OptScheduler <: Scheduler
     resolution::Dates.Period
     interval::Dates.Period
     optWindow::Int64
+    endSoc::Union{Tuple{Float64,Float64}, Nothing}
+    powerLimitPu::Float64
+    minNetLoadKw::Float64
     regulationReserve::Float64
 end
+
+OptScheduler(res, interval, win, es = nothing; powerLimitPu=1, minNetLoadKw=0, regulationReserve=0.5) = OptScheduler(res, interval, win, es, powerLimitPu, minNetLoadKw, regulationReserve)
+OptScheduler(res, interval, win, es::Float64, powerLimitPu, minNetLoadKw, regulationReserve) = OptScheduler(res, interval, win, (es, es), powerLimitPu, minNetLoadKw, regulationReserve)
 
 function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{UseCase}, tStart::Dates.DateTime)
     K = scheduler.optWindow

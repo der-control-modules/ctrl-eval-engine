@@ -4,7 +4,7 @@ struct MockController <: RTController
 end
 
 function control(_, mockController::MockController, schedulePeriod::SchedulePeriod, _, t, _)
-    tEnd = t + ceil(end_time(schedulePeriod) - t, mockController.resolution) - mockController.resolution
+    tEnd = t + ceil(EnergyStorageScheduling.end_time(schedulePeriod) - t, mockController.resolution) - mockController.resolution
     controlOps = [
         average_power(schedulePeriod)
         for _ in t:mockController.resolution:tEnd

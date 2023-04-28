@@ -1,8 +1,6 @@
 
-include("src/CtrlEvalEngine.jl")
-
 using JSON
-using .CtrlEvalEngine
+using CtrlEvalEngine
 
 redirect_stdio(stderr=stdout)
 

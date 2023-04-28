@@ -8,7 +8,8 @@ using LinearAlgebra
     @test power(OperationHistory(
         DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
         [1.0, 1.0, 1.0, 1.0],
-        zeros(4)
+        zeros(4),
+        ones(4)
     )) ⋅ VariableIntervalTimeSeries(
         DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
         [1.0, 2.0, 3.0, 4.0]
@@ -17,7 +18,8 @@ using LinearAlgebra
     @test power(OperationHistory(
         DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
         [-1.0, -1.0, 1.0, 1.0],
-        zeros(4)
+        zeros(4),
+        ones(4)
     )) ⋅ VariableIntervalTimeSeries(
         DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
         [1.0, 2.0, 3.0, 4.0]
@@ -26,7 +28,8 @@ using LinearAlgebra
     @test power(OperationHistory(
         DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
         [-1.0, -1.0, 1.0, 1.0],
-        zeros(5)
+        zeros(5),
+        ones(5)
     )) ⋅ VariableIntervalTimeSeries(
         DateTime(2022, 1, 1):Minute(30):DateTime(2022, 1, 1, 4),
         [1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]
@@ -35,7 +38,8 @@ using LinearAlgebra
     @test power(OperationHistory(
         DateTime(2022, 1, 1):Minute(30):DateTime(2022, 1, 1, 4),
         [-1.0, 0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 0.0],
-        zeros(9)
+        zeros(9),
+        ones(9)
     )) ⋅ VariableIntervalTimeSeries(
         DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
         [1.0, 2.0, 3.0, 4.0]
@@ -49,7 +53,8 @@ using LinearAlgebra
             DateTime("2022-01-01T03:45")
         ],
         [1.0, -1.0, 1.0],
-        zeros(4)
+        zeros(4),
+        ones(4)
     )) ⋅ VariableIntervalTimeSeries(
         DateTime(2022, 1, 1):Hour(1):DateTime(2022, 1, 1, 4),
         [1.0, 2.0, 3.0, 4.0]
@@ -68,7 +73,8 @@ using LinearAlgebra
         irregularOperationIncomeMatches = power(OperationHistory(
             tOperation,
             ones(length(tOperation) - 1),
-            zeros(length(tOperation))
+            zeros(length(tOperation)),
+            ones(length(tOperation))
         )) ⋅ VariableIntervalTimeSeries(
             DateTime(2022, 1, 1):Minute(10):DateTime(2022, 1, 1, 4),
             ones(24)
