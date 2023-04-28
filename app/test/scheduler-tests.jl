@@ -9,7 +9,7 @@ using Dates
         LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
         LiIonBatteryStates(0.5, 0)
     )
-    optScheduler = OptScheduler(Hour(1), Hour(4), 4, 0)
+    optScheduler = OptScheduler(Hour(1), Hour(4), 4)
     tStart = floor(now(), Hour(1))
     useCases = UseCase[
         EnergyArbitrage(
