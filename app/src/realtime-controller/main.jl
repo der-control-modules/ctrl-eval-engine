@@ -51,8 +51,15 @@ include("mock-rt-controller.jl")
 
 Create a realtime controller of appropriate type from the input dictionary
 """
-function get_rt_controller(inputDict::Dict)
-    return MockController(Minute(15))
+function get_rt_controller(controlConfig::Dict)
+    controlType = controlConfig["type"]
+    controller = if controlType == "amac"
+        AMAController(controlConfig)
+    else
+        MockController(Minute(15))
+    end
+
+    return controller
 end
 
 end
