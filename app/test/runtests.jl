@@ -8,4 +8,4 @@ using CtrlEvalEngine
 
 include("simulator-tests.jl")
 include("use-case-tests.jl")
-include("scheduler-test.jl")
+include("scheduler-tests.jl")

@@ -10,7 +10,7 @@ export UseCase, get_use_cases, summarize_use_case, calculate_net_income, EnergyA
 abstract type UseCase end
 
 using Dates
-using CtrlEvalEngine: OperationHistory, power, TimeSeries, FixedIntervalTimeSeries, start_time, end_time
+using CtrlEvalEngine: OperationHistory, power, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, start_time, end_time
 using LinearAlgebra
 using JuMP
 

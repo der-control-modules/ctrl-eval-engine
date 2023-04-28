@@ -97,6 +97,7 @@ struct OperationHistory
     t::Vector{Dates.DateTime}
     powerKw::Vector{Float64}
     SOC::Vector{Float64}
+    SOH::Vector{Float64}
 end
 
 start_time(op::OperationHistory) = op.t[1]

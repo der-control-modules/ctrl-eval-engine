@@ -68,7 +68,7 @@ function get_scheduler(schedulerConfig::Dict)
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
     elseif schedulerType == "optimization"
-        OptScheduler(Hour(1), Day(1), Day(1))
+        OptScheduler(Hour(1), Day(1), Day(1), 0.1)
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end
