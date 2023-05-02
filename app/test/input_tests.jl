@@ -54,9 +54,7 @@ end
                 "scheduleResolutionHrs": 1,
                 "optWindowLenHrs":24,
                 "intervalHrs": 24,
-                "powerLimitPct": 100,
-                "endSocPct": 50,
-                "minNetLoadKw": 0
+                "endSocPct": 50
             }""")
 
         scheduler = get_scheduler(inputDict)
@@ -64,6 +62,8 @@ end
         @test scheduler.resolution == Hour(1)
         @test scheduler.optWindow == 24
         @test scheduler.endSoc == (0.5, 0.5)
+        @test scheduler.minNetLoadKw == nothing
+        @test scheduler.powerLimitPu == 1.0
 
         inputDict = JSON.parse("""
             {
@@ -71,7 +71,7 @@ end
                 "scheduleResolutionHrs": 4,
                 "optWindowLenHrs": 50,
                 "intervalHrs": 24,
-                "powerLimitPct": 100,
+                "powerLimitPct": 84,
                 "endSocPct": [45, 50],
                 "minNetLoadKw": 0
             }""")
@@ -81,5 +81,7 @@ end
         @test scheduler.resolution == Hour(4)
         @test scheduler.optWindow == 13
         @test scheduler.endSoc == (0.45, 0.5)
+        @test scheduler.minNetLoadKw == 0.0
+        @test scheduler.powerLimitPu == 0.84
     end
 end

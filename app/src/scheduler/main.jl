@@ -68,19 +68,24 @@ function get_scheduler(schedulerConfig::Dict)
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
     elseif schedulerType == "optimization"
-        endSoc = if schedulerConfig["endSocPct"] isa Real
-            schedulerConfig["endSocPct"] / 100
+        endSocInput = get(schedulerConfig,"endSocPct", nothing)
+        endSoc = if isnothing(endSocInput)
+            nothing
+        elseif endSocInput isa Real
+            endSocInput / 100
         else
             (
-                schedulerConfig["endSocPct"][1],
-                schedulerConfig["endSocPct"][2]
+                endSocInput[1],
+                endSocInput[2]
             ) ./ 100
         end
         OptScheduler(
             Hour(schedulerConfig["scheduleResolutionHrs"]),
             Hour(schedulerConfig["intervalHrs"]),
             ceil(Int64, schedulerConfig["optWindowLenHrs"] / schedulerConfig["scheduleResolutionHrs"]),
-            endSoc
+            endSoc;
+            minNetLoadKw=get(schedulerConfig, "minNetLoadKw", nothing),
+            powerLimitPu=get(schedulerConfig, "powerLimitPct", 100.0) / 100
         )
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
