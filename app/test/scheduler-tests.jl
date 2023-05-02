@@ -55,4 +55,9 @@ using Dates
     ]
     sReg = schedule(ess, optScheduler, useCases, tStart)
     @test length(sReg.powerKw) == 4
+
+    optScheduler2 = OptScheduler(Hour(1), Hour(4), 4; powerLimitPu=0.5, minNetLoadKw=-100)
+    s2 = schedule(ess, optScheduler2, useCases, tStart)
+    @test all(abs.(s2.powerKw) .≤ p_max(ess.specs) * 0.5)
+    @test all(s2.powerKw .≤ 100)
 end
