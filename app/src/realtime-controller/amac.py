@@ -16,6 +16,7 @@ class AMACOperation:
         self.load_total_data.append(self.load_power, self.d_time)
         
         #use case configs
+        self.data_rate = 1
         self.damping_parameter = usecase_config.get("damping_parameter", 8.)
         self.max_window_size = usecase_config.get("Maximum_allowable_window_size", 2100)
         maximum_pv_power = usecase_config.get("Maximum_pv_power", 300)
@@ -40,27 +41,6 @@ class AMACOperation:
         self.s_charge = self.bess_soc_init
         self.pr = 0
         self.p_update = 0
-        self.csi = TSBuffer(maxlen=900)
-        
-
-    def gets(self, data):
-        data.index = data.index.tz_localize('UTC')
-        data = data.resample('1S').mean().fillna(method='pad').fillna(method='backfill')
-        data.index = data.index.tz_convert('US/Eastern')
-        return data
-
-    def vaja(self, data1,data2):
-        data = pd.concat([data1, -data2], axis=1)
-        data = data.sum(axis=1)
-        return data
-
-    def window(self, data,x):
-        load_power_mean =data.rolling(min_periods=1, window=x).mean()
-        return load_power_mean
-
-    def sdwindow(self, data,x):
-        load_power_std = data.rolling(min_periods=x, window=x).std()
-        return load_power_std
     
     def publish_calculations(self, value_buffer, horizon=900):
         if len(value_buffer) < horizon:
@@ -88,6 +68,9 @@ class AMACOperation:
             except Exception as e:
                 print("Exception in smart_persistence: {}".format(str(e)))
         return forecast_value, forecast_time
+    
+    def calculate_soc(self, soc_now, power):
+        return (power/(self.bess_rated_kWh * self.data_rate)/36)+ soc_now
     
     def run_model(self, soc):
         self.publish_calculations(self.load_total_data)
@@ -120,6 +103,8 @@ class AMACOperation:
             instantaneous_residual = ama_power + p_update
             buffered_residual = residuals[1] - residuals[2]
             mean_component = residuals[2]
+            
+        new_soc = self.calculate_soc(instantaneous_residual, self.soc)
 
         message = [
             {
@@ -128,4 +113,5 @@ class AMACOperation:
              'buffered_residual': buffered_residual,
              'window': window_size
              }]
-        return message
+        print(message)
+        return new_soc, instantaneous_residual, window_size
