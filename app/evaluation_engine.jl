@@ -1,6 +1,7 @@
 
 using JSON
 using CtrlEvalEngine
+using AWS
 
 redirect_stdio(stderr=stdout)
 
