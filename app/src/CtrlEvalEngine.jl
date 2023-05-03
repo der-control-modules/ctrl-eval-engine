@@ -29,8 +29,12 @@ using .EnergyStorageRTControl
 
 Calculate the benefits and costs given `operation` and `useCases`.
 """
-function calculate_benefit_cost(operation::OperationHistory, useCases::AbstractVector{<:UseCase})
-    map(uc -> summarize_use_case(operation, uc), useCases)
+function generate_output_dict(operation::OperationHistory, useCases::AbstractVector{<:UseCase})
+    outputDict = Dict(
+        :metrics => map(uc -> summarize_use_case(operation, uc), useCases),
+        :timeCharts => generate_chart_data(progress)
+    )
+    return outputDict
 end
 
 
@@ -152,13 +156,7 @@ function evaluate_controller(inputDict; debug=false)
         end
     end
 
-    useCaseResults = calculate_benefit_cost(progress.operation, useCases)
-
-    output = Dict(
-        :metrics => useCaseResults,
-        :timeCharts => generate_chart_data(progress)
-    )
-    return output
+    return generate_output_dict(progress.operation, useCases)
 end
 
 end
