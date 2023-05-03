@@ -1,7 +1,7 @@
 
 using JSON
 using CtrlEvalEngine
-using AWS
+using AWSS3
 
 redirect_stdio(stderr=stdout)
 
