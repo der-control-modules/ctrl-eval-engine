@@ -17,7 +17,7 @@ else
 end
 
 outputDict = try
-    evaluate_controller(inputDict; debug)
+    evaluate_controller(inputDict, JOB_ID; debug)
 catch e
     if debug
         throw(e)
