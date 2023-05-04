@@ -62,7 +62,7 @@ end
         @test scheduler.resolution == Hour(1)
         @test scheduler.optWindow == 24
         @test scheduler.endSoc == (0.5, 0.5)
-        @test scheduler.minNetLoadKw == nothing
+        @test scheduler.minNetLoadKw === nothing
         @test scheduler.powerLimitPu == 1.0
 
         inputDict = JSON.parse("""

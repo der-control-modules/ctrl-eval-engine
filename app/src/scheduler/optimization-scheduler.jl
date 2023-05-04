@@ -139,9 +139,9 @@ function objective_term(m::JuMP.Model, ucReg::Regulation, scheduler::OptSchedule
     # )
 end
 
-function add_constraints!(m::JuMP.Model, ucReg::UseCase) end
+function add_constraints!(::JuMP.Model, ::UseCase) end
 
-function add_constraints!(m::JuMP.Model, ucReg::Regulation)
+function add_constraints!(m::JuMP.Model, ::Regulation)
     @constraints(m, begin
         m[:r_c] .<= m[:r_p]
         m[:r_c] .<= m[:r_n]
