@@ -5,19 +5,22 @@ using AWSS3
 
 redirect_stdio(stderr=stdout)
 
-inputDict, debug = if length(ARGS) == 1
-    JOB_ID = ARGS[1]
-    BUCKET_NAME = get(ENV, "BUCKET_NAME", "long-running-jobs-test")
-    (JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$JOB_ID.json")))), false)
+inputDict, debug, BUCKET_NAME, JOB_ID = if length(ARGS) == 1
+    (
+        JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$JOB_ID.json")))),
+        false,
+        get(ENV, "BUCKET_NAME", "long-running-jobs-test"),
+        ARGS[1]
+    )
 elseif length(ARGS) == 2 && ARGS[1] == "debug"
-    (JSON.parsefile(ARGS[2]), true)
+    (JSON.parsefile(ARGS[2]), true, nothing, nothing)
 else
     @error "Unsupported command line arguments" ARGS
     exit(1)
 end
 
 outputDict = try
-    evaluate_controller(inputDict, JOB_ID; debug)
+    evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug)
 catch e
     if debug
         throw(e)

@@ -142,7 +142,7 @@ end
 
 Evaluate the performance of the controller specified in `inputDict`
 """
-function evaluate_controller(inputDict, JOB_ID; debug=false)
+function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug=false)
     @info "Parsing and validating input data"
     setting = get_setting(inputDict)
     ess = get_ess(inputDict["selectedBatteryCharacteristics"])
