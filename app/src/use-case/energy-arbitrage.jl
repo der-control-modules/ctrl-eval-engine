@@ -28,7 +28,15 @@ EnergyArbitrage(input::AbstractVector) = EnergyArbitrage(
 
 Summarize the benefit and cost associated with `useCase` given `operation`
 """
-function summarize_use_case(operation::OperationHistory, eaUseCase::EnergyArbitrage)
-    return Dict(:netArbitrageIncome => power(operation) ⋅ eaUseCase.price)
+function calculate_metrics(operation::OperationHistory, eaUseCase::EnergyArbitrage)
+    return [
+        Dict(
+            :sectionTitle => "Energy Arbitrage",
+        ),
+        Dict(
+            :label => "Net Income",
+            :value => power(operation) ⋅ eaUseCase.price
+        )
+    ]
 end
 
