@@ -4,16 +4,17 @@ using CtrlEvalEngine
 using AWSS3
 
 redirect_stdio(stderr=stdout)
+BUCKET_NAME = get(ENV, "BUCKET_NAME", "long-running-jobs-test")
 
-inputDict, debug, BUCKET_NAME, JOB_ID = if length(ARGS) == 1
+inputDict, debug, JOB_ID = if length(ARGS) == 1
+    inputJobId = ARGS[1]
     (
-        JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$JOB_ID.json")))),
+        JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$inputJobId.json")))),
         false,
-        get(ENV, "BUCKET_NAME", "long-running-jobs-test"),
-        ARGS[1]
+        inputJobId 
     )
 elseif length(ARGS) == 2 && ARGS[1] == "debug"
-    (JSON.parsefile(ARGS[2]), true, nothing, nothing)
+    (JSON.parsefile(ARGS[2]), true, nothing)
 else
     @error "Unsupported command line arguments" ARGS
     exit(1)
