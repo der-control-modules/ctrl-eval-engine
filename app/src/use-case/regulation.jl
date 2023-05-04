@@ -28,7 +28,7 @@ function calculate_metrics(operation::OperationHistory, ucReg::Regulation)
         ),
         Dict(
             :label => "Net Income",
-            :value => operation ⋅ ucReg.price
+            :value => power(operation) ⋅ ucReg.price
         ),
         Dict(
             :label => "AGC Signal Following RMSE (ex.)",
