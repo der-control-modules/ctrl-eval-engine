@@ -21,6 +21,18 @@ import Base: *
 *(pp::RegulationPricePoint, op::RegulationOperationPoint) = pp.capacityPrice * op.capacity + pp.servicePrice * op.capacity * op.mileage
 *(op::RegulationOperationPoint, pp::RegulationPricePoint) = pp.capacityPrice * op.capacity + pp.servicePrice * op.capacity * op.mileage
 
-function summarize_use_case(operation::OperationHistory, ucReg::Regulation)
-    return Dict(:RegulationIncome => operation ⋅ ucReg.price)
+function calculate_metrics(operation::OperationHistory, ucReg::Regulation)
+    return [
+        Dict(
+            :sectionTitle => "Frequency Regulation",
+        ),
+        Dict(
+            :label => "Net Income",
+            :value => operation ⋅ ucReg.price
+        ),
+        Dict(
+            :label => "AGC Signal Following RMSE (ex.)",
+            :value => 1.34e-3
+        ),
+    ]
 end

@@ -25,12 +25,43 @@ using .EnergyStorageRTControl
 
 
 """
-    calculate_benefit_cost(operation, useCases)
+    generate_output_dict(progress, useCases)
 
-Calculate the benefits and costs given `operation` and `useCases`.
+Generate the output dictionary according to `progress` and `useCases`.
 """
-function calculate_benefit_cost(operation::OperationHistory, useCases::AbstractVector{<:UseCase})
-    map(uc -> summarize_use_case(operation, uc), useCases)
+function generate_output_dict(progress::Progress, useCases::AbstractVector{<:UseCase})
+    metrics = mapreduce(
+        uc -> calculate_metrics(progress.operation, uc),
+        vcat,
+        useCases,
+        init=[
+            Dict(
+                :label => "Annual Benefit (ex.)",
+                :value => "\$100K"
+            ),
+            Dict(
+                :label => "Present Value Benefit (ex.)",
+                :value => "\$6.8M"
+            ),
+            Dict(
+                :label => "Annual Usage (Discharged Energy) (ex.)",
+                :value => "10 MWh (100 cycles)"
+            ),
+            Dict(
+                :label => "SOH Change (ex.)",
+                :value => "100% → 87%"
+            ),
+            Dict(
+                :label => "Energy Loss (ex.)",
+                :value => "190 kWh"
+            ),
+        ]
+    )
+    outputDict = Dict(
+        :metrics => metrics,
+        :timeCharts => generate_chart_data(progress)
+    )
+    return outputDict
 end
 
 
@@ -152,13 +183,7 @@ function evaluate_controller(inputDict; debug=false)
         end
     end
 
-    useCaseResults = calculate_benefit_cost(progress.operation, useCases)
-
-    output = Dict(
-        :metrics => useCaseResults,
-        :timeCharts => generate_chart_data(progress)
-    )
-    return output
+    return generate_output_dict(progress, useCases)
 end
 
 end

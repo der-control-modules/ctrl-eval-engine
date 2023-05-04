@@ -5,7 +5,7 @@ The `EnergyStorageUseCases` provides type and functions for
 """
 module EnergyStorageUseCases
 
-export UseCase, get_use_cases, summarize_use_case, calculate_net_income, EnergyArbitrage, Regulation, RegulationOperationPoint, regulation_income
+export UseCase, get_use_cases, calculate_metrics, calculate_net_income, EnergyArbitrage, Regulation, RegulationOperationPoint, regulation_income
 
 abstract type UseCase end
 
