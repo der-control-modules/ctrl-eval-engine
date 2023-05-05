@@ -3,22 +3,17 @@ from ts_buffer import TSBuffer
 
 
 class AMACOperation:
-    def __init__(self, load_data, d_time, soc, bess_config, usecase_config):
-        self.load_power = load_data
-        self.d_time = d_time
-        self.soc = soc
-        self.max_interval_length = 900
-        self.load_total_data = TSBuffer(maxlen=self.max_interval_length)
-        self.load_total_data.append(self.load_power, self.d_time)
-        
+    def __init__(self, bess_config, amac_config):
+               
         #use case configs
         self.data_interval = 1
-        self.damping_parameter = usecase_config.get("damping_parameter", 8.)
-        self.max_window_size = usecase_config.get("Maximum_allowable_window_size", 2100)
-        maximum_pv_power = usecase_config.get("Maximum_pv_power", 300)
-        maximum_allowable_variability_pct = usecase_config.get("maximum_allowable_variability_pct", 50)
-        refrence_variability_pct = usecase_config.get("refrence_variability_pct", 10)
-        minimum_allowable_variability_pct = usecase_config.get("minimum_allowable_variability_pct", 2)
+        self.damping_parameter = amac_config.get("damping_parameter", 8.)
+        self.max_window_size = amac_config.get("Maximum_allowable_window_size", 2100)
+        maximum_pv_power = amac_config.get("Maximum_pv_power", 300)
+        maximum_allowable_variability_pct = amac_config.get("maximum_allowable_variability_pct", 50)
+        refrence_variability_pct = amac_config.get("refrence_variability_pct", 10)
+        minimum_allowable_variability_pct = amac_config.get("minimum_allowable_variability_pct", 2)
+        self.bess_soc_ref = amac_config.get("bess_soc_ref", 50.)
         self.min_variability = (maximum_pv_power * minimum_allowable_variability_pct)/100
         self.max_variability = (maximum_pv_power  * maximum_allowable_variability_pct)/100
         self.ref_variability = (maximum_pv_power * refrence_variability_pct)/100
@@ -28,13 +23,21 @@ class AMACOperation:
         self.bess_rated_kWh = bess_config.get("bess_rated_kWh", 200.)
         self.bess_eta = bess_config.get("bess_eta", 0.925)
         self.bess_soc_init = bess_config.get("bess_soc_init", 50)
-        self.bess_soc_ref = bess_config.get("bess_soc_ref", 50.)
         self.bess_soc_max = bess_config.get("bess_soc_max", 90)
         self.bess_soc_min = bess_config.get("bess_soc_min", 10)
         self.s_charge = self.bess_soc_init
         self.asc_power = 0
         self.battery_output_power = 0
         self.accerlation_parameter = 0
+        
+    def get_load_data(self, load_data, d_time, soc):
+        self.load_power = load_data
+        self.d_time = d_time
+        self.soc = soc
+        self.max_interval_length = 900
+        self.load_total_data = TSBuffer(maxlen=self.max_interval_length)
+        self.load_total_data.append(self.load_power, self.d_time)
+        
     
     def publish_calculations(self, value_buffer, horizon=900):
         if len(value_buffer) < horizon:
@@ -60,7 +63,7 @@ class AMACOperation:
         return forecast_value, forecast_time
     
     def calculate_soc(self, soc_now, power):
-        return (power/(self.bess_rated_kWh * self.data_interval)/36)+ soc_now
+        return (power/(self.bess_rated_kWh * self.data_interval)/36) + soc_now
     
     def run_model(self):
         self.publish_calculations(self.load_total_data)
