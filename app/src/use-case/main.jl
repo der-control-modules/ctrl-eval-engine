@@ -16,6 +16,7 @@ using JuMP
 
 include("energy-arbitrage.jl")
 include("regulation.jl")
+include("variability-mitigation.jl")
 
 function get_use_cases(inputDict::Dict)
     return [EnergyArbitrage(inputDict["Energy Arbitrage"]["data"])]
