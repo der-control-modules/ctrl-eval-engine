@@ -30,14 +30,17 @@ using .EnergyStorageRTControl
 Generate the output dictionary according to `progress` and `useCases`.
 """
 function generate_output_dict(progress::Progress, useCases::AbstractVector{<:UseCase})
+    netBenefit = mapreduce(uc -> calculate_net_benefit(progress, uc), +, useCases)
+    simPeriodLengthInYear = (end_time(progress.operation) - start_time(progress.operation)) / Day(365)
+    annualBenefit = netBenefit / simPeriodLengthInYear
     metrics = mapreduce(
         uc -> calculate_metrics(progress.operation, uc),
         vcat,
         useCases,
         init=[
             Dict(
-                :label => "Annual Benefit (ex.)",
-                :value => "\$100K"
+                :label => "Annual Benefit",
+                :value => "\$$annualBenefit"
             ),
             Dict(
                 :label => "Present Value Benefit (ex.)",

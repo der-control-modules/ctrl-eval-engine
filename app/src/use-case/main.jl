@@ -10,7 +10,7 @@ export UseCase, get_use_cases, calculate_metrics, calculate_net_income, EnergyAr
 abstract type UseCase end
 
 using Dates
-using CtrlEvalEngine: OperationHistory, power, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, start_time, end_time
+using CtrlEvalEngine: Progress, OperationHistory, power, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, start_time, end_time
 using LinearAlgebra
 using JuMP
 
@@ -20,5 +20,11 @@ include("regulation.jl")
 function get_use_cases(inputDict::Dict)
     return [EnergyArbitrage(inputDict["Energy Arbitrage"]["data"])]
 end
+
+# Return zero if a use-case-specific method is not implemented
+calculate_net_benefit(::Progress, ::UseCase) = 0.0
+
+# Return an empty vector if a use-case-specific method is not implemented
+calculate_metrics(::OperationHistory, ::UseCase) = []
 
 end

@@ -22,20 +22,21 @@ EnergyArbitrage(input::AbstractVector) = EnergyArbitrage(
     )
 )
 
+calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) = power(progress.operation) ⋅ ucEA.price
 
 """
-    summarize_use_case(operation, useCase)
+    calculate_metrics(operation, useCase)
 
 Summarize the benefit and cost associated with `useCase` given `operation`
 """
-function calculate_metrics(operation::OperationHistory, eaUseCase::EnergyArbitrage)
+function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
     return [
         Dict(
             :sectionTitle => "Energy Arbitrage",
         ),
         Dict(
             :label => "Net Income",
-            :value => power(operation) ⋅ eaUseCase.price
+            :value => power(operation) ⋅ ucEA.price
         )
     ]
 end

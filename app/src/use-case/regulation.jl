@@ -10,11 +10,11 @@ struct RegulationOperationPoint{TC<:Union{Real,JuMP.VariableRef},TM<:Union{Real,
 end
 struct Regulation <: UseCase
     price::FixedIntervalTimeSeries{Hour,RegulationPricePoint}
-    perfermanceScore::Float64
+    performanceScore::Float64
 end
 
 function regulation_income(regOperation::TimeSeries{<:RegulationOperationPoint}, ucReg::Regulation)
-    (ucReg.price ⋅ regOperation) * ucReg.perfermanceScore
+    (ucReg.price ⋅ regOperation) * ucReg.performanceScore
 end
 
 import Base: *
