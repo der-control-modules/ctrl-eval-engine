@@ -8,6 +8,7 @@ module EnergyStorageRTControl
 using Dates
 using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
+using CtrlEvalEngine.EnergyStorageSimulators
 
 export get_rt_controller, control
 

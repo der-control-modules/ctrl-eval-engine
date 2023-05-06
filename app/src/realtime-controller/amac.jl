@@ -7,20 +7,20 @@ struct AMAController <: RTController
 end
 
 pushfirst!(pyimport("sys")."path", @__DIR__)
-pyAmacModule = pyimport("amac")
+pyAmacClass = pyimport("amac").AMACOperation
 
 function AMAController(controlConfig::Dict, ess, useCases::AbstractArray{UseCase})
-    amac = pyAmacModule.AMACOperation(
+    pyAmac = pyAmacClass(
         Dict(
             :bess_rated_kw => p_max(ess),
-            :bess_rated_kWh => energy_capacity(ess),
+            :bess_rated_kWh => e_max(ess),
             :bess_eta => ηRT(ess),
             :bess_soc_max => 100,
             :bess_soc_min => 0
         ),
         controlConfig
     )
-    AMAController(Second(1), amac)
+    AMAController(Second(1), pyAmac)
 end
 
 function control(ess, amac::AMAController, _::SchedulePeriod, useCases::AbstractArray{UseCase}, t, _)
