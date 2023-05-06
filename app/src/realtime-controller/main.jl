@@ -6,6 +6,7 @@ The `EnergyStorageRTControl` provides type and functions related to the realtime
 module EnergyStorageRTControl
 
 using Dates
+using PyCall
 using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
@@ -63,6 +64,10 @@ function get_rt_controller(controlConfig::Dict, ess, useCases)
     end
 
     return controller
+end
+
+function __init__()
+    pushfirst!(pyimport("sys")."path", @__DIR__)
 end
 
 end

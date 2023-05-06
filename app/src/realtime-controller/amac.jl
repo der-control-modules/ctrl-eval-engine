@@ -6,10 +6,8 @@ struct AMAController <: RTController
     pyAmac
 end
 
-pushfirst!(pyimport("sys")."path", @__DIR__)
-pyAmacClass = pyimport("amac").AMACOperation
-
 function AMAController(controlConfig::Dict, ess, useCases::AbstractArray{UseCase})
+    pyAmacClass = pyimport("amac").AMACOperation
     pyAmac = pyAmacClass(
         Dict(
             :bess_rated_kw => p_max(ess),
