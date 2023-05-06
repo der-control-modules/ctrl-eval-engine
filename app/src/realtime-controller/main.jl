@@ -5,6 +5,7 @@ The `EnergyStorageRTControl` provides type and functions related to the realtime
 """
 module EnergyStorageRTControl
 
+using CtrlEvalEngine
 using Dates
 using ..EnergyStorageScheduling
 
@@ -45,6 +46,7 @@ control(
 
 
 include("mock-rt-controller.jl")
+include("pid.jl")
 
 """
     get_rt_controller(inputDict::Dict)
