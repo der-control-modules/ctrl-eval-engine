@@ -29,10 +29,32 @@ using .EnergyStorageRTControl
 
 Generate the output dictionary according to `progress` and `useCases`.
 """
-function generate_output_dict(progress::Progress, useCases::AbstractVector{<:UseCase})
+function generate_output_dict(progress::Progress, useCases::AbstractVector{<:UseCase}, ess::EnergyStorageSystem)
     netBenefit = mapreduce(uc -> calculate_net_benefit(progress, uc), +, useCases)
     simPeriodLengthInYear = (end_time(progress.operation) - start_time(progress.operation)) / Day(365)
     annualBenefit = netBenefit / simPeriodLengthInYear
+
+    # Capital recovery factor
+    discount = 0.0685
+    cbaYears = 20
+    CRF = discount + discount / ((1 + discount)^cbaYears - 1)
+
+    pvBenefit = annualBenefit / CRF
+
+    # Annual usage
+    dischargedEnergyKwh = discharged_energy(progress.operation)
+    annualDischargedEnergyKwh = dischargedEnergyKwh / simPeriodLengthInYear
+    annualCycles = round(annualDischargedEnergyKwh / e_max(ess), sigdigits=2)
+    annualDischargedEnergyMwh = round(annualDischargedEnergyKwh / 1000, sigdigits=3)
+    annualUsageString = (
+        annualDischargedEnergyKwh ≥ 1000 ?
+        "$annualDischargedEnergyMwh MWh" :
+        "$(round(annualDischargedEnergyKwh, sigdigits=3)) kWh"
+    ) * " ($annualCycles cycles)"
+    energyLossKwh = charged_energy(progress.operation) - dischargedEnergyKwh
+
+    endingSohPct = round(SOH(ess) * 100)
+
     metrics = mapreduce(
         uc -> calculate_metrics(progress.operation, uc),
         vcat,
@@ -43,20 +65,22 @@ function generate_output_dict(progress::Progress, useCases::AbstractVector{<:Use
                 :value => "\$$annualBenefit"
             ),
             Dict(
-                :label => "Present Value Benefit (ex.)",
-                :value => "\$6.8M"
+                :label => "Present Value Benefit",
+                :value => "\$$pvBenefit"
             ),
             Dict(
-                :label => "Annual Usage (Discharged Energy) (ex.)",
-                :value => "10 MWh (100 cycles)"
+                :label => "Annual Usage (Discharged Energy)",
+                :value => annualUsageString
             ),
             Dict(
-                :label => "SOH Change (ex.)",
-                :value => "100% → 87%"
+                :label => "SOH Change",
+                :value => "100% → $endingSohPct%"
             ),
             Dict(
-                :label => "Energy Loss (ex.)",
-                :value => "190 kWh"
+                :label => "Energy Loss",
+                :value => energyLossKwh ≥ 1000 ?
+                          "$(round(energyLossKwh / 1000, sigdigits=3)) MWh" :
+                          "$(round(energyLossKwh, sigdigits=3)) kWh"
             ),
         ]
     )
@@ -186,7 +210,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug=false)
         end
     end
 
-    return generate_output_dict(progress, useCases)
+    return generate_output_dict(progress, useCases, ess)
 end
 
 end
