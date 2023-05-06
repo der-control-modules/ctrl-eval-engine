@@ -7,13 +7,14 @@ class AMACOperation:
                
         #use case configs
         self.data_interval = 1
-        self.damping_parameter = amac_config.get("damping_parameter", 8.)
-        self.max_window_size = amac_config.get("Maximum_allowable_window_size", 2100)
-        maximum_pv_power = amac_config.get("Maximum_pv_power", 300)
-        maximum_allowable_variability_pct = amac_config.get("maximum_allowable_variability_pct", 50)
-        refrence_variability_pct = amac_config.get("refrence_variability_pct", 10)
-        minimum_allowable_variability_pct = amac_config.get("minimum_allowable_variability_pct", 2)
-        self.bess_soc_ref = amac_config.get("bess_soc_ref", 50.)
+        self.damping_parameter = amac_config.get("dampingParameter", 8.)
+        self.max_window_size = amac_config.get("maximumAllowableWindowSize", 2100)
+        maximum_pv_power = amac_config.get("maximumPvPower", 300)
+        maximum_allowable_variability_pct = amac_config.get("maximumAllowableVariabilityPct", 50)
+        refrence_variability_pct = amac_config.get("referenceVariabilityPct", 10)
+        minimum_allowable_variability_pct = amac_config.get("minimumAllowableVariabilityPct", 2)
+        self.bess_soc_ref = amac_config.get("referenceSocPct", 50.)
+        self.variability = 0.0
         self.min_variability = (maximum_pv_power * minimum_allowable_variability_pct)/100
         self.max_variability = (maximum_pv_power  * maximum_allowable_variability_pct)/100
         self.ref_variability = (maximum_pv_power * refrence_variability_pct)/100
@@ -22,10 +23,8 @@ class AMACOperation:
         self.bess_rated_kw = bess_config.get("bess_rated_kw", 125.)
         self.bess_rated_kWh = bess_config.get("bess_rated_kWh", 200.)
         self.bess_eta = bess_config.get("bess_eta", 0.925)
-        self.bess_soc_init = bess_config.get("bess_soc_init", 50)
         self.bess_soc_max = bess_config.get("bess_soc_max", 90)
         self.bess_soc_min = bess_config.get("bess_soc_min", 10)
-        self.s_charge = self.bess_soc_init
         self.asc_power = 0
         self.battery_output_power = 0
         self.accerlation_parameter = 0

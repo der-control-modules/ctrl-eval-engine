@@ -6,7 +6,8 @@ The `EnergyStorageRTControl` provides type and functions related to the realtime
 module EnergyStorageRTControl
 
 using Dates
-using ..EnergyStorageScheduling
+using CtrlEvalEngine.EnergyStorageScheduling
+using CtrlEvalEngine.EnergyStorageUseCases
 
 export get_rt_controller, control
 
@@ -45,16 +46,17 @@ control(
 
 
 include("mock-rt-controller.jl")
+include("amac.jl")
 
 """
     get_rt_controller(inputDict::Dict)
 
 Create a realtime controller of appropriate type from the input dictionary
 """
-function get_rt_controller(controlConfig::Dict)
+function get_rt_controller(controlConfig::Dict, ess, useCases)
     controlType = controlConfig["type"]
     controller = if controlType == "amac"
-        AMAController(controlConfig)
+        AMAController(controlConfig, ess, useCases)
     else
         MockController(Minute(15))
     end

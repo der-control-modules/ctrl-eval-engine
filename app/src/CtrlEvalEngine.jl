@@ -70,7 +70,7 @@ function evaluate_controller(inputDict; debug=false)
     ess = get_ess(inputDict["selectedBatteryCharacteristics"])
     useCases = get_use_cases(inputDict["selectedUseCasesCharacteristics"])
     scheduler = EnergyStorageScheduling.get_scheduler(inputDict["selectedControlTypeCharacteristics"]["scheduler"])
-    rtController = EnergyStorageRTControl.get_rt_controller(inputDict["selectedControlTypeCharacteristics"]["rtController"])
+    rtController = EnergyStorageRTControl.get_rt_controller(inputDict["selectedControlTypeCharacteristics"]["rtController"], ess, useCases)
 
     t = setting.simStart
     progress = Progress(
