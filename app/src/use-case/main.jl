@@ -5,7 +5,8 @@ The `EnergyStorageUseCases` provides type and functions for
 """
 module EnergyStorageUseCases
 
-export UseCase, get_use_cases, summarize_use_case, calculate_net_income, EnergyArbitrage, Regulation, RegulationOperationPoint, regulation_income
+export UseCase, get_use_cases, summarize_use_case, calculate_net_income, EnergyArbitrage,
+ Regulation, RegulationOperationPoint, regulation_income, LoadFollowing
 
 abstract type UseCase end
 
@@ -16,6 +17,7 @@ using JuMP
 
 include("energy-arbitrage.jl")
 include("regulation.jl")
+include("load-following.jl")
 
 function get_use_cases(inputDict::Dict)
     return [EnergyArbitrage(inputDict["Energy Arbitrage"]["data"])]
