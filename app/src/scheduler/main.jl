@@ -57,6 +57,7 @@ using CtrlEvalEngine.EnergyStorageUseCases
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
 include("mock-python-scheduler.jl")
+include("manual-scheduler.jl")
 
 """
     get_scheduler(inputDict::Dict)
