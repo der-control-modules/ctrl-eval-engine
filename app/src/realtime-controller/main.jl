@@ -39,10 +39,8 @@ control(
     ess,
     controller::RTController,
     schedulePeriod::SchedulePeriod,
-    useCases,
-    t=start_time(schedulePeriod),
-    spProgress=nothing
-) = control(ess, controller, schedulePeriod, useCases, t, spProgress)
+    useCases
+) = control(ess, controller, schedulePeriod, useCases, start_time(schedulePeriod), nothing)
 
 
 include("mock-rt-controller.jl")

@@ -108,11 +108,11 @@ function update_progress!(scheduleHistory::ScheduleHistory, currentSchedule::Ene
 end
 
 
-function update_schedule_period_progress!(spp::SchedulePeriodProgress, actualPowerKw, duration)
-    if !isempty(spp.powerKw) && spp.powerKw[end] == actualPowerKw
+function update_schedule_period_progress!(spp::VariableIntervalTimeSeries, actualPowerKw, duration::Dates.Period)
+    if !isempty(spp.value) && spp.value[end] == actualPowerKw
         spp.t[end] += duration
     else
-        push!(spp.powerKw, actualPowerKw)
+        push!(spp.value, actualPowerKw)
         push!(spp.t, spp.t[end] + duration)
     end
 end
@@ -189,7 +189,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug=false)
         update_progress!(progress.schedule, currentSchedule)
         for schedulePeriod in currentSchedule
             schedulePeriodEnd = min(EnergyStorageScheduling.end_time(schedulePeriod), setting.simEnd)
-            spProgress = SchedulePeriodProgress(schedulePeriod)
+            spProgress = VariableIntervalTimeSeries([t], Float64[])
             while t < schedulePeriodEnd
                 controlSequence = control(ess, rtController, schedulePeriod, useCases, t, spProgress)
                 for (powerSetpointKw, controlDuration) in controlSequence

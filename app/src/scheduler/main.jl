@@ -29,13 +29,6 @@ start_time(sp::SchedulePeriod) = sp.tStart
 end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
 average_power(sp::SchedulePeriod) = sp.powerKw
 
-struct SchedulePeriodProgress
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
-end
-
-SchedulePeriodProgress(sp::SchedulePeriod) = SchedulePeriodProgress([start_time(sp)], [])
-
 Base.iterate(s::Schedule, index=1) =
     index > length(s.powerKw) ?
     nothing :
