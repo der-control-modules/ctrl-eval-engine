@@ -16,7 +16,7 @@ end
 OptScheduler(res, interval, win, es=nothing; powerLimitPu=1, minNetLoadKw=nothing, regulationReserve=0.5) = OptScheduler(res, interval, win, es, powerLimitPu, minNetLoadKw, regulationReserve)
 OptScheduler(res, interval, win, es::Float64, powerLimitPu, minNetLoadKw, regulationReserve) = OptScheduler(res, interval, win, (es, es), powerLimitPu, minNetLoadKw, regulationReserve)
 
-function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{UseCase}, tStart::Dates.DateTime)
+function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{<:UseCase}, tStart::Dates.DateTime)
     K = scheduler.optWindow
     scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
     rte = ηRT(ess)
