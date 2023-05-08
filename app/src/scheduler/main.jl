@@ -29,13 +29,6 @@ start_time(sp::SchedulePeriod) = sp.tStart
 end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
 average_power(sp::SchedulePeriod) = sp.powerKw
 
-struct SchedulePeriodProgress
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
-end
-
-SchedulePeriodProgress(sp::SchedulePeriod) = SchedulePeriodProgress([start_time(sp)], [])
-
 Base.iterate(s::Schedule, index=1) =
     index > length(s.powerKw) ?
     nothing :
@@ -57,6 +50,7 @@ using CtrlEvalEngine.EnergyStorageUseCases
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
 include("mock-python-scheduler.jl")
+include("manual-scheduler.jl")
 
 """
     get_scheduler(inputDict::Dict)
@@ -68,7 +62,27 @@ function get_scheduler(schedulerConfig::Dict)
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
     elseif schedulerType == "optimization"
-        OptScheduler(Hour(1), Day(1), Day(1))
+        endSocInput = get(schedulerConfig,"endSocPct", nothing)
+        endSoc = if isnothing(endSocInput)
+            nothing
+        elseif endSocInput isa Real
+            endSocInput / 100
+        else
+            (
+                endSocInput[1],
+                endSocInput[2]
+            ) ./ 100
+        end
+        res = Minute(round(Int, convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"]))
+        interval = Minute(round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]))
+        OptScheduler(
+            res,
+            interval,
+            ceil(Int64, schedulerConfig["optWindowLenHrs"] / schedulerConfig["scheduleResolutionHrs"]),
+            endSoc;
+            minNetLoadKw=get(schedulerConfig, "minNetLoadKw", nothing),
+            powerLimitPu=get(schedulerConfig, "powerLimitPct", 100.0) / 100
+        )
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end

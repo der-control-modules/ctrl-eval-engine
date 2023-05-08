@@ -6,7 +6,8 @@ using Test
 
 using CtrlEvalEngine
 
-# include("simulator-tests.jl")
-# include("use-case-tests.jl")
-# include("scheduler-test.jl")
-include("rt-controller-tests.jl")
+include("input_tests.jl")
+include("simulator-tests.jl")
+include("use-case-tests.jl")
+include("scheduler-tests.jl")
+include("controller-tests.jl")

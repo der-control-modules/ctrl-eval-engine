@@ -80,6 +80,7 @@ end
 
 LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(ts1, ts2)
 
+mean(ts::TimeSeries) = VariableIntervalTimeSeries([start_time(ts), end_time(ts)], [1]) ⋅ ts / /(promote(end_time(ts) - start_time(ts), Hour(1))...)
 
 struct ScheduleHistory
     t::Vector{Dates.DateTime}
@@ -97,12 +98,25 @@ struct OperationHistory
     t::Vector{Dates.DateTime}
     powerKw::Vector{Float64}
     SOC::Vector{Float64}
+    SOH::Vector{Float64}
 end
 
 start_time(op::OperationHistory) = op.t[1]
 end_time(op::OperationHistory) = op.t[end]
 
 power(op::OperationHistory) = VariableIntervalTimeSeries(op.t, op.powerKw)
+
+discharged_energy(op::OperationHistory) = begin
+    dischargePeriods = op.powerKw .> 0
+    durationHours = (op.t[2:end] .- op.t[1:end-1]) ./ Hour(1)
+    sum(op.powerKw[dischargePeriods] .* durationHours[dischargePeriods])
+end
+
+charged_energy(op::OperationHistory) = begin
+    chargePeriods = op.powerKw .< 0
+    durationHours = (op.t[2:end] .- op.t[1:end-1]) ./ Hour(1)
+    -sum(op.powerKw[chargePeriods] .* durationHours[chargePeriods])
+end
 
 Base.iterate(op::OperationHistory, index=1) =
     index > length(op.powerKw) || index + 1 > length(op.t) ?

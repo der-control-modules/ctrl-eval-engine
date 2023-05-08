@@ -31,3 +31,10 @@ Now the repo should be ready to use.
     shell> docker run -it <imageName>:<tag> julia --project=.
     ```
 1. Run tests (optional, similar to [Native](#Native))
+
+## Local Testing and Debug
+
+```sh
+cd app
+julia --project=. evaluation_engine.jl debug <input_file.json>
+```

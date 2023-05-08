@@ -5,6 +5,7 @@ The `EnergyStorageRTControl` provides type and functions related to the realtime
 """
 module EnergyStorageRTControl
 
+using CtrlEvalEngine
 using Dates
 using PyCall
 using CtrlEvalEngine.EnergyStorageScheduling
@@ -41,13 +42,12 @@ control(
     ess,
     controller::RTController,
     schedulePeriod::SchedulePeriod,
-    useCases,
-    t=start_time(schedulePeriod),
-    spProgress=nothing
-) = control(ess, controller, schedulePeriod, useCases, t, spProgress)
+    useCases
+) = control(ess, controller, schedulePeriod, useCases, start_time(schedulePeriod), nothing)
 
 
 include("mock-rt-controller.jl")
+include("pid.jl")
 include("amac.jl")
 
 """
@@ -55,19 +55,19 @@ include("amac.jl")
 
 Create a realtime controller of appropriate type from the input dictionary
 """
-function get_rt_controller(controlConfig::Dict, ess, useCases)
-    controlType = controlConfig["type"]
-    controller = if controlType == "amac"
-        AMAController(controlConfig, ess, useCases)
+function get_rt_controller(config::Dict)
+    controllerType = config["type"]
+    controller = if controllerType == "mock"
+        MockController(get(config, "resolution", Minute(15)))
+    elseif controllerType == "pid"
+        res = Millisecond(round(Int, convert(Millisecond, Second(1)).value * config["resolution"]))
+        PIDController(res, config["Kp"], config["Ti"], config["Td"])
+    elseif controllerType == "amac"
+        AMAController(config, ess, useCases)
     else
-        MockController(Minute(15))
+        throw(InvalidInput("Invalid real-time controller type: $controllerType"))
     end
-
     return controller
-end
-
-function __init__()
-    pushfirst!(pyimport("sys")."path", @__DIR__)
 end
 
 end

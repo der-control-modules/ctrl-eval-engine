@@ -1,24 +1,27 @@
 
-include("src/CtrlEvalEngine.jl")
-
 using JSON
-using .CtrlEvalEngine
+using CtrlEvalEngine
+using AWSS3
 
 redirect_stdio(stderr=stdout)
+BUCKET_NAME = get(ENV, "BUCKET_NAME", "long-running-jobs-test")
 
-inputDict, debug = if length(ARGS) == 1
-    JOB_ID = ARGS[1]
-    BUCKET_NAME = get(ENV, "BUCKET_NAME", "long-running-jobs-test")
-    (JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$JOB_ID.json")))), false)
+inputDict, debug, JOB_ID = if length(ARGS) == 1
+    inputJobId = ARGS[1]
+    (
+        JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$inputJobId.json")))),
+        false,
+        inputJobId 
+    )
 elseif length(ARGS) == 2 && ARGS[1] == "debug"
-    (JSON.parsefile(ARGS[2]), true)
+    (JSON.parsefile(ARGS[2]), true, nothing)
 else
     @error "Unsupported command line arguments" ARGS
     exit(1)
 end
 
 outputDict = try
-    evaluate_controller(inputDict; debug)
+    evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug)
 catch e
     if debug
         throw(e)
