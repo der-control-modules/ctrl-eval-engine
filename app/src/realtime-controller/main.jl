@@ -51,8 +51,17 @@ include("pid.jl")
 
 Create a realtime controller of appropriate type from the input dictionary
 """
-function get_rt_controller(inputDict::Dict)
-    return MockController(Minute(15))
+function get_rt_controller(config::Dict)
+    controllerType = config["type"]
+    controller = if controllerType == "mock"
+        MockController(get(config, "resolution", Minute(15)))
+    elseif controllerType == "pid"
+        res = Millisecond(round(Int, convert(Millisecond, Second(1)).value * config["resolution"]))
+        PIDController(res, config["Kp"], config["Ti"], config["Td"])
+    else
+        throw(InvalidInput("Invalid real-time controller type: $controllerType"))
+    end
+    return controller
 end
 
 end
