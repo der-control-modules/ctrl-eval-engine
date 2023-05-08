@@ -108,5 +108,6 @@ Operate `ess` with `powerKw` for `durationHour` hours
 function _operate!(ess::LiIonBattery, powerKw::Real, durationHour::Real)
     pNorm = powerKw / ess.specs.energyCapacityKwh
     ess.states.SOC += ΔSOC(ess, max(pNorm, 0), min(pNorm, 0), durationHour)
+    ess.states.SOC = min(max(ess.states.SOC, 0), 1)
     ess.states.d += Δd(SOC(ess), pNorm, ess.specs.D, durationHour)
 end
