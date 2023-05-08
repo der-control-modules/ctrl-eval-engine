@@ -80,6 +80,7 @@ end
 
 LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(ts1, ts2)
 
+mean(ts::TimeSeries) = VariableIntervalTimeSeries([start_time(ts), end_time(ts)], [1]) ⋅ ts / /(promote(end_time(ts) - start_time(ts), Hour(1))...)
 
 struct ScheduleHistory
     t::Vector{Dates.DateTime}
