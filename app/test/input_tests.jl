@@ -68,9 +68,9 @@ end
         inputDict = JSON.parse("""
             {
                 "type": "optimization",
-                "scheduleResolutionHrs": 4,
-                "optWindowLenHrs": 50,
-                "intervalHrs": 24,
+                "scheduleResolutionHrs": 0.5,
+                "optWindowLenHrs": 24.1,
+                "intervalHrs": 2.6,
                 "powerLimitPct": 84,
                 "endSocPct": [45, 50],
                 "minNetLoadKw": 0
@@ -78,8 +78,8 @@ end
 
         scheduler = get_scheduler(inputDict)
         @test scheduler isa EnergyStorageScheduling.OptScheduler
-        @test scheduler.resolution == Hour(4)
-        @test scheduler.optWindow == 13
+        @test scheduler.resolution == Minute(30)
+        @test scheduler.optWindow == 49
         @test scheduler.endSoc == (0.45, 0.5)
         @test scheduler.minNetLoadKw == 0.0
         @test scheduler.powerLimitPu == 0.84

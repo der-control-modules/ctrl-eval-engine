@@ -73,9 +73,11 @@ function get_scheduler(schedulerConfig::Dict)
                 endSocInput[2]
             ) ./ 100
         end
+        res = Minute(round(Int, convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"]))
+        interval = Minute(round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]))
         OptScheduler(
-            Hour(schedulerConfig["scheduleResolutionHrs"]),
-            Hour(schedulerConfig["intervalHrs"]),
+            res,
+            interval,
             ceil(Int64, schedulerConfig["optWindowLenHrs"] / schedulerConfig["scheduleResolutionHrs"]),
             endSoc;
             minNetLoadKw=get(schedulerConfig, "minNetLoadKw", nothing),
