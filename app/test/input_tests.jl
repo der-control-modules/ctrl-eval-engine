@@ -3,6 +3,7 @@ using JSON
 using Dates
 using CtrlEvalEngine.EnergyStorageSimulators
 using CtrlEvalEngine.EnergyStorageScheduling
+using CtrlEvalEngine.EnergyStorageRTControl
 
 @testset "ESS Input" begin
     inputDict = JSON.parse("""
@@ -83,5 +84,36 @@ end
         @test scheduler.endSoc == (0.45, 0.5)
         @test scheduler.minNetLoadKw == 0.0
         @test scheduler.powerLimitPu == 0.84
+    end
+end
+
+@testset "RTController Input" begin
+    @testset "PIDController" begin
+        inputDict = JSON.parse("""
+            {
+                "type": "pid",
+                "resolution": 5,
+                "Kp": 8,
+                "Ti": 0.3,
+                "Td": 1
+            }""")
+        controller = get_rt_controller(inputDict)
+        @test controller isa EnergyStorageRTControl.PIDController
+        @test controller.resolution == Second(5)
+        @test controller.Kp == 8
+        @test controller.Ti == 0.3
+        @test controller.Td == 1
+
+        inputDict = JSON.parse("""
+            {
+                "type": "pid",
+                "resolution": 0.1,
+                "Kp": 8,
+                "Ti": 0.3,
+                "Td": 1
+            }""")
+        controller = get_rt_controller(inputDict)
+        @test controller isa EnergyStorageRTControl.PIDController
+        @test controller.resolution == Millisecond(100)
     end
 end

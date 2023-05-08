@@ -15,9 +15,9 @@ function schedule(ess, scheduler::ManualScheduler, _, tStart::Dates.DateTime)
             min.(
                 scheduler.powerKw,
                 p_max(ess, scheduler.resolution)
-                ),
-            p_min(ess, scheduler.resolution)
             ),
+            p_min(ess, scheduler.resolution)
+        ),
         tStart,
         Second(scheduler.resolution)
     )
