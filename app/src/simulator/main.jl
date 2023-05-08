@@ -7,8 +7,8 @@ module EnergyStorageSimulators
 
 using Dates
 
-export EnergyStorageSystem, MockSimulator, operate!, get_ess, SOC, p_max, p_min, e_max, e_min, energy_state, ηRT
-using CtrlEvalEngine: InvalidInput
+export EnergyStorageSystem, MockSimulator, operate!, get_ess, SOC, SOH, p_max, p_min, e_max, e_min, energy_state, ηRT
+using CtrlEvalEngine
 
 abstract type EnergyStorageSystem end
 

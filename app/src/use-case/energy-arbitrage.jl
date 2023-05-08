@@ -9,26 +9,35 @@ end
 Construct an `EnergyArbitrage` object from `input` dictionary or array
 """
 EnergyArbitrage(input::Dict) = EnergyArbitrage(
-    TimeSeriesPrice(
-        DateTime.(input["t"]),
+    VariableIntervalTimeSeries(
+        push!(DateTime.(input["t"]), DateTime(input["t"][end]) + Hour(1)),
         Float64.(input["actualPriceData"])
     )
 )
 
 EnergyArbitrage(input::AbstractVector) = EnergyArbitrage(
-    TimeSeriesPrice(
-        [DateTime(row["date"]) for row in input],
+    VariableIntervalTimeSeries(
+        push!([DateTime(row["date"]) for row in input], DateTime(input[end]["date"]) + Hour(1)),
         [Float64(row["lmp"]) for row in input]
     )
 )
 
+calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) = power(progress.operation) ⋅ ucEA.price
 
 """
-    summarize_use_case(operation, useCase)
+    calculate_metrics(operation, useCase)
 
 Summarize the benefit and cost associated with `useCase` given `operation`
 """
-function summarize_use_case(operation::OperationHistory, eaUseCase::EnergyArbitrage)
-    return Dict(:netArbitrageIncome => power(operation) * eaUseCase.price)
+function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
+    return [
+        Dict(
+            :sectionTitle => "Energy Arbitrage",
+        ),
+        Dict(
+            :label => "Net Income",
+            :value => power(operation) ⋅ ucEA.price
+        )
+    ]
 end
 

@@ -5,13 +5,13 @@ The `EnergyStorageUseCases` provides type and functions for
 """
 module EnergyStorageUseCases
 
-export UseCase, get_use_cases, summarize_use_case, calculate_net_income, EnergyArbitrage,
+export UseCase, get_use_cases, calculate_metrics, calculate_net_benefit, EnergyArbitrage,
  Regulation, RegulationOperationPoint, regulation_income, LoadFollowing
 
 abstract type UseCase end
 
 using Dates
-using CtrlEvalEngine: OperationHistory, power, TimeSeries, FixedIntervalTimeSeries, start_time, end_time
+using CtrlEvalEngine: Progress, OperationHistory, power, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, start_time, end_time
 using LinearAlgebra
 using JuMP
 
@@ -22,5 +22,11 @@ include("load-following.jl")
 function get_use_cases(inputDict::Dict)
     return [EnergyArbitrage(inputDict["Energy Arbitrage"]["data"])]
 end
+
+# Return zero if a use-case-specific method is not implemented
+calculate_net_benefit(::Progress, ::UseCase) = 0.0
+
+# Return an empty vector if a use-case-specific method is not implemented
+calculate_metrics(::OperationHistory, ::UseCase) = []
 
 end
