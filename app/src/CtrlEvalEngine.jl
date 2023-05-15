@@ -122,9 +122,9 @@ function generate_chart_data(progress::Progress)
         Dict(
             :title => "ESS Operation",
             :height => "400px",
-            :xAxis => Dict(:label => "Time"),
-            :yAxisLeft => Dict(:label => "Power (kW)"),
-            :yAxisRight => Dict(:label => "SOC (%)"),
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Power (kW)"),
+            :yAxisRight => Dict(:title => "SOC (%)", :tickformat => ",.0%"),
             :data => [
                 Dict(
                     :x => progress.schedule.t,
@@ -150,8 +150,8 @@ function generate_chart_data(progress::Progress)
         Dict(
             :title => "Cumulative Degradation",
             :height => "300px",
-            :xAxis => Dict(:label => "Time"),
-            :yAxisLeft => Dict(:label => "SOH (%)"),
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "SOH (%)", :tickformat => ",.0%"),
             :data => [
                 Dict(
                     :x => progress.operation.t,
