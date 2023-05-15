@@ -29,4 +29,7 @@ calculate_net_benefit(::Progress, ::UseCase) = 0.0
 # Return an empty vector if a use-case-specific method is not implemented
 calculate_metrics(::OperationHistory, ::UseCase) = []
 
+# Return an empty vector if a use-case-specific method is not implemented
+use_case_charts(::OperationHistory, ::UseCase) = []
+
 end

@@ -38,3 +38,53 @@ LoadFollowing(input::Dict) = LoadFollowing(
         [float(row["value"]) for row in input["realtimeLoadPower"]]
     )
 )
+
+function calculate_metrics(operation::OperationHistory, ucLF::LoadFollowing)
+    [
+        Dict(
+            :sectionTitle => "Load Following",
+        ),
+        Dict(
+            :label => "RMSE",
+            :value => 0
+        ),
+        Dict(
+            :label => "Maximum Deviation",
+            :value => 0
+        )
+    ]
+end
+
+function use_case_charts(operation::OperationHistory, ucLF::LoadFollowing)
+    [
+        # TODO: this is an example to be replaced
+        Dict(
+            :title => "Load Following Performance",
+            :height => "400px",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Power (kW)"),
+            :yAxisRight => Dict(:title => "Error (%)", :tickformat => ",.0%"),
+            :data => [
+                Dict(
+                    :x => timestamps(ucLF.forecastLoadPower),
+                    :y => values(ucLF.forecastLoadPower),
+                    :type => "interval",
+                    :name => "Forecast Load Power"
+                ),
+                Dict(
+                    :x => timestamps(ucLF.realtimeLoadPower),
+                    :y => values(ucLF.realtimeLoadPower),
+                    :type => "interval",
+                    :name => "Real-time Load Power"
+                ),
+                Dict(
+                    :x => timestamps(ucLF.realtimeLoadPower),
+                    :y => zeros(length(values(ucLF.realtimeLoadPower))), # TODO: to be replaced with actual errors
+                    :type => "interval",
+                    :name => "Relative Error",
+                    :yAxis => "right"
+                ),
+            ]
+        ),
+    ]
+end
