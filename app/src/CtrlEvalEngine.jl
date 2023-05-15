@@ -3,7 +3,7 @@ using AWSS3
 using JSON
 using Dates
 
-export evaluate_controller, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, InvalidInput
+export evaluate_controller, TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, timestamps, values, InvalidInput
 
 include("types.jl")
 
@@ -118,50 +118,55 @@ function update_schedule_period_progress!(spp::VariableIntervalTimeSeries, actua
 end
 
 function generate_chart_data(progress::Progress)
-    [
-        Dict(
-            :title => "ESS Operation",
-            :height => "400px",
-            :xAxis => Dict(:title => "Time"),
-            :yAxisLeft => Dict(:title => "Power (kW)"),
-            :yAxisRight => Dict(:title => "SOC (%)", :tickformat => ",.0%"),
-            :data => [
-                Dict(
-                    :x => progress.schedule.t,
-                    :y => progress.schedule.powerKw,
-                    :type => "interval",
-                    :name => "Scheduled Power"
-                ),
-                Dict(
-                    :x => progress.operation.t,
-                    :y => progress.operation.powerKw,
-                    :type => "interval",
-                    :name => "Actual Power"
-                ),
-                Dict(
-                    :x => progress.operation.t,
-                    :y => progress.operation.SOC,
-                    :type => "instance",
-                    :name => "Actual SOC",
-                    :yAxis => "right"
-                ),
-            ]
-        ),
-        Dict(
-            :title => "Cumulative Degradation",
-            :height => "300px",
-            :xAxis => Dict(:title => "Time"),
-            :yAxisLeft => Dict(:title => "SOH (%)", :tickformat => ",.0%"),
-            :data => [
-                Dict(
-                    :x => progress.operation.t,
-                    :y => progress.operation.SOH,
-                    :type => "instance",
-                    :name => "ESS State of Health"
-                ),
-            ]
-        )
-    ]
+    mapreduce(
+        uc -> use_case_charts(progress.operation, uc),
+        vcat,
+        useCases,
+        init=[
+            Dict(
+                :title => "ESS Operation",
+                :height => "400px",
+                :xAxis => Dict(:title => "Time"),
+                :yAxisLeft => Dict(:title => "Power (kW)"),
+                :yAxisRight => Dict(:title => "SOC (%)", :tickformat => ",.0%"),
+                :data => [
+                    Dict(
+                        :x => progress.schedule.t,
+                        :y => progress.schedule.powerKw,
+                        :type => "interval",
+                        :name => "Scheduled Power"
+                    ),
+                    Dict(
+                        :x => progress.operation.t,
+                        :y => progress.operation.powerKw,
+                        :type => "interval",
+                        :name => "Actual Power"
+                    ),
+                    Dict(
+                        :x => progress.operation.t,
+                        :y => progress.operation.SOC,
+                        :type => "instance",
+                        :name => "Actual SOC",
+                        :yAxis => "right"
+                    ),
+                ]
+            ),
+            Dict(
+                :title => "Cumulative Degradation",
+                :height => "300px",
+                :xAxis => Dict(:title => "Time"),
+                :yAxisLeft => Dict(:title => "SOH (%)", :tickformat => ",.0%"),
+                :data => [
+                    Dict(
+                        :x => progress.operation.t,
+                        :y => progress.operation.SOH,
+                        :type => "instance",
+                        :name => "ESS State of Health"
+                    ),
+                ]
+            )
+        ]
+    )
 end
 
 """
