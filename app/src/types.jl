@@ -25,6 +25,8 @@ end
 
 start_time(ts::VariableIntervalTimeSeries) = ts.t[1]
 end_time(ts::VariableIntervalTimeSeries) = ts.t[end]
+timestamps(ts::VariableIntervalTimeSeries) = ts.t
+values(ts::TimeSeries) = ts.value
 
 get_period(ts::VariableIntervalTimeSeries, t::DateTime) = begin
     if t ≥ ts.t[1] && t < ts.t[end]
@@ -43,6 +45,7 @@ end
 
 start_time(ts::FixedIntervalTimeSeries) = ts.tStart
 end_time(ts::FixedIntervalTimeSeries) = ts.tStart + ts.resolution * length(ts.value)
+timestamps(ts::FixedIntervalTimeSeries) = range(ts.tStart, step=ts.resolution, length=length(ts.value) + 1)
 
 get_period(ts::FixedIntervalTimeSeries, t::DateTime) = begin
     index = floor(Int64, /(promote(t - ts.tStart, ts.resolution)...)) + 1

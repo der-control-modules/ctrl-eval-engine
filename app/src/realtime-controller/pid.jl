@@ -27,8 +27,13 @@ function control(
     control_signals = []
     set_point = average_power(schedulePeriod)
 
-    # TODO: handle LoadFollowing as a use case
     # measured_value, _, _ = CtrlEvalEngine.get_period(useCase.loadPower, t)
+    idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
+    if idxloadFollowing !== nothing
+        # TODO: handle the case that LoadFollowing is a selected use case
+    else
+        # TODO: handle the case that LoadFollowing isn't selected
+    end
     process_variable = if isempty(spProgress.value)
         set_point
     else
