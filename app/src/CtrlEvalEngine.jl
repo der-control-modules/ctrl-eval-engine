@@ -86,7 +86,7 @@ function generate_output_dict(progress::Progress, useCases::AbstractVector{<:Use
     )
     outputDict = Dict(
         :metrics => metrics,
-        :timeCharts => generate_chart_data(progress)
+        :timeCharts => generate_chart_data(progress, useCases)
     )
     return outputDict
 end
@@ -117,7 +117,7 @@ function update_schedule_period_progress!(spp::VariableIntervalTimeSeries, actua
     end
 end
 
-function generate_chart_data(progress::Progress)
+function generate_chart_data(progress::Progress, useCases)
     mapreduce(
         uc -> use_case_charts(progress.operation, uc),
         vcat,
