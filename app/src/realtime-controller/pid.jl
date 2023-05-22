@@ -1,6 +1,6 @@
 using Dates, DiscretePIDs
 using CtrlEvalEngine.EnergyStorageSimulators: EnergyStorageSystem
-using CtrlEvalEngine.EnergyStorageUseCases: UseCase
+using CtrlEvalEngine.EnergyStorageUseCases: UseCase, LoadFollowing
 using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod
 
 struct PIDController <: RTController
