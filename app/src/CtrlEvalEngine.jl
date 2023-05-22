@@ -95,9 +95,10 @@ end
 function update_progress!(progress::Progress, t::Dates.DateTime, setting::SimSetting, ess::EnergyStorageSystem, powerKw::Real)
     push!(progress.operation.t, t)
     progress.progressPct = min((t - setting.simStart) / (setting.simEnd - setting.simStart), 1.0) * 100.0
-    push!(progress.operation.powerKw, powerKw)
-    push!(progress.operation.SOC, SOC(ess))
-    push!(progress.operation.SOH, SOH(ess))
+    # NOTE: exclude detailed operation in progress for now
+    # push!(progress.operation.powerKw, powerKw)
+    # push!(progress.operation.SOC, SOC(ess))
+    # push!(progress.operation.SOH, SOH(ess))
 end
 
 function update_progress!(scheduleHistory::ScheduleHistory, currentSchedule::EnergyStorageScheduling.Schedule)
