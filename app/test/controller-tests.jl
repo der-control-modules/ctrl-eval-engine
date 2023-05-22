@@ -11,14 +11,14 @@ using JSON
         LiIonBatteryStates(0.5, 0)
     )
     tStart = floor(now(), Hour(1))
-    # useCases = UseCase[
-    #     LoadFollowing(
-    #         VariableIntervalTimeSeries(
-    #             range(tStart; step=Hour(1), length=5),
-    #             [10, 20, 1, 10]
-    #         )
-    #     ),
-    # ]
+    useCases = UseCase[
+        EnergyArbitrage(
+            VariableIntervalTimeSeries(
+                range(tStart; step=Hour(1), length=5),
+                [10, 20, 1, 10]
+            )
+        )
+    ]
     t = tStart
     progress = CtrlEvalEngine.Progress(
         0.0,
@@ -32,7 +32,7 @@ using JSON
     schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
     spProgress = VariableIntervalTimeSeries([tStart], Float64[])
     while t < schedulePeriodEnd
-        controlSequence = control(ess, controller, schedulePeriod, UseCase[], t, spProgress)
+        controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
         for (powerSetpointKw, controlDuration) in controlSequence
             actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
             CtrlEvalEngine.update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
