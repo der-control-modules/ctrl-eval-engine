@@ -3,23 +3,27 @@ from ts_buffer import TSBuffer
 
 
 class AMACOperation:
-    def __init__(self, bess_config, amac_config):
+    def __init__(self, amac_config):
 
         # use case configs
         self.data_interval = 1
         self.damping_parameter = amac_config.get("dampingParameter", 8.0)
         self.max_window_size = amac_config.get("maximumAllowableWindowSize", 2100)
-
+        self.asc_power = 0
+        self.battery_output_power = 0
+        self.acceleration_parameter = 0
+        
+    def get_usecase_config(self, usecase_config):
         # TODO: move maximumPvPower and dependent variables out of __init__
-        maximum_pv_power = amac_config.get("maximumPvPower", 300)
-        maximum_allowable_variability_pct = amac_config.get(
+        maximum_pv_power = usecase_config.get("maximumPvPower", 300)
+        maximum_allowable_variability_pct = usecase_config.get(
             "maximumAllowableVariabilityPct", 50
         )
-        reference_variability_pct = amac_config.get("referenceVariabilityPct", 10)
-        minimum_allowable_variability_pct = amac_config.get(
+        reference_variability_pct = usecase_config.get("referenceVariabilityPct", 10)
+        minimum_allowable_variability_pct = usecase_config.get(
             "minimumAllowableVariabilityPct", 2
         )
-        self.bess_soc_ref = amac_config.get("referenceSocPct", 50.0)
+        self.bess_soc_ref = usecase_config.get("referenceSocPct", 50.0)
         self.variability = 0.0
         self.min_variability = (
             maximum_pv_power * minimum_allowable_variability_pct
@@ -28,7 +32,8 @@ class AMACOperation:
             maximum_pv_power * maximum_allowable_variability_pct
         ) / 100
         self.ref_variability = (maximum_pv_power * reference_variability_pct) / 100
-
+        
+    def get_bess_config(self, bess_config):
         # BESS config
         # TODO: move BESS config out of __init__
         self.bess_rated_kw = bess_config.get("bess_rated_kw", 125.0)
@@ -36,9 +41,7 @@ class AMACOperation:
         self.bess_eta = bess_config.get("bess_eta", 0.925)
         self.bess_soc_max = bess_config.get("bess_soc_max", 90)
         self.bess_soc_min = bess_config.get("bess_soc_min", 10)
-        self.asc_power = 0
-        self.battery_output_power = 0
-        self.acceleration_parameter = 0
+        
 
     def get_load_data(self, load_data, d_time, soc):
         self.load_power = load_data
@@ -92,8 +95,7 @@ class AMACOperation:
             self.acceleration_parameter = min(
                 (self.variability - self.min_variability)
                 / (self.ref_variability - self.min_variability),
-                1,
-            )
+                1,)
         else:
             self.acceleration_parameter = 0
 
