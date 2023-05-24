@@ -20,11 +20,7 @@ using JSON
         )
     ]
     t = tStart
-    progress = CtrlEvalEngine.Progress(
-        0.0,
-        CtrlEvalEngine.ScheduleHistory([t], Float64[]),
-        CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
-    )
+    opHist = CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
     setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
     controller = PIDController(Minute(1), 8.0, 0.5, 0.01)
 
@@ -37,7 +33,7 @@ using JSON
             actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
             CtrlEvalEngine.update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
             t += controlDuration
-            CtrlEvalEngine.update_progress!(progress, t, setting, ess, actualPowerKw)
+            CtrlEvalEngine.update_operation_history!(opHist, t, ess, actualPowerKw)
             if t > schedulePeriodEnd
                 break
             end
