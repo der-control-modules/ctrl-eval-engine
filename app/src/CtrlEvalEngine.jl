@@ -92,16 +92,19 @@ function generate_output_dict(progress::Progress, useCases::AbstractVector{<:Use
 end
 
 
-function update_progress!(progress::Progress, t::Dates.DateTime, setting::SimSetting, ess::EnergyStorageSystem, powerKw::Real)
-    push!(progress.operation.t, t)
+function update_progress!(progress::Progress, t::Dates.DateTime, setting::SimSetting)
     progress.progressPct = min((t - setting.simStart) / (setting.simEnd - setting.simStart), 1.0) * 100.0
-    # NOTE: exclude detailed operation in progress for now
-    # push!(progress.operation.powerKw, powerKw)
-    # push!(progress.operation.SOC, SOC(ess))
-    # push!(progress.operation.SOH, SOH(ess))
 end
 
-function update_progress!(scheduleHistory::ScheduleHistory, currentSchedule::EnergyStorageScheduling.Schedule)
+function update_operation_history!(opHistory::OperationHistory, t::Dates.DateTime, ess::EnergyStorageSystem, powerKw::Real)
+    push!(opHistory.t, t)
+    push!(opHistory.powerKw, powerKw)
+    push!(opHistory.SOC, SOC(ess))
+    push!(opHistory.SOH, SOH(ess))
+end
+
+
+function update_schedule_history!(scheduleHistory::ScheduleHistory, currentSchedule::EnergyStorageScheduling.Schedule)
     for schedulePeriod in currentSchedule
         push!(scheduleHistory.t, EnergyStorageScheduling.end_time(schedulePeriod))
         push!(scheduleHistory.powerKw, EnergyStorageScheduling.average_power(schedulePeriod))
@@ -190,9 +193,15 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug=false)
         OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)])
     )
 
+    outputProgress = Progress(
+        0.0,
+        ScheduleHistory([t], Float64[]),
+        OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)])
+    )
+
     while t < setting.simEnd
         currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t)
-        update_progress!(progress.schedule, currentSchedule)
+        update_schedule_history!(outputProgress.schedule, currentSchedule)
         for schedulePeriod in currentSchedule
             schedulePeriodEnd = min(EnergyStorageScheduling.end_time(schedulePeriod), setting.simEnd)
             spProgress = VariableIntervalTimeSeries([t], Float64[])
@@ -202,13 +211,14 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug=false)
                     actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
                     update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
                     t += controlDuration
-                    update_progress!(progress, t, setting, ess, actualPowerKw)
+                    update_operation_history!(outputProgress.operation, t, ess, actualPowerKw)
                     if t > schedulePeriodEnd
                         break
                     end
                 end
             end
         end
+        update_progress!(progress, t, setting)
         if debug
             @debug "Progress updated" progress
         else
@@ -216,7 +226,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug=false)
         end
     end
 
-    return generate_output_dict(progress, useCases, ess)
+    return generate_output_dict(outputProgress, useCases, ess)
 end
 
 end
