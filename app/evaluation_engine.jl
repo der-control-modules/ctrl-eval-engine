@@ -31,7 +31,7 @@ catch e
     else
         @error("Something went wrong during evaluation")
     end
-    Dict(:error => string(e))
+    Dict(:error => string(e, "\n", catch_backtrace()))
 end
 
 if debug
