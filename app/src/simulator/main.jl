@@ -65,10 +65,10 @@ function operate!(ess::EnergyStorageSystem, powerKw::Real, duration::Dates.Perio
     durationHour = /(promote(duration, Hour(1))...)
 
     if powerKw > p_max(ess, durationHour)
-        @warn "Operation attempt exceeds power upper bound. Falling back to bound." powerKw upper_bound = p_max(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
+        @warn "Operation attempt exceeds power upper bound. Falling back to bound." maxlog=10 powerKw upper_bound = p_max(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
         powerKw = p_max(ess, durationHour)
     elseif powerKw < p_min(ess, durationHour)
-        @warn "Operation attempt exceeds power lower bound. Falling back to bound." powerKw lower_bound = p_min(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
+        @warn "Operation attempt exceeds power lower bound. Falling back to bound." maxlog=10 powerKw lower_bound = p_min(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
         powerKw = p_min(ess, durationHour)
     end
 

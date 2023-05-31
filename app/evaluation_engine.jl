@@ -27,11 +27,11 @@ catch e
         throw(e)
     end
     if isa(e, InvalidInput)
-        @error("Invalid input")
+        @error("Invalid input", exception=(e, catch_backtrace()))
     else
-        @error("Something went wrong during evaluation")
+        @error("Something went wrong during evaluation", exception=(e, catch_backtrace()))
     end
-    Dict(:error => string(e, "\n", catch_backtrace()))
+    Dict(:error => string(e))
 end
 
 if debug
