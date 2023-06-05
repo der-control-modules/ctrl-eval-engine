@@ -6,7 +6,8 @@ The `EnergyStorageScheduling` provides type and functions related to the schedul
 module EnergyStorageScheduling
 
 using Dates
-using CtrlEvalEngine
+using PyCall
+using ..CtrlEvalEngine
 
 export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, average_power,
     OptScheduler, RLScheduler
@@ -45,8 +46,8 @@ Base.iterate(s::Schedule, index=1) =
 Base.eltype(::Type{Schedule}) = SchedulePeriod
 Base.length(s::Schedule) = length(s.powerKw)
 
-using CtrlEvalEngine.EnergyStorageSimulators
-using CtrlEvalEngine.EnergyStorageUseCases
+using ..CtrlEvalEngine.EnergyStorageSimulators
+using ..CtrlEvalEngine.EnergyStorageUseCases
 
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
@@ -64,7 +65,7 @@ function get_scheduler(schedulerConfig::Dict)
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
     elseif schedulerType == "optimization"
-        endSocInput = get(schedulerConfig,"endSocPct", nothing)
+        endSocInput = get(schedulerConfig, "endSocPct", nothing)
         endSoc = if isnothing(endSocInput)
             nothing
         elseif endSocInput isa Real
@@ -90,6 +91,10 @@ function get_scheduler(schedulerConfig::Dict)
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end
     return scheduler
+end
+
+function __init__()
+    @pyinclude(joinpath(@__DIR__, "RL.py"))
 end
 
 end

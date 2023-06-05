@@ -1,6 +1,4 @@
 
-using PyCall
-
 
 struct RLScheduler <: Scheduler
     resolution::Dates.Period
@@ -14,8 +12,6 @@ function RLScheduler(config::Dict)
 end
 
 function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractArray{UseCase}, tStart::Dates.DateTime)
-    pushfirst!(PyVector(pyimport("sys").path), ".")
-    pyRL = pyimport("RL").RL
     eaIdx = findfirst(uc -> uc isa EnergyArbitrage, useCases)
     if isnothing(eaIdx)
         error("No supported use case is found by ML scheduler")
@@ -30,26 +26,14 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractArray{UseCase
         "initial_soc" => SOC(ess)
     )
 
-    K = 24
-    K_interval = 1
-    rlParameters = Dict(
-        "epsilon_initial" => 0.7,
-        "epsilon_interval" => 50 * K / 24,
-        "epsilon_update" => 1.07,
-        "alpha" => 1,
-        "gamma" => 1,
-        "discrete" => 20
-    )
-
-    price = sample(ucEA.price, range(tStart; step=Hour(1), length=K))
-    _, _, battery_power = pyRL(
+    price = sample(ucEA.price, range(tStart; step=Hour(1), length=24))
+    @debug "Entering pyRL" price
+    _, _, battery_power = py"RL"(
         price,
         "energy_arbitrage",
         rlScheduler.approach,
         batteryParameters,
-        rlScheduler.numIter,
-        K,
-        K_interval
+        rlScheduler.numIter
     )
     return Schedule(battery_power, tStart, rlScheduler.resolution)
 end

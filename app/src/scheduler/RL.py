@@ -11,7 +11,8 @@ import itertools
 import random
 
 
-def RL(price, use_case, approach, Battery_parameters, iteration, K, K_interval):
+def RL(price, use_case, approach, Battery_parameters, iteration):
+    K = len(price)
     RL_parameters = {"iteration": iteration, "epsilon_initial": 0.7, "epsilon_interval": 50*K/24, "epsilon_update": 1.07, "alpha": 1, "gamma": 1, "discrete": 20}
     delta = (
         Battery_parameters["soc_high"] - Battery_parameters["soc_low"]
@@ -20,7 +21,7 @@ def RL(price, use_case, approach, Battery_parameters, iteration, K, K_interval):
         Battery_parameters["soc_low"], Battery_parameters["soc_high"], delta
     )
     states = np.round(states, 2)
-    time_states = np.arange(0, K, K_interval)
+    time_states = np.arange(0, K)
 
     c = list(itertools.product(time_states, states))
     Q_table = np.zeros([len(c), len(states)])
@@ -66,16 +67,16 @@ def RL(price, use_case, approach, Battery_parameters, iteration, K, K_interval):
                 rand_action = random.randint(1, len(help_assign))
                 action = help_assign[rand_action - 1]
                 if use_case == "energy_arbitrage":
-                    cost = -power[action] * price[t][0]
+                    cost = -power[action] * price[t]
                 if use_case == "frequency_regulation":
-                    cost = abs(power[action]) * price[t][1]
+                    cost = abs(power[action]) * price[t]
             else:
                 Q_action = np.argmax(Q_table[idx_current_state, help_assign])
                 action = help_assign[Q_action]
                 if use_case == "energy_arbitrage":
-                    cost = -power[action] * price[t][0]
+                    cost = -power[action] * price[t]
                 if use_case == "frequency_regulation":
-                    cost = abs(power[action]) * price[t][1]
+                    cost = abs(power[action]) * price[t]
 
             next_time = t + 1
             next_soc = states[action]
