@@ -6,9 +6,10 @@ The `EnergyStorageScheduling` provides type and functions related to the schedul
 module EnergyStorageScheduling
 
 using Dates
-using CtrlEvalEngine: InvalidInput, FixedIntervalTimeSeries
+using CtrlEvalEngine
 
-export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, average_power
+export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, average_power,
+    OptScheduler, RLScheduler
 
 abstract type Scheduler end
 
@@ -51,6 +52,7 @@ include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
 include("mock-python-scheduler.jl")
 include("manual-scheduler.jl")
+include("RL-scheduler.jl")
 
 """
     get_scheduler(inputDict::Dict)
@@ -83,6 +85,7 @@ function get_scheduler(schedulerConfig::Dict)
             minNetLoadKw=get(schedulerConfig, "minNetLoadKw", nothing),
             powerLimitPu=get(schedulerConfig, "powerLimitPct", 100.0) / 100
         )
+    elseif schedulerType == "ml"
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end

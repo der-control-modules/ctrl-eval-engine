@@ -6,13 +6,13 @@ Created on Mon Mar 27 14:29:51 2023
 """
 
 
-import pandas as pd
 import numpy as np
 import itertools
 import random
 
 
-def RL(price, use_case, approach, Battery_parameters, RL_parameters, K, K_interval):
+def RL(price, use_case, approach, Battery_parameters, iteration, K, K_interval):
+    RL_parameters = {"iteration": iteration, "epsilon_initial": 0.7, "epsilon_interval": 50*K/24, "epsilon_update": 1.07, "alpha": 1, "gamma": 1, "discrete": 20}
     delta = (
         Battery_parameters["soc_high"] - Battery_parameters["soc_low"]
     ) / RL_parameters["discrete"]
@@ -27,10 +27,8 @@ def RL(price, use_case, approach, Battery_parameters, RL_parameters, K, K_interv
 
     ep_update = RL_parameters["epsilon_interval"]
     epsilon = RL_parameters["epsilon_initial"]
-    # Batt_action = []
-    # Batt_power = []
 
-    for i in range(int(RL_parameters["iteration"])):
+    for i in range(iteration):
         batt_state = Battery_parameters["initial_soc"]
         total_cost = 0
 
@@ -84,7 +82,7 @@ def RL(price, use_case, approach, Battery_parameters, RL_parameters, K, K_interv
             Batt_power.append(power[action])
 
             if next_time < K:
-                if approach == "sarsa":
+                if approach == "SARSA":
                     next_state = c.index((next_time, next_soc))
                     status = np.ones(len(states))
                     powerbatt = (states - next_soc) * Battery_parameters["energy"]
@@ -133,11 +131,5 @@ def RL(price, use_case, approach, Battery_parameters, RL_parameters, K, K_interv
             batt_state = next_soc
             total_cost = total_cost + cost
             Batt_action.append(next_soc)
-        print(f"Episode: {i}")
-        print(f"Cost: {total_cost}")
 
     return total_cost, Batt_action, Batt_power
-    # plt.plot(Batt_action)
-    # plt.xlabel('Episode')
-    # plt.ylabel('Battery SOC')
-    # plt.show()
