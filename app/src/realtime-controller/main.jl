@@ -53,10 +53,10 @@ Create a realtime controller of appropriate type from the input dictionary
 """
 function get_rt_controller(config::Dict)
     controllerType = config["type"]
+    res = Millisecond(round(Int, convert(Millisecond, Second(1)).value * get(config,"resolutionSec", 60)))
     controller = if controllerType == "mock"
-        MockController(get(config, "resolution", Minute(15)))
+        MockController(res)
     elseif controllerType == "pid"
-        res = Millisecond(round(Int, convert(Millisecond, Second(1)).value * config["resolution"]))
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))

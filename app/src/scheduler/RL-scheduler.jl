@@ -11,7 +11,7 @@ function RLScheduler(config::Dict)
     RLScheduler(Hour(1), config["approach"], config["interation"])
 end
 
-function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractArray{UseCase}, tStart::Dates.DateTime)
+function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseCase}, tStart::Dates.DateTime)
     eaIdx = findfirst(uc -> uc isa EnergyArbitrage, useCases)
     if isnothing(eaIdx)
         error("No supported use case is found by ML scheduler")
