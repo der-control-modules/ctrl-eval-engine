@@ -87,6 +87,8 @@ function get_scheduler(schedulerConfig::Dict)
             powerLimitPu=get(schedulerConfig, "powerLimitPct", 100.0) / 100
         )
     elseif schedulerType == "ml"
+        res = Minute(round(Int, convert(Minute, Hour(1)).value * get(schedulerConfig, "scheduleResolutionHrs", 1)))
+        RLScheduler(res, schedulerConfig["approach"], round(Int, get(schedulerConfig, "iteration", 4000)))
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end
