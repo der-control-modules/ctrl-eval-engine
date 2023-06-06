@@ -90,6 +90,14 @@ end
             )
         )
     ]
-    sVar = schedule(ess, rlScheduler, useCases, tStart)
-    @test length(sVar.powerKw) == 24
+    sRL = schedule(ess, rlScheduler, useCases, tStart)
+    @test length(sRL.powerKw) == 24
+
+    rlScheduler = RLScheduler(Minute(30), "SARSA", 4000)
+    sRL2 = schedule(ess, rlScheduler, useCases, tStart)
+    @test length(sRL2.powerKw) == 48
+
+    rlScheduler = RLScheduler(Minute(15), "Q-learning", 4000)
+    sRL3 = schedule(ess, rlScheduler, useCases, tStart)
+    @test length(sRL3.powerKw) == 96
 end
