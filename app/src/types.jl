@@ -27,7 +27,13 @@ start_time(ts::VariableIntervalTimeSeries) = ts.t[1]
 end_time(ts::VariableIntervalTimeSeries) = ts.t[end]
 timestamps(ts::VariableIntervalTimeSeries) = ts.t
 values(ts::TimeSeries) = ts.value
+sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) = map(t -> get_period(ts, t)[1], tArray)
 
+"""
+    get_period(ts, t)
+
+Return the value of `ts` at `t` and the defined time period that encloses `t`.
+"""
 get_period(ts::VariableIntervalTimeSeries, t::DateTime) = begin
     if t ≥ ts.t[1] && t < ts.t[end]
         index = findfirst(ts.t .> t) - 1
