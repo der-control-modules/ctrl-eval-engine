@@ -85,8 +85,8 @@ end
     useCases = UseCase[
         EnergyArbitrage(
             VariableIntervalTimeSeries(
-                range(tStart; step=Hour(6), length=5),
-                [10, 20, 1, 10]
+                range(tStart; step=Hour(6), length=6),
+                [10, 20, 1, 10, 5]
             )
         )
     ]

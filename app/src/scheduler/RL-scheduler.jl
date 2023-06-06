@@ -26,8 +26,14 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractArray{UseCase
         "initial_soc" => SOC(ess)
     )
 
-    price = sample(ucEA.price, range(tStart; step=rlScheduler.resolution, stop=tStart + Hour(24)))
-    @debug "Entering pyRL" price
+    price = sample(
+        ucEA.price,
+        range(
+            tStart;
+            step=rlScheduler.resolution,
+            stop=tStart + Hour(24) - Second(1)
+        )
+    )
     _, _, battery_power = py"RL"(
         price,
         "energy_arbitrage",
