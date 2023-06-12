@@ -23,7 +23,7 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseC
         "efficiency" => ηRT(ess),
         "soc_low" => e_min(ess) / e_max(ess) * 100,
         "soc_high" => 100,
-        "initial_soc" => SOC(ess)
+        "initial_soc" => SOC(ess) * 100
     )
 
     price = sample(
