@@ -21,9 +21,9 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseC
         "energy" => e_max(ess),
         "power" => p_max(ess),
         "efficiency" => ηRT(ess),
-        "soc_low" => e_min(ess) / e_max(ess) * 100,
-        "soc_high" => 100,
-        "initial_soc" => SOC(ess) * 100
+        "soc_low" => e_min(ess) / e_max(ess),
+        "soc_high" => 1,
+        "initial_soc" => SOC(ess)
     )
 
     price = sample(
@@ -34,10 +34,12 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseC
             stop=tStart + Hour(24) - Second(1)
         )
     )
+    @debug "RL-scheduler" t=tStart resolution=rlScheduler.resolution price batteryParameters
     _, _, battery_power = py"RL"(
         price,
         "energy_arbitrage",
         rlScheduler.approach,
+        /(promote(rlScheduler.resolution, Hour(1))...),
         batteryParameters,
         rlScheduler.numIter
     )

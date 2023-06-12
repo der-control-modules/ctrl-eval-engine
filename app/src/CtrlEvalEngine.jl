@@ -46,7 +46,7 @@ function generate_output_dict(progress::Progress, useCases::AbstractVector{<:Use
     # Annual usage
     dischargedEnergyKwh = discharged_energy(progress.operation)
     annualDischargedEnergyKwh = dischargedEnergyKwh / simPeriodLengthInYear
-    annualCycles = round(annualDischargedEnergyKwh / e_max(ess), sigdigits=2)
+    annualCycles = round(Int, annualDischargedEnergyKwh / e_max(ess))
     annualDischargedEnergyMwh = round(annualDischargedEnergyKwh / 1000, sigdigits=3)
     annualUsageString = (
         annualDischargedEnergyKwh ≥ 1000 ?
@@ -222,7 +222,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug=false)
         end
         update_progress!(progress, t, setting)
         if debug
-            @debug "Progress updated" progress
+            @debug "Progress updated" t progress
         else
             s3_put(BUCKET_NAME, "$JOB_ID/progress.json", JSON.json(progress))
         end

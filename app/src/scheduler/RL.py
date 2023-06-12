@@ -11,7 +11,7 @@ import itertools
 import random
 
 
-def RL(price, use_case, approach, Battery_parameters, iteration):
+def RL(price, use_case, approach, resolution_hrs, Battery_parameters, iteration):
     K = len(price)
     RL_parameters = {"iteration": iteration, "epsilon_initial": 0.7, "epsilon_interval": 50*K/24, "epsilon_update": 1.07, "alpha": 1, "gamma": 1, "discrete": 20}
     delta = (
@@ -42,7 +42,7 @@ def RL(price, use_case, approach, Battery_parameters, iteration):
 
         for t in range(K):
             status = np.ones(len(states))
-            powerbatt = (states - batt_state) * Battery_parameters["energy"]
+            powerbatt = (states - batt_state) * Battery_parameters["energy"] / resolution_hrs
             index_ch = [idx for idx, val in enumerate(powerbatt) if val > 0]
             index_dis = [idx for idx, val in enumerate(powerbatt) if val < 0]
             power = powerbatt
@@ -86,7 +86,7 @@ def RL(price, use_case, approach, Battery_parameters, iteration):
                 if approach == "SARSA":
                     next_state = c.index((next_time, next_soc))
                     status = np.ones(len(states))
-                    powerbatt = (states - next_soc) * Battery_parameters["energy"]
+                    powerbatt = (states - next_soc) * Battery_parameters["energy"] / resolution_hrs
                     index_ch_nxt = [idx for idx, val in enumerate(powerbatt) if val > 0]
                     index_dis_nxt = [
                         idx for idx, val in enumerate(powerbatt) if val < 0
