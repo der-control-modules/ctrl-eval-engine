@@ -28,15 +28,22 @@ function _operate!(ess::MockSimulator, powerKw::Real, durationHour::Real)
 end
 
 SOC(ess::MockSimulator) = ess.states.SOC
+energy_state(ess::MockSimulator) = ess.states.SOC * ess.specs.energyCapacityKwh
 
 p_max(ess::MockSimulator, durationHour::Real) = min(
     ess.specs.powerCapacityKw,
     SOC(ess) * ess.specs.energyCapacityKwh / durationHour * ess.specs.efficiency
 )
+p_max(ess::MockSimulator) = ess.specs.powerCapacityKw
 
 p_min(ess::MockSimulator, durationHour::Real) = max(
     -ess.specs.powerCapacityKw,
     (SOC(ess) - 1) * ess.specs.energyCapacityKwh / durationHour / ess.specs.efficiency
 )
+p_min(ess::MockSimulator) = -ess.specs.powerCapacityKw
 
-ηRT(ess::MockSimulator) = 1
+e_max(ess::MockSimulator) = ess.specs.energyCapacityKwh
+
+e_min(ess::MockSimulator) = 0
+
+ηRT(ess::MockSimulator) = ess.specs.efficiency ^ 2
