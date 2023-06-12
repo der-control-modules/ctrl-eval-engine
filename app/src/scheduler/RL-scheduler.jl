@@ -21,8 +21,8 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseC
         "energy" => e_max(ess),
         "power" => p_max(ess),
         "efficiency" => ηRT(ess),
-        "soc_low" => e_min(ess) / e_max(ess),
-        "soc_high" => 1,
+        "soc_low" => e_min(ess) / e_max(ess) * 100,
+        "soc_high" => 100,
         "initial_soc" => SOC(ess)
     )
 
