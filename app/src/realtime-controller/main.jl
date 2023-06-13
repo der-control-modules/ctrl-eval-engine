@@ -63,11 +63,15 @@ function get_rt_controller(config::Dict)
     elseif controllerType == "pid"
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
     elseif controllerType == "amac"
-        AMAController(config, ess, useCases)
+        AMAController(config)
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))
     end
     return controller
+end
+
+function __init__()
+    @pyinclude(joinpath(@__DIR__, "amac.py"))
 end
 
 end

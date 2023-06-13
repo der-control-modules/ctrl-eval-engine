@@ -1,9 +1,53 @@
-from datetime import timedelta
-from ts_buffer import TSBuffer
+from collections import deque
+from pytz import timezone
+from datetime import datetime, timedelta
+from itertools import islice
+import pandas as pd
 
+
+class TSBuffer(object):
+    def __init__(self, maxlen=None, tz='UTC'):
+        self.deque = deque(maxlen=maxlen)
+        self.tz = tz
+
+    def __len__(self):
+        return len(self.deque)
+
+    def append(self, value, d_time=None):
+        d_time = d_time if d_time else timezone(self.tz).localize(datetime.utcnow())
+        data = (d_time, value)
+        self.deque.append(data)
+
+    def maxlen(self, new_length):
+        if new_length > self.deque.maxlen:
+            self.deque = deque(self.deque, maxlen=new_length)
+
+    def extend(self, values):
+        self.deque.extend(values)
+
+    def get(self, horizon=None, times=True):
+        try:
+            contents = self.deque
+            if horizon and horizon < len(contents):
+                contents = list(islice(contents, len(contents) - horizon, None))
+            if times:
+                contents = zip(*contents)
+            else:
+                contents = zip(*contents)[1]
+        except Exception as e:
+            print("In Buffer.get(), exception is: {}".format(str(e)))
+            return [(), ()]
+        else:
+            return contents
+
+    def get_series(self, horizon=0):
+        horizon = horizon if horizon < len(self.deque) else 0
+        contents = self.deque if not horizon else list(islice(self.deque, len(self.deque) - horizon, None))
+        contents = zip(*contents) if contents else [[],[]]
+        return pd.Series(contents[1], contents[0])
 
 class AMACOperation:
-    def __init__(self, bess_config, amac_config):
+    def __init__(self, amac_config):
 
         # use case configs
         self.data_interval = 1
@@ -29,23 +73,31 @@ class AMACOperation:
         ) / 100
         self.ref_variability = (maximum_pv_power * reference_variability_pct) / 100
 
-        # BESS config
-        # TODO: move BESS config out of __init__
-        self.bess_rated_kw = bess_config.get("bess_rated_kw", 125.0)
-        self.bess_rated_kWh = bess_config.get("bess_rated_kWh", 200.0)
-        self.bess_eta = bess_config.get("bess_eta", 0.925)
-        self.bess_soc_max = bess_config.get("bess_soc_max", 90)
-        self.bess_soc_min = bess_config.get("bess_soc_min", 10)
+        self.bess_rated_kw = 125.0
+        self.bess_rated_kwh = 200.0
+        self.bess_eta = 0.925
+        self.bess_soc_max = 90
+        self.bess_soc_min = 10
         self.asc_power = 0
         self.battery_output_power = 0
         self.acceleration_parameter = 0
+        self.soc_pct = 50
 
-    def get_load_data(self, load_data, d_time, soc):
-        self.load_power = load_data
-        self.d_time = d_time
-        self.soc = soc
         self.max_interval_length = 900
         self.load_total_data = TSBuffer(maxlen=self.max_interval_length)
+
+    def get_bess_data(self, rated_kw, rated_kwh, eta, soc_pct, soc_max, soc_min):
+        # BESS config
+        self.bess_rated_kw = rated_kw
+        self.bess_rated_kwh = rated_kwh
+        self.bess_eta = eta
+        self.bess_soc_max = soc_max
+        self.bess_soc_min = soc_min
+        self.soc_pct = soc_pct
+
+    def get_load_data(self, load_data, d_time):
+        self.load_power = load_data
+        self.d_time = d_time
         self.load_total_data.append(self.load_power, self.d_time)
 
     def publish_calculations(self, value_buffer, horizon=900):
@@ -74,7 +126,7 @@ class AMACOperation:
         return forecast_value, forecast_time
 
     def calculate_soc(self, soc_now, power):
-        return (power / (self.bess_rated_kWh * self.data_interval) / 36) + soc_now
+        return (power / (self.bess_rated_kwh * self.data_interval) / 36) + soc_now
 
     def run_model(self):
         self.publish_calculations(self.load_total_data)
@@ -97,7 +149,7 @@ class AMACOperation:
         else:
             self.acceleration_parameter = 0
 
-        delta_soc = float(self.soc) - float(self.bess_soc_ref)
+        delta_soc = float(self.soc_pct) - float(self.bess_soc_ref)
         sign = 1 if delta_soc <= 0 else -1
         if abs(delta_soc) > 0:
             self.asc_power = (
@@ -128,7 +180,7 @@ class AMACOperation:
             ama_power = residuals[0] - residuals[1]
             instantaneous_residual = ama_power + self.asc_power
             self.battery_power = self.load_power - instantaneous_residual
-        new_soc = self.calculate_soc(self.battery_power, self.soc)
+        new_soc = self.calculate_soc(self.battery_power, self.soc_pct)
 
         message = [
             {
