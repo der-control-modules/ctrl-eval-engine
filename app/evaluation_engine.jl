@@ -11,7 +11,7 @@ inputDict, debug, JOB_ID = if length(ARGS) == 1
     (
         JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$inputJobId.json")))),
         false,
-        inputJobId 
+        inputJobId
     )
 elseif length(ARGS) == 2 && ARGS[1] == "debug"
     (JSON.parsefile(ARGS[2]), true, nothing)
@@ -27,9 +27,9 @@ catch e
         throw(e)
     end
     if isa(e, InvalidInput)
-        @error("Invalid input")
+        @error("Invalid input", exception = (e, catch_backtrace()))
     else
-        @error("Something went wrong during evaluation")
+        @error("Something went wrong during evaluation", exception = (e, catch_backtrace()))
     end
     Dict(:error => string(e))
 end
@@ -39,6 +39,11 @@ if debug
         JSON.print(f, outputDict)
     end
 else
+    if haskey(outputDict, :error)
+        @warn "Error occurred. Uploading info for debugging"
+        s3_put(BUCKET_NAME, "error/$JOB_ID.json", JSON.json(Dict(:input => inputDict, :output => outputDict), 4))
+    end
+
     @info "Uploading output data"
     s3_put(BUCKET_NAME, "output/$JOB_ID.json", JSON.json(outputDict))
 end

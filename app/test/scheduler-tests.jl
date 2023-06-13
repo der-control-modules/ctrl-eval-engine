@@ -1,7 +1,7 @@
 
-using CtrlEvalEngine.EnergyStorageSimulators: LiIonBattery, LFP_LiIonBatterySpecs, LiIonBatteryStates
+using CtrlEvalEngine.EnergyStorageSimulators: LiIonBattery, LFP_LiIonBatterySpecs, LiIonBatteryStates, p_max
 using CtrlEvalEngine.EnergyStorageUseCases: UseCase, EnergyArbitrage, Regulation, RegulationPricePoint
-using CtrlEvalEngine.EnergyStorageScheduling: schedule, OptScheduler, ManualScheduler
+using CtrlEvalEngine.EnergyStorageScheduling: schedule, OptScheduler, ManualScheduler, RLScheduler
 using Dates
 
 @testset "Manual Scheduler" begin
@@ -44,6 +44,15 @@ end
     sFix = schedule(ess, optScheduler, useCases, tStart)
     @test all(sVar.powerKw .== sFix.powerKw)
 
+    # Sub-hourly resolution
+    optScheduler = OptScheduler(Minute(30), Hour(4), 8)
+    sSubHourly = schedule(ess, optScheduler, useCases, tStart)
+    @test all(sum(reshape(sSubHourly.powerKw, 2, :), dims=1)[:] ./ 2 .≈ sFix.powerKw)
+
+    optScheduler = OptScheduler(Minute(15), Hour(4), 16)
+    sSubHourly = schedule(ess, optScheduler, useCases, tStart)
+    @test all(sum(reshape(sSubHourly.powerKw, 4, :), dims=1)[:] ./ 4 .≈ sFix.powerKw)
+
     # OptScheduler with regulation
     useCases = UseCase[
         EnergyArbitrage(
@@ -65,6 +74,8 @@ end
             1.0
         )
     ]
+
+    optScheduler = OptScheduler(Hour(1), Hour(4), 8)
     sReg = schedule(ess, optScheduler, useCases, tStart)
     @test length(sReg.powerKw) == 4
 
@@ -73,3 +84,31 @@ end
     @test all(abs.(s2.powerKw) .≤ p_max(ess.specs) * 0.5)
     @test all(s2.powerKw .≤ 100)
 end
+
+# @testset "ML Scheduler" begin
+#     ess = LiIonBattery(
+#         LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+#         LiIonBatteryStates(0.5, 0)
+#     )
+
+#     rlScheduler = RLScheduler(Hour(1), "Q-learning", 4000)
+#     tStart = floor(now(), Hour(1))
+#     useCases = UseCase[
+#         EnergyArbitrage(
+#             VariableIntervalTimeSeries(
+#                 range(tStart; step=Hour(6), length=6),
+#                 [10, 20, 1, 10, 5]
+#             )
+#         )
+#     ]
+#     sRL = schedule(ess, rlScheduler, useCases, tStart)
+#     @test length(sRL.powerKw) == 24
+
+#     rlScheduler = RLScheduler(Minute(30), "SARSA", 4000)
+#     sRL2 = schedule(ess, rlScheduler, useCases, tStart)
+#     @test length(sRL2.powerKw) == 48
+
+#     rlScheduler = RLScheduler(Minute(15), "Q-learning", 4000)
+#     sRL3 = schedule(ess, rlScheduler, useCases, tStart)
+#     @test length(sRL3.powerKw) == 96
+# end

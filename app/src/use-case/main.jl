@@ -5,8 +5,10 @@ The `EnergyStorageUseCases` provides type and functions for
 """
 module EnergyStorageUseCases
 
-export UseCase, get_use_cases, calculate_metrics, calculate_net_benefit, EnergyArbitrage,
- Regulation, RegulationOperationPoint, regulation_income, LoadFollowing
+export UseCase, get_use_cases, calculate_metrics, calculate_net_benefit, use_case_charts,
+    EnergyArbitrage,
+    Regulation, RegulationOperationPoint, regulation_income,
+    LoadFollowing
 
 abstract type UseCase end
 
@@ -29,5 +31,8 @@ calculate_net_benefit(::Progress, ::UseCase) = 0.0
 
 # Return an empty vector if a use-case-specific method is not implemented
 calculate_metrics(::OperationHistory, ::UseCase) = []
+
+# Return an empty vector if a use-case-specific method is not implemented
+use_case_charts(::OperationHistory, ::UseCase) = []
 
 end

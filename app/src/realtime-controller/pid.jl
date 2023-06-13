@@ -1,6 +1,6 @@
 using Dates, DiscretePIDs
-using CtrlEvalEngine.EnergyStorageSimulators: EnergyStorageSystem
-using CtrlEvalEngine.EnergyStorageUseCases: UseCase
+using CtrlEvalEngine.EnergyStorageSimulators
+using CtrlEvalEngine.EnergyStorageUseCases: UseCase, LoadFollowing
 using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod
 
 struct PIDController <: RTController
@@ -27,17 +27,31 @@ function control(
     control_signals = []
     set_point = average_power(schedulePeriod)
 
-    # TODO: handle LoadFollowing as a use case
     # measured_value, _, _ = CtrlEvalEngine.get_period(useCase.loadPower, t)
+    idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
+    if idxloadFollowing !== nothing
+        # TODO: handle the case that LoadFollowing is a selected use case
+    else
+        # TODO: handle the case that LoadFollowing isn't selected
+    end
     process_variable = if isempty(spProgress.value)
         set_point
     else
         CtrlEvalEngine.mean(spProgress)
     end
     control_signal = pid(set_point, process_variable)
-    push!(control_signals, control_signal)
     # print(["spProgress.powerKw:", spProgress.powerKw, "set_point:", set_point, "measured_value:", measured_value, "process_variable:", process_variable, "control_signal:", control_signal])
-    return ControlSequence([control_signal], controller.resolution)
+    return ControlSequence(
+        [
+            min(
+                max(
+                    p_min(ess, controller.resolution),
+                    control_signal
+                ), p_max(ess, controller.resolution)
+            )
+        ],
+        controller.resolution
+    )
 end
 
 

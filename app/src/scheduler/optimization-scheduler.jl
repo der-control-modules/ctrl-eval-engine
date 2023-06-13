@@ -20,14 +20,15 @@ function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{<:UseCa
     K = scheduler.optWindow
     scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
     rte = ηRT(ess)
+    resolutionHrs = /(promote(scheduler.resolution, Hour(1))...)
 
     m = Model(Clp.Optimizer)
     set_optimizer_attribute(m, "LogLevel", 0)
 
     @variables(m, begin
         e_min(ess) ≤ eng[1:K+1] ≤ e_max(ess) # energy state
-        0 ≤ p_p[1:K] ≤ p_max(ess.specs) * scheduler.powerLimitPu  # discharging power
-        0 ≤ p_n[1:K] ≤ -p_min(ess.specs) * scheduler.powerLimitPu  # charging power
+        0 ≤ p_p[1:K] ≤ p_max(ess) * scheduler.powerLimitPu  # discharging power
+        0 ≤ p_n[1:K] ≤ -p_min(ess) * scheduler.powerLimitPu  # charging power
         pBatt[1:K]   # power output of the battery
         r_p[1:K] ≥ 0  # regulation-up power
         r_n[1:K] ≥ 0   # regulation-down power
@@ -42,15 +43,15 @@ function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{<:UseCa
         eng[1] == energy_state(ess)
         pBatt .== p_p .- p_n
         # regulation up
-        r_p .<= p_max(ess.specs) .- pBatt
-        r_p .+ spn .≤ p_max(ess.specs) .- pBatt
-        eng[1:end-1] .- scheduler.regulationReserve .* r_p .+ spn ./ rte .≥ 0
+        r_p .<= p_max(ess) .- pBatt
+        r_p .+ spn .≤ p_max(ess) .- pBatt
+        eng[1:end-1] .- (scheduler.regulationReserve .* r_p .+ spn ./ rte) .* resolutionHrs .≥ 0
         # regulation down
-        r_n .<= -p_min(ess.specs) .+ pBatt
-        eng[1:end-1] .+ scheduler.regulationReserve .* r_n .* rte .<= e_max(ess)
+        r_n .<= -p_min(ess) .+ pBatt
+        eng[1:end-1] .+ (scheduler.regulationReserve .* r_n .* rte) .* resolutionHrs .<= e_max(ess)
         # regulation
         # energy state dynamics
-        eng[2:end] .== eng[1:end-1] .- p_p ./ rte + p_n .* rte
+        eng[2:end] .== eng[1:end-1] .- (p_p ./ rte .- p_n .* rte) .* resolutionHrs
         # TODO: PV generation dump
         pvp .== 0
     end)

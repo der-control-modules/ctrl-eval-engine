@@ -92,7 +92,7 @@ end
         inputDict = JSON.parse("""
             {
                 "type": "pid",
-                "resolution": 5,
+                "resolutionSec": 5,
                 "Kp": 8,
                 "Ti": 0.3,
                 "Td": 1
@@ -107,7 +107,7 @@ end
         inputDict = JSON.parse("""
             {
                 "type": "pid",
-                "resolution": 0.1,
+                "resolutionSec": 0.1,
                 "Kp": 8,
                 "Ti": 0.3,
                 "Td": 1
