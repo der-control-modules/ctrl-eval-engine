@@ -24,7 +24,15 @@ include("variability-mitigation.jl")
 include("load-following.jl")
 
 function get_use_cases(inputDict::Dict)
-    return [EnergyArbitrage(inputDict["Energy Arbitrage"]["data"])]
+    return map(inputDict) do (name, config)
+        if name === "Energy Arbitrage"
+            EnergyArbitrage(config["data"])
+        elseif name === "Variability Mitigation"
+            VariabilityMitigation(config)
+        else
+            throw(InvalidInput("Unknown use case: $name"))
+        end
+    end
 end
 
 # Return zero if a use-case-specific method is not implemented

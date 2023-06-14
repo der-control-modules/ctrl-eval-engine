@@ -9,11 +9,11 @@ end
 
 Construct an `VariabilityMitigation` object from `input` dictionary or array
 """
-VariabilityMitigation(inputDict::Dict) = VariabilityMitigation(
+VariabilityMitigation(config::Dict) = VariabilityMitigation(
     FixedIntervalTimeSeries(
-        DateTime(inputDict["pvGenProfile"][1]["DateTime"]),
-        DateTime(inputDict["pvGenProfile"][2]["DateTime"]) - DateTime(inputDict[1]["DateTime"]),
-        [Float64(row["Power"]) for row in inputDict["pvGenProfile"]]
+        DateTime(config["pvGenProfile"][1]["DateTime"]),
+        DateTime(config["pvGenProfile"][2]["DateTime"]) - DateTime(config[1]["DateTime"]),
+        [Float64(row["Power"]) for row in config["pvGenProfile"]]
     ),
-    inputDict["ratedPowerKw"]
+    config["ratedPowerKw"]
 )
