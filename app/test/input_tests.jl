@@ -146,7 +146,7 @@ end
         }"""
     )
     useCases = get_use_cases(inputDict)
-    @test useCases <: AbstractVector{<:UseCase}
+    @test useCases isa AbstractVector{<:UseCase}
     @test useCases[1] isa VariabilityMitigation
     @test useCases[1].pvGenProfile.resolution == Minute(1)
     @test useCases[1].ratedPowerKw == 500
