@@ -1,7 +1,7 @@
 
 struct VariabilityMitigation <: UseCase
     pvGenProfile::FixedIntervalTimeSeries{<:TimePeriod,Float64}
-    ratedPower::Float64
+    ratedPowerKw::Float64
 end
 
 """
