@@ -1,6 +1,4 @@
 
-export VariabilityMitigation
-
 struct VariabilityMitigation <: UseCase
     pvGenProfile::FixedIntervalTimeSeries{<:TimePeriod,Float64}
     ratedPower::Float64

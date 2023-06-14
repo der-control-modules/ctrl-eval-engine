@@ -4,7 +4,7 @@ using JSON
 using Dates
 
 export evaluate_controller,
-    TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, timestamps, values, sample,
+    TimeSeries, FixedIntervalTimeSeries, VariableIntervalTimeSeries, timestamps, values, sample, get_period,
     InvalidInput
 
 include("types.jl")

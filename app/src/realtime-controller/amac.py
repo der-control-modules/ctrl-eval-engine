@@ -43,7 +43,7 @@ class TSBuffer(object):
     def get_series(self, horizon=0):
         horizon = horizon if horizon < len(self.deque) else 0
         contents = self.deque if not horizon else list(islice(self.deque, len(self.deque) - horizon, None))
-        contents = zip(*contents) if contents else [[],[]]
+        contents = list(zip(*contents)) if contents else [[],[]]
         return pd.Series(contents[1], contents[0])
 
 class AMACOperation:
@@ -79,7 +79,7 @@ class AMACOperation:
         self.bess_soc_max = 90
         self.bess_soc_min = 10
         self.asc_power = 0
-        self.battery_output_power = 0
+        self.battery_power = 0
         self.acceleration_parameter = 0
         self.soc_pct = 50
 
@@ -100,7 +100,7 @@ class AMACOperation:
         self.d_time = d_time
         self.load_total_data.append(self.load_power, self.d_time)
 
-    def publish_calculations(self, value_buffer, horizon=900):
+    def publish_calculations(self, value_buffer, horizon=2):
         if len(value_buffer) < horizon:
             return
         value_series = value_buffer.get_series()
@@ -164,6 +164,7 @@ class AMACOperation:
         if self.variability < self.min_variability:
             self.asc_power = 0
 
+        ama_power = 0
         if window_size > 0:
             residuals = []
             for horizon in [
@@ -172,7 +173,7 @@ class AMACOperation:
             ]:
                 # TODO: This should have a setting for the meter to use, or should only be reading one if appropriate.
                 residual_forecast, residual_forecast_time = self.persistence(
-                    self.load_power,
+                    self.load_total_data,
                     window_size=horizon,
                     forecast_delta=timedelta(seconds=self.data_interval),
                 )
@@ -184,6 +185,8 @@ class AMACOperation:
 
         message = [
             {
+                "load_len": len(self.load_total_data),
+                # "load": self.load_total_data.get_series() if len(self.load_total_data) > 0 else None,
                 "ama_power": ama_power,
                 "battery_power": self.battery_power,
                 "instantaneous_residual": instantaneous_residual,

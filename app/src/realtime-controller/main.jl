@@ -12,7 +12,7 @@ using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
 
-export get_rt_controller, control
+export get_rt_controller, control, PIDController, AMAController
 
 abstract type RTController end
 

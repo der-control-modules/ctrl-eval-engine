@@ -8,7 +8,8 @@ module EnergyStorageUseCases
 export UseCase, get_use_cases, calculate_metrics, calculate_net_benefit, use_case_charts,
     EnergyArbitrage,
     Regulation, RegulationOperationPoint, regulation_income,
-    LoadFollowing
+    LoadFollowing,
+    VariabilityMitigation
 
 abstract type UseCase end
 
