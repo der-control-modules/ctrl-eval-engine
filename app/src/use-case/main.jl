@@ -23,8 +23,8 @@ include("regulation.jl")
 include("variability-mitigation.jl")
 include("load-following.jl")
 
-function get_use_cases(inputDict::Dict)
-    return map(inputDict) do (name, config)
+get_use_cases(inputDict::Dict) =
+    [
         if name === "Energy Arbitrage"
             EnergyArbitrage(config["data"])
         elseif name === "Variability Mitigation"
@@ -32,8 +32,8 @@ function get_use_cases(inputDict::Dict)
         else
             throw(InvalidInput("Unknown use case: $name"))
         end
-    end
-end
+        for (name, config) in inputDict
+    ]
 
 # Return zero if a use-case-specific method is not implemented
 calculate_net_benefit(::Progress, ::UseCase) = 0.0
