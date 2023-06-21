@@ -65,6 +65,7 @@ e_min(_::LiIonBattery) = 0
 SOH(ess::LiIonBattery) = ess.specs.C_p / (ess.specs.C_p + ess.specs.H_p * ess.states.d)
 
 p_max(specs::LiIonBatterySpecs) = specs.powerCapacityKw
+p_max(ess::LiIonBattery) = p_max(ess.specs)
 
 p_max(ess::LiIonBattery, durationHour::Real) = min(
     ess.specs.powerCapacityKw,
@@ -74,6 +75,7 @@ p_max(ess::LiIonBattery, durationHour::Real) = min(
 )
 
 p_min(specs::LiIonBatterySpecs) = -specs.powerCapacityKw
+p_min(ess::LiIonBattery) = p_min(ess.specs)
 
 p_min(ess::LiIonBattery, durationHour::Real) = max(
     -ess.specs.powerCapacityKw,

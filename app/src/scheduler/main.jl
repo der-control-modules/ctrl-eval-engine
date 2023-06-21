@@ -6,9 +6,11 @@ The `EnergyStorageScheduling` provides type and functions related to the schedul
 module EnergyStorageScheduling
 
 using Dates
-using CtrlEvalEngine: InvalidInput, FixedIntervalTimeSeries
+using PyCall
+using ..CtrlEvalEngine
 
-export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, average_power
+export get_scheduler, schedule, Schedule, SchedulePeriod, SchedulePeriodProgress, duration, average_power,
+    OptScheduler, RLScheduler
 
 abstract type Scheduler end
 
@@ -44,13 +46,14 @@ Base.iterate(s::Schedule, index=1) =
 Base.eltype(::Type{Schedule}) = SchedulePeriod
 Base.length(s::Schedule) = length(s.powerKw)
 
-using CtrlEvalEngine.EnergyStorageSimulators
-using CtrlEvalEngine.EnergyStorageUseCases
+using ..CtrlEvalEngine.EnergyStorageSimulators
+using ..CtrlEvalEngine.EnergyStorageUseCases
 
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
 include("mock-python-scheduler.jl")
 include("manual-scheduler.jl")
+include("RL-scheduler.jl")
 
 """
     get_scheduler(inputDict::Dict)
@@ -62,7 +65,7 @@ function get_scheduler(schedulerConfig::Dict)
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
     elseif schedulerType == "optimization"
-        endSocInput = get(schedulerConfig,"endSocPct", nothing)
+        endSocInput = get(schedulerConfig, "endSocPct", nothing)
         endSoc = if isnothing(endSocInput)
             nothing
         elseif endSocInput isa Real
@@ -83,10 +86,17 @@ function get_scheduler(schedulerConfig::Dict)
             minNetLoadKw=get(schedulerConfig, "minNetLoadKw", nothing),
             powerLimitPu=get(schedulerConfig, "powerLimitPct", 100.0) / 100
         )
+    elseif schedulerType == "ml"
+        res = Minute(round(Int, convert(Minute, Hour(1)).value * get(schedulerConfig, "scheduleResolutionHrs", 1)))
+        RLScheduler(res, schedulerConfig["approach"], round(Int, get(schedulerConfig, "iteration", 4000)))
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end
     return scheduler
+end
+
+function __init__()
+    @pyinclude(joinpath(@__DIR__, "RL.py"))
 end
 
 end

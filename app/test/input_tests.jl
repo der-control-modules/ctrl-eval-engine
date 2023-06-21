@@ -4,6 +4,7 @@ using Dates
 using CtrlEvalEngine.EnergyStorageSimulators
 using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageRTControl
+using CtrlEvalEngine.EnergyStorageUseCases
 
 @testset "ESS Input" begin
     inputDict = JSON.parse("""
@@ -92,7 +93,7 @@ end
         inputDict = JSON.parse("""
             {
                 "type": "pid",
-                "resolution": 5,
+                "resolutionSec": 5,
                 "Kp": 8,
                 "Ti": 0.3,
                 "Td": 1
@@ -107,7 +108,7 @@ end
         inputDict = JSON.parse("""
             {
                 "type": "pid",
-                "resolution": 0.1,
+                "resolutionSec": 0.1,
                 "Kp": 8,
                 "Ti": 0.3,
                 "Td": 1
@@ -116,4 +117,37 @@ end
         @test controller isa EnergyStorageRTControl.PIDController
         @test controller.resolution == Millisecond(100)
     end
+end
+
+@testset "Use Case Input" begin
+    inputDict = JSON.parse("""
+        {
+            "Variability Mitigation": {
+                "pvGenProfile": [
+                    {
+                        "DateTime": "2018-01-21T00:00",
+                        "Power": 351.54
+                    },
+                    {
+                        "DateTime": "2018-01-21T00:01",
+                        "Power": 351.5
+                    },
+                    {
+                        "DateTime": "2018-01-21T00:02",
+                        "Power": 35.54
+                    },
+                    {
+                        "DateTime": "2018-01-21T00:03",
+                        "Power": 51.54
+                    }
+                ],
+                "ratedPowerKw": 500
+            }
+        }"""
+    )
+    useCases = get_use_cases(inputDict)
+    @test useCases isa AbstractVector{<:UseCase}
+    @test useCases[1] isa VariabilityMitigation
+    @test useCases[1].pvGenProfile.resolution == Minute(1)
+    @test useCases[1].ratedPowerKw == 500
 end
