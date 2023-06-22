@@ -41,3 +41,38 @@ function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
     ]
 end
 
+
+use_case_charts(op::OperationHistory, ucEA::EnergyArbitrage) = [
+    Dict(
+        :title => "Energy Arbitrage",
+        :xAxis => Dict(:title => "Time"),
+        :yAxisLeft => Dict(:title => "Power (kW)"),
+        :yAxisRight => Dict(:title => "Price ($/kWh)"),
+        :data => [
+            Dict(
+                :x => op.t,
+                :y => op.powerKw,
+                :type => "interval",
+                :name => "Actual Power"
+            ),
+            Dict(
+                :x => timestamps(ucEA.price),
+                :y => values(ucEA.price),
+                :type => "interval",
+                :name => "Energy Price",
+                :yAxis => "right"
+            ),
+        ]
+    ),
+    Dict(
+        :xAxis => Dict(:title => "Time"),
+        :yAxisLeft => Dict(:title => "Cumulative Net Income ($)"),
+        :data => [
+            Dict(
+                :x => timestamps(ucEA.price),
+                :y => values(mean(power(op), timestamps(ucEA.price))) .* values(ucEA.price),
+                :type => "interval"
+            ),
+        ]
+    )
+]

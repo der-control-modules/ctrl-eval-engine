@@ -89,7 +89,27 @@ end
 
 LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(ts1, ts2)
 
-mean(ts::TimeSeries) = VariableIntervalTimeSeries([start_time(ts), end_time(ts)], [1]) ⋅ ts / /(promote(end_time(ts) - start_time(ts), Hour(1))...)
+"""
+    mean(ts, t1=start_time(ts), t2=end_time(ts))
+
+Calculate the average value of `ts` during the time period from `t1` to `t2`.
+"""
+mean(ts::TimeSeries, t1::DateTime, t2::DateTime) = VariableIntervalTimeSeries([t1, t2], [1]) ⋅ ts / /(promote(t2 - t1, Hour(1))...)
+mean(ts::TimeSeries) = mean(ts, start_time(ts), end_time(ts))
+
+"""
+    mean(ts::TimeSeries, t::AbstractVector{DateTime})
+
+Return a new time series with the average values of `ts` during the time periods defined in `t`.
+"""
+function mean(ts::TimeSeries, t::AbstractVector{DateTime})
+    values = [
+        mean(ts, t[idx], t[idx+1])
+        for idx = 1:length(t)-1
+    ]
+    VariableIntervalTimeSeries(t, values)
+end
+
 
 struct ScheduleHistory
     t::Vector{Dates.DateTime}
