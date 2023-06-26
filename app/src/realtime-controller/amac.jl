@@ -7,16 +7,7 @@ struct AMAController <: RTController
 end
 
 function AMAController(controlConfig::Dict)
-    pyAmac = py"AMACOperation"(
-        # Dict(
-        #     :bess_rated_kw => p_max(ess),
-        #     :bess_rated_kWh => e_max(ess),
-        #     :bess_eta => ηRT(ess),
-        #     :bess_soc_max => 100,
-        #     :bess_soc_min => 0
-        # ),
-        controlConfig
-    )
+    pyAmac = py"AMACOperation"(controlConfig)
     AMAController(pyAmac)
 end
 

@@ -117,6 +117,20 @@ end
         @test controller isa EnergyStorageRTControl.PIDController
         @test controller.resolution == Millisecond(100)
     end
+
+    @testset "AMAC" begin
+        amac = AMAController(JSON.parse("""
+        {
+            "type": "ama",
+            "referenceSocPct":50,
+            "maximumAllowableWindowSize": 2100,
+            "maximumAllowableVariabilityPct":50,
+            "referenceVariabilityPct": 10,
+            "activationThresholdVariabilityPct": 2,
+            "dampingParameter": 8
+        }
+        """))
+    end
 end
 
 @testset "Use Case Input" begin
