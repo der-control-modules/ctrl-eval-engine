@@ -24,10 +24,31 @@ struct VariableIntervalTimeSeries{V} <: TimeSeries{V}
 end
 
 start_time(ts::VariableIntervalTimeSeries) = ts.t[1]
+
 end_time(ts::VariableIntervalTimeSeries) = ts.t[end]
+
 timestamps(ts::VariableIntervalTimeSeries) = ts.t
+
 values(ts::TimeSeries) = ts.value
-sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) = map(t -> get_period(ts, t)[1], tArray)
+
+sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) =
+    map(t -> get_period(ts, t)[1], tArray)
+
+function truncate(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+    t1 = max(tStart, start_time(ts))
+    t2 = min(tEnd, end_time(ts))
+    if t1 < ts.t[end] && t2 ≥ ts.t[1]
+        # some overlap time period
+        idx1 = findfirst(ts.t .> t1) - 1
+        idx2 = findfirst(ts.t .> t2) - 1
+        VariableIntervalTimeSeries(
+            [tStart, ts.t[idx1+1:idx2]..., tEnd],
+            ts.value[idx1:idx2],
+        )
+    else
+        VariableIntervalTimeSeries([tStart], [])
+    end
+end
 
 """
     get_period(ts, t)
@@ -50,13 +71,41 @@ struct FixedIntervalTimeSeries{R<:Dates.Period,V} <: TimeSeries{V}
 end
 
 start_time(ts::FixedIntervalTimeSeries) = ts.tStart
+
 end_time(ts::FixedIntervalTimeSeries) = ts.tStart + ts.resolution * length(ts.value)
-timestamps(ts::FixedIntervalTimeSeries) = range(ts.tStart, step=ts.resolution, length=length(ts.value) + 1)
+
+timestamps(ts::FixedIntervalTimeSeries) =
+    range(ts.tStart; step = ts.resolution, length = length(ts.value) + 1)
+
+function truncate(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+    t1 = max(tStart, start_time(ts))
+    t2 = min(tEnd, end_time(ts))
+    if t1 < end_time(ts) && t2 ≥ start_time(ts)
+        # some overlap time period
+        idx1 = div(t1 - ts.tStart, ts.resolution) + 1
+        idx2 = div(t2 - ts.tStart, ts.resolution) + 1
+        if Dates.value((t1 - ts.tStart) % ts.resolution) == 0 &&
+           Dates.value((t2 - ts.tStart) % ts.resolution) == 0
+            FixedIntervalTimeSeries(tStart, ts.resolution, ts.value[idx1:idx2])
+        else
+            VariableIntervalTimeSeries(
+                [tStart, (ts.tStart .+ (idx1:idx2-1) .* ts.resolution)..., tEnd],
+                ts.value[idx1:idx2],
+            )
+        end
+    else
+        VariableIntervalTimeSeries([tStart], [])
+    end
+end
 
 get_period(ts::FixedIntervalTimeSeries, t::DateTime) = begin
     index = floor(Int64, /(promote(t - ts.tStart, ts.resolution)...)) + 1
     if index ≥ 1 && index ≤ length(ts.value)
-        (ts.value[index], ts.tStart + ts.resolution * (index - 1), ts.tStart + ts.resolution * index)
+        (
+            ts.value[index],
+            ts.tStart + ts.resolution * (index - 1),
+            ts.tStart + ts.resolution * index,
+        )
     else
         (nothing, nothing, nothing)
     end
@@ -94,7 +143,9 @@ LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(t
 
 Calculate the average value of `ts` during the time period from `t1` to `t2`.
 """
-mean(ts::TimeSeries, t1::DateTime, t2::DateTime) = VariableIntervalTimeSeries([t1, t2], [1]) ⋅ ts / /(promote(t2 - t1, Hour(1))...)
+mean(ts::TimeSeries, t1::DateTime, t2::DateTime) =
+    VariableIntervalTimeSeries([t1, t2], [1]) ⋅ ts / /(promote(t2 - t1, Hour(1))...)
+
 mean(ts::TimeSeries) = mean(ts, start_time(ts), end_time(ts))
 
 """
@@ -103,19 +154,14 @@ mean(ts::TimeSeries) = mean(ts, start_time(ts), end_time(ts))
 Return a new time series with the average values of `ts` during the time periods defined in `t`.
 """
 function mean(ts::TimeSeries, t::AbstractVector{DateTime})
-    values = [
-        mean(ts, t[idx], t[idx+1])
-        for idx = 1:length(t)-1
-    ]
+    values = [mean(ts, t[idx], t[idx+1]) for idx = 1:length(t)-1]
     VariableIntervalTimeSeries(t, values)
 end
-
 
 struct ScheduleHistory
     t::Vector{Dates.DateTime}
     powerKw::Vector{Float64}
 end
-
 
 """
     OperationHistory
@@ -131,6 +177,7 @@ struct OperationHistory
 end
 
 start_time(op::OperationHistory) = op.t[1]
+
 end_time(op::OperationHistory) = op.t[end]
 
 power(op::OperationHistory) = VariableIntervalTimeSeries(op.t, op.powerKw)
@@ -167,7 +214,6 @@ mutable struct Progress
     schedule::ScheduleHistory
     operation::OperationHistory
 end
-
 
 mutable struct InvalidInput <: Exception
     msg::String
