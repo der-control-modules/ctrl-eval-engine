@@ -48,7 +48,7 @@ end
         LiIonBatteryStates(0.5, 0)
     )
     tStart = floor(now(), Hour(1))
-    useCases = UseCase[
+    useCases = [
         VariabilityMitigation(
             FixedIntervalTimeSeries(
                 tStart + Minute(20),
@@ -67,7 +67,9 @@ end
             "referenceVariabilityPct" => 10,
             "minimumAllowableVariabilityPct" => 5,
             "referenceSocPct" => 50.0,
-        )
+        ),
+        ess,
+        useCases
     )
 
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))

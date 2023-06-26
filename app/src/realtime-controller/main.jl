@@ -55,7 +55,7 @@ include("amac.jl")
 
 Create a realtime controller of appropriate type from the input dictionary
 """
-function get_rt_controller(config::Dict)
+function get_rt_controller(config::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
     controllerType = config["type"]
     res = Millisecond(round(Int, convert(Millisecond, Second(1)).value * get(config,"resolutionSec", 60)))
     controller = if controllerType == "mock"
@@ -63,7 +63,7 @@ function get_rt_controller(config::Dict)
     elseif controllerType == "pid"
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
     elseif controllerType == "amac"
-        AMAController(config)
+        AMAController(config, ess, useCases)
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))
     end

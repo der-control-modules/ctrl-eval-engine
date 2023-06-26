@@ -70,27 +70,32 @@ class AMACOperation:
         self.acceleration_parameter = 0
         self.soc_pct = 50
         
-    def get_usecase_config(self, usecase_config):
-        # TODO: move maximumPvPower and dependent variables out of __init__
-        maximum_pv_power = usecase_config.get("maximumPvPower", 300)
-        maximum_allowable_variability_pct = usecase_config.get(
+        self.bess_soc_ref = amac_config.get("referenceSocPct", 50.0)
+
+        self.maximum_allowable_variability_pct = amac_config.get(
             "maximumAllowableVariabilityPct", 50
         )
-        reference_variability_pct = usecase_config.get("referenceVariabilityPct", 10)
-        minimum_allowable_variability_pct = usecase_config.get(
+        self.reference_variability_pct = amac_config.get("referenceVariabilityPct", 10)
+        self.minimum_allowable_variability_pct = amac_config.get(
             "minimumAllowableVariabilityPct", 2
         )
-        self.bess_soc_ref = usecase_config.get("referenceSocPct", 50.0)
+
         self.variability = 0.0
+        self.min_variability = 0.0
+        self.max_variability = 0.0
+        self.ref_variability = 0.0
+
+    
+    def set_PV_rated_power(self, maximum_pv_power):
         self.min_variability = (
-            maximum_pv_power * minimum_allowable_variability_pct
+            maximum_pv_power * self.minimum_allowable_variability_pct
         ) / 100
         self.max_variability = (
-            maximum_pv_power * maximum_allowable_variability_pct
+            maximum_pv_power * self.maximum_allowable_variability_pct
         ) / 100
-        self.ref_variability = (maximum_pv_power * reference_variability_pct) / 100
+        self.ref_variability = (maximum_pv_power * self.reference_variability_pct) / 100
 
-    def get_bess_data(self, rated_kw, rated_kwh, eta, soc_pct, soc_max, soc_min):
+    def set_bess_data(self, rated_kw, rated_kwh, eta, soc_pct, soc_max, soc_min):
         # BESS config
         self.bess_rated_kw = rated_kw
         self.bess_rated_kwh = rated_kwh
@@ -99,7 +104,7 @@ class AMACOperation:
         self.bess_soc_min = soc_min
         self.soc_pct = soc_pct
 
-    def get_load_data(self, load_data, d_time):
+    def set_load_data(self, load_data, d_time):
         self.load_power = load_data
         self.d_time = d_time
         self.load_total_data.append(self.load_power, self.d_time)

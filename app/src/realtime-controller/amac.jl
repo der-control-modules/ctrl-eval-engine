@@ -4,15 +4,12 @@ using CtrlEvalEngine: start_time, end_time
 
 struct AMAController <: RTController
     pyAmac
+    passive::Bool
 end
 
-function AMAController(controlConfig::Dict)
+function AMAController(controlConfig::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
     pyAmac = py"AMACOperation"(controlConfig)
-    AMAController(pyAmac)
-end
-
-function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::AbstractArray{UseCase}, t::DateTime, _::VariableIntervalTimeSeries)
-    amac.pyAmac.get_bess_data(
+    pyAmac.set_bess_data(
         p_max(ess),
         e_max(ess) - e_min(ess),
         ηRT(ess),
@@ -22,12 +19,21 @@ function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::Abstrac
     )
 
     idxVM = findfirst(uc -> uc isa VariabilityMitigation, useCases)
+    if !isnothing
+        pyAmac.set_PV_rated_power(useCases[idxVM].ratedPowerKw)
+    end
 
-    if isnothing(idxVM)
-        # If VariabilityMitigation use case isn't selected, fall back to passive control according to schedule
+    # If VariabilityMitigation use case isn't selected, fall back to passive control according to schedule
+    AMAController(pyAmac, isnothing(idxVM))
+end
+
+function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::AbstractArray{<:UseCase}, t::DateTime, _::VariableIntervalTimeSeries)
+    if amac.passive
+        # Fall back to passive control according to schedule
         return ControlSequence([sp.powerKw], sp.duration)
     end
 
+    idxVM = findfirst(uc -> uc isa VariabilityMitigation, useCases)
     ucVM = useCases[idxVM]
     if start_time(ucVM.pvGenProfile) > t
         # Passive control until start of PV generation or end of SchedulePeriod, whichever comes first
@@ -44,7 +50,7 @@ function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::Abstrac
     end
 
     # Active control if PV generation is present
-    amac.pyAmac.get_load_data(currentPvGen, t)
+    amac.pyAmac.set_load_data(currentPvGen, t)
     _, _, battery_power, _ = amac.pyAmac.run_model()
     battery_power = min(max(p_min(ess), battery_power + sp.powerKw), p_max(ess))
     return ControlSequence([battery_power], ucVM.pvGenProfile.resolution)
