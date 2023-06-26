@@ -51,7 +51,7 @@ include("pid.jl")
 include("amac.jl")
 
 """
-    get_rt_controller(inputDict::Dict)
+    get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
 
 Create a realtime controller of appropriate type from the input dictionary
 """
