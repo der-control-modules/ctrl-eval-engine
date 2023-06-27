@@ -19,7 +19,7 @@ function AMAController(controlConfig::Dict, ess::EnergyStorageSystem, useCases::
     )
 
     idxVM = findfirst(uc -> uc isa VariabilityMitigation, useCases)
-    if !isnothing
+    if !isnothing(idxVM)
         pyAmac.set_PV_rated_power(useCases[idxVM].ratedPowerKw)
     end
 
@@ -51,7 +51,7 @@ function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::Abstrac
 
     # Active control if PV generation is present
     amac.pyAmac.set_load_data(currentPvGen, t)
-    _, _, battery_power, _ = amac.pyAmac.run_model()
+    battery_power = amac.pyAmac.run_model()
     battery_power = min(max(p_min(ess), battery_power + sp.powerKw), p_max(ess))
     return ControlSequence([battery_power], ucVM.pvGenProfile.resolution)
 end

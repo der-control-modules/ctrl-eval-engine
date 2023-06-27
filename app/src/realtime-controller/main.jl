@@ -62,7 +62,7 @@ function get_rt_controller(config::Dict, ess::EnergyStorageSystem, useCases::Abs
         MockController(res)
     elseif controllerType == "pid"
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
-    elseif controllerType == "amac"
+    elseif controllerType == "ama"
         AMAController(config, ess, useCases)
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))

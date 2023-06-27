@@ -195,16 +195,16 @@ class AMACOperation:
                 instantaneous_residual = ama_power + self.asc_power
                 self.battery_power = self.load_power - instantaneous_residual
 
-            message = [
-                {
-                    #"load_len": len(self.load_total_data),
-                    "load": self.load_total_data.get_series() if len(self.load_total_data) > 0 else None,
-                    "ama_power": ama_power,
-                    "battery_power": self.battery_power,
-                    "instantaneous_residual": instantaneous_residual,
-                    "window": window_size,
-                }
-            ]
+            # message = [
+            #     {
+            #         #"load_len": len(self.load_total_data),
+            #         "load": self.load_total_data.get_series() if len(self.load_total_data) > 0 else None,
+            #         "ama_power": ama_power,
+            #         "battery_power": self.battery_power,
+            #         "instantaneous_residual": instantaneous_residual,
+            #         "window": window_size,
+            #     }
+            # ]
             #print(message)
             return self.battery_power
     

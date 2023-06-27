@@ -122,7 +122,13 @@ end
 end
 
 @testset "RTController Input" begin
+
     @testset "PIDController" begin
+        ess = LiIonBattery(
+            EnergyStorageSimulators.LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+            EnergyStorageSimulators.LiIonBatteryStates(0.5, 0)
+        )
+
         inputDict = JSON.parse("""
             {
                 "type": "pid",
@@ -131,7 +137,7 @@ end
                 "Ti": 0.3,
                 "Td": 1
             }""")
-        controller = get_rt_controller(inputDict, ess, useCases)
+        controller = get_rt_controller(inputDict, ess, UseCase[])
         @test controller isa EnergyStorageRTControl.PIDController
         @test controller.resolution == Second(5)
         @test controller.Kp == 8
@@ -146,12 +152,28 @@ end
                 "Ti": 0.3,
                 "Td": 1
             }""")
-        controller = get_rt_controller(inputDict, ess, useCases)
+        controller = get_rt_controller(inputDict, ess, UseCase[])
         @test controller isa EnergyStorageRTControl.PIDController
         @test controller.resolution == Millisecond(100)
     end
 
     @testset "AMAC" begin
+        ess = LiIonBattery(
+            EnergyStorageSimulators.LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+            EnergyStorageSimulators.LiIonBatteryStates(0.5, 0)
+        )
+
+        useCases = [
+            VariabilityMitigation(
+                FixedIntervalTimeSeries(
+                    now(),
+                    Minute(5),
+                    [60.0, 110.6, 200.0, 90.0, 20.0, 92.4, 150.7]
+                ),
+                300
+            )
+        ]
+
         inputDict = JSON.parse("""
             {
                 "type": "ama",
@@ -165,5 +187,10 @@ end
         )
         controller = get_rt_controller(inputDict, ess, useCases)
         @test controller isa EnergyStorageRTControl.AMAController
+        @test !controller.passive
+
+        controller = get_rt_controller(inputDict, ess, UseCase[])
+        @test controller isa EnergyStorageRTControl.AMAController
+        @test controller.passive
     end
 end
