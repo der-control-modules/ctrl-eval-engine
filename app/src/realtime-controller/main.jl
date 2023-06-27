@@ -7,9 +7,12 @@ module EnergyStorageRTControl
 
 using CtrlEvalEngine
 using Dates
-using ..EnergyStorageScheduling
+using PyCall
+using CtrlEvalEngine.EnergyStorageScheduling
+using CtrlEvalEngine.EnergyStorageUseCases
+using CtrlEvalEngine.EnergyStorageSimulators
 
-export get_rt_controller, control
+export get_rt_controller, control, PIDController, AMAController
 
 abstract type RTController end
 
@@ -45,23 +48,30 @@ control(
 
 include("mock-rt-controller.jl")
 include("pid.jl")
+include("amac.jl")
 
 """
-    get_rt_controller(inputDict::Dict)
+    get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
 
 Create a realtime controller of appropriate type from the input dictionary
 """
-function get_rt_controller(config::Dict)
+function get_rt_controller(config::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
     controllerType = config["type"]
     res = Millisecond(round(Int, convert(Millisecond, Second(1)).value * get(config,"resolutionSec", 60)))
     controller = if controllerType == "mock"
         MockController(res)
     elseif controllerType == "pid"
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
+    elseif controllerType == "ama"
+        AMAController(config, ess, useCases)
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))
     end
     return controller
+end
+
+function __init__()
+    @pyinclude(joinpath(@__DIR__, "amac.py"))
 end
 
 end

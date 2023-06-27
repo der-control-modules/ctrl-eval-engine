@@ -34,7 +34,7 @@ values(ts::TimeSeries) = ts.value
 sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) =
     map(t -> get_period(ts, t)[1], tArray)
 
-function truncate(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+function extract(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
     t1 = max(tStart, start_time(ts))
     t2 = min(tEnd, end_time(ts))
     if t1 < ts.t[end] && t2 ≥ ts.t[1]
@@ -77,7 +77,7 @@ end_time(ts::FixedIntervalTimeSeries) = ts.tStart + ts.resolution * length(ts.va
 timestamps(ts::FixedIntervalTimeSeries) =
     range(ts.tStart; step = ts.resolution, length = length(ts.value) + 1)
 
-function truncate(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
     t1 = max(tStart, start_time(ts))
     t2 = min(tEnd, end_time(ts))
     if t1 < end_time(ts) && t2 ≥ start_time(ts)

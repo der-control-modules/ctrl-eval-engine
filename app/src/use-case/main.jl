@@ -14,7 +14,8 @@ export UseCase,
     Regulation,
     RegulationOperationPoint,
     regulation_income,
-    LoadFollowing
+    LoadFollowing,
+    VariabilityMitigation
 
 abstract type UseCase end
 
@@ -34,17 +35,19 @@ using JuMP
 
 include("energy-arbitrage.jl")
 include("regulation.jl")
+include("variability-mitigation.jl")
 include("load-following.jl")
 
-function get_use_cases(inputDict::Dict, setting::SimSetting)
-    return [
-        EnergyArbitrage(
-            inputDict["Energy Arbitrage"]["data"],
-            setting.simStart,
-            setting.simEnd,
-        ),
-    ]
-end
+get_use_cases(inputDict::Dict, setting::SimSetting) = [
+    if name === "Energy Arbitrage"
+        EnergyArbitrage(config["data"], setting.simStart, setting.simEnd)
+    elseif name === "Variability Mitigation"
+        VariabilityMitigation(config)
+    else
+        throw(InvalidInput("Unknown use case: $name"))
+    end
+    for (name, config) in inputDict
+]
 
 # Return zero if a use-case-specific method is not implemented
 calculate_net_benefit(::Progress, ::UseCase) = 0.0

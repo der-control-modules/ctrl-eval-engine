@@ -4,6 +4,7 @@ using Dates
 using CtrlEvalEngine.EnergyStorageSimulators
 using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageRTControl
+using CtrlEvalEngine.EnergyStorageUseCases
 
 @testset "ESS Input" begin
     inputDict = JSON.parse("""
@@ -23,6 +24,39 @@ using CtrlEvalEngine.EnergyStorageRTControl
     ess = get_ess(inputDict)
     @test SOC(ess) ≥ 0 && SOC(ess) ≤ 1
     @test SOH(ess) ≥ 0 && SOH(ess) ≤ 1
+end
+
+@testset "Use Case Input" begin
+    inputDict = JSON.parse("""
+        {
+            "Variability Mitigation": {
+                "pvGenProfile": [
+                    {
+                        "DateTime": "2018-01-21T00:00",
+                        "Power": 351.54
+                    },
+                    {
+                        "DateTime": "2018-01-21T00:01",
+                        "Power": 351.5
+                    },
+                    {
+                        "DateTime": "2018-01-21T00:02",
+                        "Power": 35.54
+                    },
+                    {
+                        "DateTime": "2018-01-21T00:03",
+                        "Power": 51.54
+                    }
+                ],
+                "ratedPowerKw": 500
+            }
+        }"""
+    )
+    useCases = get_use_cases(inputDict, CtrlEvalEngine.SimSetting(DateTime(2018), DateTime(2019)))
+    @test useCases isa AbstractVector{<:UseCase}
+    @test useCases[1] isa VariabilityMitigation
+    @test useCases[1].pvGenProfile.resolution == Minute(1)
+    @test useCases[1].ratedPowerKw == 500
 end
 
 @testset "Scheduler Input" begin
@@ -88,7 +122,13 @@ end
 end
 
 @testset "RTController Input" begin
+
     @testset "PIDController" begin
+        ess = LiIonBattery(
+            EnergyStorageSimulators.LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+            EnergyStorageSimulators.LiIonBatteryStates(0.5, 0)
+        )
+
         inputDict = JSON.parse("""
             {
                 "type": "pid",
@@ -97,7 +137,7 @@ end
                 "Ti": 0.3,
                 "Td": 1
             }""")
-        controller = get_rt_controller(inputDict)
+        controller = get_rt_controller(inputDict, ess, UseCase[])
         @test controller isa EnergyStorageRTControl.PIDController
         @test controller.resolution == Second(5)
         @test controller.Kp == 8
@@ -112,8 +152,45 @@ end
                 "Ti": 0.3,
                 "Td": 1
             }""")
-        controller = get_rt_controller(inputDict)
+        controller = get_rt_controller(inputDict, ess, UseCase[])
         @test controller isa EnergyStorageRTControl.PIDController
         @test controller.resolution == Millisecond(100)
+    end
+
+    @testset "AMAC" begin
+        ess = LiIonBattery(
+            EnergyStorageSimulators.LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+            EnergyStorageSimulators.LiIonBatteryStates(0.5, 0)
+        )
+
+        useCases = [
+            VariabilityMitigation(
+                FixedIntervalTimeSeries(
+                    now(),
+                    Minute(5),
+                    [60.0, 110.6, 200.0, 90.0, 20.0, 92.4, 150.7]
+                ),
+                300
+            )
+        ]
+
+        inputDict = JSON.parse("""
+            {
+                "type": "ama",
+                "referenceSocPct":50,
+                "maximumAllowableWindowSize": 2100,
+                "maximumAllowableVariabilityPct":50,
+                "referenceVariabilityPct": 10,
+                "activationThresholdVariabilityPct": 2,
+                "dampingParameter": 8
+            }"""
+        )
+        controller = get_rt_controller(inputDict, ess, useCases)
+        @test controller isa EnergyStorageRTControl.AMAController
+        @test !controller.passive
+
+        controller = get_rt_controller(inputDict, ess, UseCase[])
+        @test controller isa EnergyStorageRTControl.AMAController
+        @test controller.passive
     end
 end

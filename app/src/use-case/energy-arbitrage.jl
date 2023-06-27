@@ -27,7 +27,7 @@ EnergyArbitrage(input::AbstractVector{<:Dict}) = EnergyArbitrage(
 
 EnergyArbitrage(input::AbstractVector{<:Dict}, tStart::DateTime, tEnd::DateTime) =
     EnergyArbitrage(
-        truncate(
+        extract(
             VariableIntervalTimeSeries(
                 push!(
                     [DateTime(row["date"]) for row in input],

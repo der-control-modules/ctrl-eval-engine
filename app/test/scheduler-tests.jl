@@ -85,30 +85,30 @@ end
     @test all(s2.powerKw .≤ 100)
 end
 
-# @testset "ML Scheduler" begin
-#     ess = LiIonBattery(
-#         LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
-#         LiIonBatteryStates(0.5, 0)
-#     )
+@testset "ML Scheduler" begin
+    ess = LiIonBattery(
+        LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+        LiIonBatteryStates(0.5, 0)
+    )
 
-#     rlScheduler = RLScheduler(Hour(1), "Q-learning", 4000)
-#     tStart = floor(now(), Hour(1))
-#     useCases = UseCase[
-#         EnergyArbitrage(
-#             VariableIntervalTimeSeries(
-#                 range(tStart; step=Hour(6), length=6),
-#                 [10, 20, 1, 10, 5]
-#             )
-#         )
-#     ]
-#     sRL = schedule(ess, rlScheduler, useCases, tStart)
-#     @test length(sRL.powerKw) == 24
+    rlScheduler = RLScheduler(Hour(1), "Q-learning", 4000)
+    tStart = floor(now(), Hour(1))
+    useCases = UseCase[
+        EnergyArbitrage(
+            VariableIntervalTimeSeries(
+                range(tStart; step=Hour(6), length=6),
+                [10, 20, 1, 10, 5]
+            )
+        )
+    ]
+    sRL = schedule(ess, rlScheduler, useCases, tStart)
+    @test length(sRL.powerKw) == 24
 
-#     rlScheduler = RLScheduler(Minute(30), "SARSA", 4000)
-#     sRL2 = schedule(ess, rlScheduler, useCases, tStart)
-#     @test length(sRL2.powerKw) == 48
+    rlScheduler = RLScheduler(Minute(30), "SARSA", 4000)
+    sRL2 = schedule(ess, rlScheduler, useCases, tStart)
+    @test length(sRL2.powerKw) == 48
 
-#     rlScheduler = RLScheduler(Minute(15), "Q-learning", 4000)
-#     sRL3 = schedule(ess, rlScheduler, useCases, tStart)
-#     @test length(sRL3.powerKw) == 96
-# end
+    rlScheduler = RLScheduler(Minute(15), "Q-learning", 4000)
+    sRL3 = schedule(ess, rlScheduler, useCases, tStart)
+    @test length(sRL3.powerKw) == 96
+end

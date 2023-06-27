@@ -10,7 +10,8 @@ export evaluate_controller,
     timestamps,
     values,
     sample,
-    truncate,
+    get_period,
+    extract,
     InvalidInput
 
 include("types.jl")
@@ -200,6 +201,8 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
     )
     rtController = EnergyStorageRTControl.get_rt_controller(
         inputDict["selectedControlTypeCharacteristics"]["rtController"],
+        ess,
+        useCases,
     )
 
     t = setting.simStart
