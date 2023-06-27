@@ -11,7 +11,7 @@ export evaluate_controller,
     values,
     sample,
     get_period,
-    truncate,
+    extract,
     InvalidInput
 
 include("types.jl")
