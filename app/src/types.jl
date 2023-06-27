@@ -29,7 +29,7 @@ end_time(ts::VariableIntervalTimeSeries) = ts.t[end]
 
 timestamps(ts::VariableIntervalTimeSeries) = ts.t
 
-values(ts::TimeSeries) = ts.value
+get_values(ts::TimeSeries) = ts.value
 
 sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) =
     map(t -> get_period(ts, t)[1], tArray)
