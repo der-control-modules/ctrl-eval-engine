@@ -10,6 +10,7 @@ export evaluate_controller,
     timestamps,
     get_values,
     sample,
+    mean,
     get_period,
     extract,
     InvalidInput
