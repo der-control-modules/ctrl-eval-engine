@@ -25,20 +25,19 @@ EnergyArbitrage(input::AbstractVector) = EnergyArbitrage(
     ),
 )
 
-EnergyArbitrage(input::AbstractVector, tStart::DateTime, tEnd::DateTime) =
-    EnergyArbitrage(
-        extract(
-            VariableIntervalTimeSeries(
-                push!(
-                    [DateTime(row["date"]) for row in input],
-                    DateTime(input[end]["date"]) + Hour(1),
-                ),
-                [Float64(row["lmp"]) for row in input],
+EnergyArbitrage(input::AbstractVector, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage(
+    extract(
+        VariableIntervalTimeSeries(
+            push!(
+                [DateTime(row["date"]) for row in input],
+                DateTime(input[end]["date"]) + Hour(1),
             ),
-            tStart,
-            tEnd,
+            [Float64(row["lmp"]) for row in input],
         ),
-    )
+        tStart,
+        tEnd,
+    ),
+)
 
 calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) =
     power(progress.operation) ⋅ ucEA.price
@@ -83,8 +82,13 @@ use_case_charts(op::OperationHistory, ucEA::EnergyArbitrage) = [
         :data => [
             Dict(
                 :x => timestamps(ucEA.price),
-                :y =>
-                    pushfirst!(cumsum(get_values(mean(power(op), timestamps(ucEA.price))) .* get_values(ucEA.price)), 0),
+                :y => pushfirst!(
+                    cumsum(
+                        get_values(mean(power(op), timestamps(ucEA.price))) .*
+                        get_values(ucEA.price),
+                    ),
+                    0,
+                ),
                 :type => "instance",
             ),
         ],
