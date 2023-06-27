@@ -84,8 +84,8 @@ use_case_charts(op::OperationHistory, ucEA::EnergyArbitrage) = [
             Dict(
                 :x => timestamps(ucEA.price),
                 :y =>
-                    get_values(mean(power(op), timestamps(ucEA.price))) .* get_values(ucEA.price),
-                :type => "interval",
+                    pushfirst!(cumsum(get_values(mean(power(op), timestamps(ucEA.price))) .* get_values(ucEA.price)), 0),
+                :type => "instance",
             ),
         ],
     ),

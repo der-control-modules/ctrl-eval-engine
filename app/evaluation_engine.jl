@@ -36,7 +36,7 @@ end
 
 if debug
     open(ARGS[2][1:end-5] * "_output.json", "w") do f
-        JSON.print(f, outputDict)
+        JSON.print(f, outputDict, 4)
     end
 else
     if haskey(outputDict, :error)

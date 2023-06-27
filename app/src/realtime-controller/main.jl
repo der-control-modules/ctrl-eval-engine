@@ -21,7 +21,9 @@ struct ControlSequence
     resolution::Dates.TimePeriod
 end
 
-Base.iterate(ops::ControlSequence, index=1) = index > length(ops.powerKw) ? nothing : ((ops.powerKw[index], ops.resolution), index + 1)
+Base.iterate(ops::ControlSequence, index = 1) =
+    index > length(ops.powerKw) ? nothing :
+    ((ops.powerKw[index], ops.resolution), index + 1)
 Base.eltype(::Type{ControlSequence}) = Tuple{Float64,Dates.TimePeriod}
 Base.length(ops::ControlSequence) = length(ops.powerKw)
 
@@ -35,16 +37,11 @@ considering `useCases`,
 where `t` is the current timestamp and
 `spProgress` is the cumulative progress in the `schedulePeriod` leading up to `t`.
 
-The returned control sequence, which may or may not cover the entire/remaining time in `schedulePeriod`, 
+The returned control sequence, which may or may not cover the entire/remaining time in `schedulePeriod`,
 will be executed before calling this function again with updated ESS states and `spProgress`.
 """
-control(
-    ess,
-    controller::RTController,
-    schedulePeriod::SchedulePeriod,
-    useCases
-) = control(ess, controller, schedulePeriod, useCases, start_time(schedulePeriod), nothing)
-
+control(ess, controller::RTController, schedulePeriod::SchedulePeriod, useCases) =
+    control(ess, controller, schedulePeriod, useCases, start_time(schedulePeriod), nothing)
 
 include("mock-rt-controller.jl")
 include("pid.jl")
@@ -55,9 +52,18 @@ include("amac.jl")
 
 Create a realtime controller of appropriate type from the input dictionary
 """
-function get_rt_controller(config::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
+function get_rt_controller(
+    config::Dict,
+    ess::EnergyStorageSystem,
+    useCases::AbstractArray{<:UseCase},
+)
     controllerType = config["type"]
-    res = Millisecond(round(Int, convert(Millisecond, Second(1)).value * get(config,"resolutionSec", 60)))
+    res = Millisecond(
+        round(
+            Int,
+            convert(Millisecond, Second(1)).value * get(config, "resolutionSec", 60),
+        ),
+    )
     controller = if controllerType == "mock"
         MockController(res)
     elseif controllerType == "pid"

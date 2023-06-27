@@ -40,7 +40,7 @@ function extract(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTim
     if t1 < ts.t[end] && t2 ≥ ts.t[1]
         # some overlap time period
         idx1 = findfirst(ts.t .> t1) - 1
-        idx2 = findfirst(ts.t .> t2) - 1
+        idx2 = findfirst(ts.t .≥ t2) - 1
         VariableIntervalTimeSeries(
             [tStart, ts.t[idx1+1:idx2]..., tEnd],
             ts.value[idx1:idx2],
@@ -86,7 +86,7 @@ function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
         idx2 = div(t2 - ts.tStart, ts.resolution) + 1
         if Dates.value((t1 - ts.tStart) % ts.resolution) == 0 &&
            Dates.value((t2 - ts.tStart) % ts.resolution) == 0
-            FixedIntervalTimeSeries(tStart, ts.resolution, ts.value[idx1:idx2])
+            FixedIntervalTimeSeries(tStart, ts.resolution, ts.value[idx1:idx2-1])
         else
             VariableIntervalTimeSeries(
                 [tStart, (ts.tStart .+ (idx1:idx2-1) .* ts.resolution)..., tEnd],
@@ -112,9 +112,14 @@ get_period(ts::FixedIntervalTimeSeries, t::DateTime) = begin
 end
 
 function dot_multiply_time_series(ts1::TimeSeries, ts2::TimeSeries)
-    @assert start_time(ts1) < end_time(ts2) && start_time(ts2) < end_time(ts1) "The time ranges must overlap"
     tStart = max(start_time(ts1), start_time(ts2))
     tEnd = min(end_time(ts1), end_time(ts2))
+
+    if tStart ≥ tEnd
+        # The time ranges do not overlap
+        return 0
+    end
+
     tPeriodStart = tStart
     v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
     v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)

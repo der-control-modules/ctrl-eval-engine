@@ -87,6 +87,5 @@ end
             end
         end
     end
-    show(spProgress)
     @test true
 end
