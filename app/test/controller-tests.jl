@@ -1,9 +1,12 @@
+using CtrlEvalEngine
 using CtrlEvalEngine.EnergyStorageSimulators: LiIonBattery, LFP_LiIonBatterySpecs, LiIonBatteryStates, SOC, SOH, operate!
-using CtrlEvalEngine.EnergyStorageUseCases: UseCase
+using CtrlEvalEngine.EnergyStorageUseCases: LoadFollowing, UseCase
 using CtrlEvalEngine.EnergyStorageScheduling: end_time, schedule, ManualScheduler, SchedulePeriod
 using CtrlEvalEngine.EnergyStorageRTControl: control, PIDController
 using Dates
 using JSON
+using Test
+using DiscretePIDs
 
 @testset "PID Controller" begin
     ess = LiIonBattery(
@@ -11,14 +14,26 @@ using JSON
         LiIonBatteryStates(0.5, 0)
     )
     tStart = floor(now(), Hour(1))
-    # useCases = UseCase[
-    #     LoadFollowing(
-    #         VariableIntervalTimeSeries(
-    #             range(tStart; step=Hour(1), length=5),
-    #             [10, 20, 1, 10]
-    #         )
-    #     ),
-    # ]
+    useCases = UseCase[
+        LoadFollowing(
+            Dict(
+                "realtimeLoadPower" =>
+                    [
+                        Dict("DateTime" => tStart, "Power" => 10),
+                        Dict("DateTime" => tStart + Minute(5), "Power" => 20),
+                        Dict("DateTime" => tStart + Minute(10), "Power" => 1),
+                        Dict("DateTime" => tStart + Minute(15), "Power" => 10),
+                    ],
+                "forecastLoadPower" =>
+                    [
+                        Dict("DateTime" => tStart, "Power" => 10),
+                        Dict("DateTime" => tStart + Minute(5), "Power" => 20),
+                        Dict("DateTime" => tStart + Minute(10), "Power" => 1),
+                        Dict("DateTime" => tStart + Minute(15), "Power" => 10),
+                    ]
+                )
+        )
+    ]
     t = tStart
     progress = CtrlEvalEngine.Progress(
         0.0,
@@ -26,13 +41,22 @@ using JSON
         CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
     )
     setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
-    controller = PIDController(Minute(1), 8.0, 0.5, 0.01)
+    println("Creating controller NOW!")
+    controller = PIDController(Second(1), 0.5, 0.5, 0.9)
+    pid = DiscretePID(
+        K=controller.Kp,
+        Ts=Dates.value(convert(Second, controller.resolution)),
+        Ti=controller.Ti,
+        Td=controller.Td
+    )
 
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15))
     schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
     spProgress = VariableIntervalTimeSeries([tStart], Float64[])
     while t < schedulePeriodEnd
-        controlSequence = control(ess, controller, schedulePeriod, UseCase[], t, spProgress)
+        controlSequence = control(ess, pid, schedulePeriod, useCases, t, spProgress)
+        # controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
+        println("Control Sequence: ", controlSequence)
         for (powerSetpointKw, controlDuration) in controlSequence
             actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
             CtrlEvalEngine.update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
@@ -43,5 +67,8 @@ using JSON
             end
         end
     end
-    @test true
+    open("controller_test_output4.json","w")do f
+        JSON.print(f, progress)
+    end
+ #   @test sVar.powerKw[2] > sVar.powerKw[3]
 end

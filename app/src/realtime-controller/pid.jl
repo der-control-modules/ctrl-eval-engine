@@ -1,6 +1,6 @@
 using Dates, DiscretePIDs
 using CtrlEvalEngine.EnergyStorageSimulators: EnergyStorageSystem
-using CtrlEvalEngine.EnergyStorageUseCases: UseCase
+using CtrlEvalEngine.EnergyStorageUseCases: UseCase, LoadFollowing
 using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod
 
 struct PIDController <: RTController
@@ -12,58 +12,49 @@ end
 
 function control(
     ess::EnergyStorageSystem,
-    controller::PIDController,
+    pid,
+    # controller::PIDController,
     schedulePeriod::SchedulePeriod,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
     spProgress::VariableIntervalTimeSeries
 )
-    pid = DiscretePID(
-        K=controller.Kp,
-        Ts=Dates.value(convert(Second, controller.resolution)),
-        Ti=controller.Ti,
-        Td=controller.Td
-    )
+    # pid = DiscretePID(
+    #     K=controller.Kp,
+    #     Ts=Dates.value(convert(Second, controller.resolution)),
+    #     Ti=controller.Ti,
+    #     Td=controller.Td
+    # )
     control_signals = []
-    set_point = average_power(schedulePeriod)
-
-    # measured_value, _, _ = CtrlEvalEngine.get_period(useCase.loadPower, t)
+    scheduled_bess_power = average_power(schedulePeriod)
+    # actual_bess_power = isempty(spProgress.value) ? 0.0 : CtrlEvalEngine.mean(spProgress)
+    actual_bess_power = isempty(spProgress.value) ? 0.0 : last(spProgress.value)
+    # actual_bess_power = isempty(spProgress.value) ? scheduled_bess_power : last(spProgress.value)
+    println("\nAt time:", t)
+    println("Scheduled BESS Power: ", scheduled_bess_power)
+    println("Actual BESS Power: ", actual_bess_power)
     idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
     if idxloadFollowing !== nothing
-        # TODO: handle the case that LoadFollowing is a selected use case
+        lf = useCases[idxloadFollowing]
+        expected_load, _, _ = CtrlEvalEngine.get_period(lf.forecastLoadPower, t)
+        actual_load, _, _ = CtrlEvalEngine.get_period(lf.realtimeLoadPower, t)
+        # set_point = expected_load - scheduled_bess_power
+        # process_variable = actual_load - actual_bess_power
+        set_point = scheduled_bess_power - expected_load
+        process_variable = actual_bess_power - actual_load
+
+        println("WE ARE LOAD FOLLOWING!")
+        println("Expected Load: ", expected_load)
+        println("Actual Load: ", actual_load)
+        println("Set Point: ", set_point)
+        println("Process Variable: ", process_variable)
     else
-        # TODO: handle the case that LoadFollowing isn't selected
-    end
-    process_variable = if isempty(spProgress.value)
-        set_point
-    else
-        CtrlEvalEngine.mean(spProgress)
+        println("NO USE CASES KNOWN....")
+        set_point = scheduled_bess_power
+        process_variable = actual_bess_power
     end
     control_signal = pid(set_point, process_variable)
+    println("Control Signal: ", control_signal)
     push!(control_signals, control_signal)
-    # print(["spProgress.powerKw:", spProgress.powerKw, "set_point:", set_point, "measured_value:", measured_value, "process_variable:", process_variable, "control_signal:", control_signal])
-    return ControlSequence([control_signal], controller.resolution)
+    return ControlSequence([control_signal], Second(pid.Ts)) 
 end
-
-
-# function control(ess::EnergyStorageSystem, controller::PIDController,
-#      schedulePeriod::SchedulePeriod, useCase::LoadFollowing, t,
-#       spProgress::SchedulePeriodProgress)
-#     pid = DiscretePID(; controller.Kp, controller.resolution, controller.Ti, controller.Td)
-#     tStart = start_time(schedulePeriod)
-#     tEnd = end_time(schedulePeriod)
-#     control_signals = []
-#     set_point = average_power(schedulePeriod)
-#     process_variable, _, _ = get_period(useCase.loadPower, tStart)
-#     current_powers = [load for load in useCase.loadPower if tStart <= load[2] < tEnd]
-#     for (measured_value, load_start, load_end) in current_powers
-#         t_now = load_start
-#         while t_now < load_end
-#             control_signal = pid(set_point, process_variable)
-#             process_variable = measured_value + control_signal
-#             control_signals.append!(control_signal)
-#             t_now += controller.resolution
-#         end
-#     end
-#     return ControlOperations(control_signals, controller.resolution)
-# end
