@@ -26,7 +26,7 @@ using DiscretePIDs
                     ],
                 "forecastLoadPower" =>
                     [
-                        Dict("DateTime" => tStart, "Power" => 10),
+                        Dict("DateTime" => tStart, "Power" => 15),
                         Dict("DateTime" => tStart + Minute(5), "Power" => 20),
                         Dict("DateTime" => tStart + Minute(10), "Power" => 1),
                         Dict("DateTime" => tStart + Minute(15), "Power" => 10),
@@ -43,18 +43,11 @@ using DiscretePIDs
     setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
     println("Creating controller NOW!")
     controller = PIDController(Second(1), 0.5, 0.5, 0.9)
-    pid = DiscretePID(
-        K=controller.Kp,
-        Ts=Dates.value(convert(Second, controller.resolution)),
-        Ti=controller.Ti,
-        Td=controller.Td
-    )
-
     schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15))
     schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
     spProgress = VariableIntervalTimeSeries([tStart], Float64[])
     while t < schedulePeriodEnd
-        controlSequence = control(ess, pid, schedulePeriod, useCases, t, spProgress)
+        controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
         # controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
         println("Control Sequence: ", controlSequence)
         for (powerSetpointKw, controlDuration) in controlSequence
@@ -67,7 +60,7 @@ using DiscretePIDs
             end
         end
     end
-    open("controller_test_output4.json","w")do f
+    open("controller_test_output5.json","w")do f
         JSON.print(f, progress)
     end
  #   @test sVar.powerKw[2] > sVar.powerKw[3]

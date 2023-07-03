@@ -8,23 +8,27 @@ struct PIDController <: RTController
     Kp::Float64
     Ti::Float64
     Td::Float64
+    pid::DiscretePID
+end
+
+function PIDController(resolution, Kp, Ti, Td)
+    pid = DiscretePID(
+        K=Kp,
+        Ts=Dates.value(convert(Second, resolution)),
+        Ti=Ti,
+        Td=Td
+    )
+    return PIDController(resolution, Kp, Ti, Td, pid)
 end
 
 function control(
-    ess::EnergyStorageSystem,
-    pid,
-    # controller::PIDController,
+    _::EnergyStorageSystem,
+    controller::PIDController,
     schedulePeriod::SchedulePeriod,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
     spProgress::VariableIntervalTimeSeries
 )
-    # pid = DiscretePID(
-    #     K=controller.Kp,
-    #     Ts=Dates.value(convert(Second, controller.resolution)),
-    #     Ti=controller.Ti,
-    #     Td=controller.Td
-    # )
     control_signals = []
     scheduled_bess_power = average_power(schedulePeriod)
     # actual_bess_power = isempty(spProgress.value) ? 0.0 : CtrlEvalEngine.mean(spProgress)
@@ -53,8 +57,8 @@ function control(
         set_point = scheduled_bess_power
         process_variable = actual_bess_power
     end
-    control_signal = pid(set_point, process_variable)
+    control_signal = controller.pid(set_point, process_variable)
     println("Control Signal: ", control_signal)
     push!(control_signals, control_signal)
-    return ControlSequence([control_signal], Second(pid.Ts)) 
+    return ControlSequence([control_signal], Second(controller.pid.Ts)) 
 end
