@@ -78,13 +78,17 @@ function get_scheduler(schedulerConfig::Dict)
         end
         res = Minute(round(Int, convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"]))
         interval = Minute(round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]))
+        powerLimitPct = get(schedulerConfig, "powerLimitPct", 100)
+        if isnothing(powerLimitPct)
+            powerLimitPct = 100
+        end
         OptScheduler(
             res,
             interval,
             ceil(Int64, schedulerConfig["optWindowLenHrs"] / schedulerConfig["scheduleResolutionHrs"]),
             endSoc;
             minNetLoadKw=get(schedulerConfig, "minNetLoadKw", nothing),
-            powerLimitPu=get(schedulerConfig, "powerLimitPct", 100.0) / 100
+            powerLimitPu= powerLimitPct / 100
         )
     elseif schedulerType == "ml"
         res = Minute(round(Int, convert(Minute, Hour(1)).value * get(schedulerConfig, "scheduleResolutionHrs", 1)))
