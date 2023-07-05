@@ -17,3 +17,13 @@ VariabilityMitigation(config::Dict) = VariabilityMitigation(
     ),
     config["ratedPowerKw"]
 )
+
+
+calculate_metrics(op::OperationHistory, ucVM::VariabilityMitigation) = [
+        Dict(:sectionTitle => "Variability Mitigation"),
+        Dict(:label => "Mitigated Variability", :value => "0%"),
+        Dict(:label => "SOC Deviation", :value => "0%"),
+    ]
+
+use_case_charts(op::OperationHistory, ucVM::VariabilityMitigation) = [
+]
