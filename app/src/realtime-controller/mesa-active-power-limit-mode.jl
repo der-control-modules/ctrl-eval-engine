@@ -6,25 +6,26 @@ using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod
 using MesaEss: MesaController, VertexCurve, RampParams
 
 
-struct ActivePowerLimitModeController <: MesaController
+struct ActivePowerLimitMode <: MesaMode
     maximumChargePercentage::Float64
     maximumDischargePercentage::Float64
 end
 
 
 function modecontrol(
+    mode::ActivePowerLimitMode,
     ess::EnergyStorageSystem,
-    controller::ActivePowerLimitModeController,
-    schedulePeriod::SchedulePeriod,
-    useCases::AbstractVector{<:UseCase},
+    controller::MesaController,
+    _,
+    _,
     t::Dates.DateTime,
-    spProgress::VariableIntervalTimeSeries,
-    wip::WorkInProgress
+    _
 )
-maxAllowedChargePower = controller.maximumChargePercentage / 100 * p_max(ess)
-maxAllowedDishargePower = controller.maximumDishargePercentage / 100 * p_max(ess)
-wip = [
-    max(min(schedulePeriod.powerKw[i], maxAllowedDishargePower), maxAllowedChargePower)
-    for i in t:mockController.resolution:tEnd
+maxAllowedChargePower = mode.maximumChargePercentage / 100 * p_min(ess)
+maxAllowedDishargePower = mode.maximumDishargePercentage / 100 * p_max(ess)
+tEnd = t + ceil(EnergyStorageScheduling.end_time(schedulePeriod) - t, controller.resolution) - controller.resolution
+controller.wip.value = [
+    max(min(controller.wip.value[i], maxAllowedDishargePower), maxAllowedChargePower)
+    for i in t:controller.resolution:tEnd
 ]
 end

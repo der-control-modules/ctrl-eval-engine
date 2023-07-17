@@ -1,6 +1,6 @@
 using MesaEss: MesaController, VertexCurve, RampParams
 
-struct VoltWattModeController <: MesaController
+struct VoltWattMode <: MesaMode
     referenceVoltageOffset::Float64
     voltWattCurve::VertexCurve
     gradient::Float64
@@ -9,13 +9,18 @@ struct VoltWattModeController <: MesaController
     upperDeadband::Float64
 end
 
-function control(
+function modecontrol(
+    mode::VoltWattMode,
     ess::EnergyStorageSystem,
-    controller::VoltWattModeController,
+    controller::MesaController,
     schedulePeriod::SchedulePeriod,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
     spProgress::VariableIntervalTimeSeries
 )
-
+    # TODO: Stuff
+    controller.wip = [
+        i # TODO: Actual stuff
+        for i in t:mockController.resolution:tEnd
+    ]
 end

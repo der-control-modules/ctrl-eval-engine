@@ -1,6 +1,6 @@
 using MesaEss: MesaController, VertexCurve, RampParams
 
-struct ActivePowerSmoothingModeController <: MesaController
+struct ActivePowerSmoothingMode <: MesaMode
     smoothingGradient::Float64
     lowerSmoothingLimit::Float64
     upperSmoothingLimit::Float64
@@ -9,13 +9,18 @@ struct ActivePowerSmoothingModeController <: MesaController
 end
 
 
-function control(
+function modecontrol(
+    mode::ActivePowerSmoothingMode,
     ess::EnergyStorageSystem,
-    controller::ActivePowerSmoothingModeController,
+    controller::MesaController,
     schedulePeriod::SchedulePeriod,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
     spProgress::VariableIntervalTimeSeries
 )
-
+    # TODO: Stuff
+    controller.wip = [
+        i # TODO: Actual stuff
+        for i in t:mockController.resolution:tEnd
+    ]
 end

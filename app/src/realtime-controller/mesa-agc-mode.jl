@@ -1,19 +1,24 @@
 using MesaEss: MesaController, VertexCurve, RampParams
 
-struct AGCModeControler <: MesaController
+struct AGCMode <: MesaMode
     rampOrTimeConstant::Bool
     rampParams::RampParams
     minimumUsableSOC::Float64
     maximumUsableSOC::Float64
 end
 
-function control(
+function modecontrol(
+    mode::AGCMode,
     ess::EnergyStorageSystem,
-    controller::AGCModeControler,
+    controller::MesaController,
     schedulePeriod::SchedulePeriod,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
     spProgress::VariableIntervalTimeSeries
 )
-
+    # TODO: Stuff
+    controller.wip = [
+        i # TODO: Actual stuff
+        for i in t:mockController.resolution:tEnd
+    ]
 end

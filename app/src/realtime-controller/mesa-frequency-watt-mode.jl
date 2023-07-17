@@ -1,7 +1,7 @@
 using MesaEss: MesaController, VertexCurve, RampParams
 
 
-struct FrequencyWattModeController <: MesaController
+struct FrequencyWattMode <: MesaMode
     useCurves::Bool
     frequencyWattCurve::VertexCurve
     lowHysteresisCurve::VertexCurve
@@ -25,13 +25,18 @@ struct FrequencyWattModeController <: MesaController
     lowReturnGradient::Float64
 end
 
-function control(
+function modecontrol(
+    mode::FrequencyWattMode,
     ess::EnergyStorageSystem,
-    controller::FrequencyWattModeController,
+    controller::MesaController,
     schedulePeriod::SchedulePeriod,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
     spProgress::VariableIntervalTimeSeries
 )
-
+    # TODO: Stuff
+    controller.wip = [
+        i # TODO: Actual stuff
+        for i in t:mockController.resolution:tEnd
+    ]
 end
