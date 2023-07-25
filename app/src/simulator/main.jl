@@ -7,7 +7,7 @@ module EnergyStorageSimulators
 
 using Dates
 
-export EnergyStorageSystem, MockSimulator, operate!, get_ess, SOC, SOH, p_max, p_min, e_max, e_min, energy_state, ηRT
+export EnergyStorageSystem, MockSimulator, LiIonBattery, operate!, get_ess, SOC, SOH, p_max, p_min, e_max, e_min, energy_state, ηRT
 using CtrlEvalEngine
 
 abstract type EnergyStorageSystem end
@@ -65,10 +65,10 @@ function operate!(ess::EnergyStorageSystem, powerKw::Real, duration::Dates.Perio
     durationHour = /(promote(duration, Hour(1))...)
 
     if powerKw > p_max(ess, durationHour)
-        @warn "Operation attempt exceeds power upper bound. Falling back to bound." powerKw upper_bound = p_max(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
+        @warn "Operation attempt exceeds power upper bound. Falling back to bound." maxlog=10 powerKw upper_bound = p_max(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
         powerKw = p_max(ess, durationHour)
     elseif powerKw < p_min(ess, durationHour)
-        @warn "Operation attempt exceeds power lower bound. Falling back to bound." powerKw lower_bound = p_min(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
+        @warn "Operation attempt exceeds power lower bound. Falling back to bound." maxlog=10 powerKw lower_bound = p_min(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
         powerKw = p_min(ess, durationHour)
     end
 
@@ -84,23 +84,23 @@ Calculate the state of health (SOH) of an ESS.
 SOH(ess::EnergyStorageSystem) = 1
 
 """
-    p_max(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+    p_max(ess::EnergyStorageSystem, duration::Dates.Period)
 
 Calculate the maximum power output (positive means discharging, negative means charging)
 of `ess` lasting for a time period of `duration`.
 """
-function p_max(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+function p_max(ess::EnergyStorageSystem, duration::Dates.Period)
     durationHour = /(promote(duration, Hour(1))...)
     p_max(ess, durationHour)
 end
 
 """
-    p_min(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+    p_min(ess::EnergyStorageSystem, duration::Dates.Period)
 
 Calculate the minimum power output (negative means charging, positive means discharging)
 of `ess` lasting for a time period of `duration`.
 """
-function p_min(ess::EnergyStorageSystem, duration::Dates.Period=Hour(1))
+function p_min(ess::EnergyStorageSystem, duration::Dates.Period)
     durationHour = /(promote(duration, Hour(1))...)
     p_min(ess, durationHour)
 end
