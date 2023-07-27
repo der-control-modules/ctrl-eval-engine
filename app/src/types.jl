@@ -23,6 +23,13 @@ struct VariableIntervalTimeSeries{V} <: TimeSeries{V}
         length(t) == length(v) + 1 ? new{eltype(v)}(t, v) : error("Incompatible lengths")
 end
 
+Base.iterate(ts::VariableIntervalTimeSeries, index = 1) =
+    index > length(ts.value) || index + 1 > length(ts.t) ? nothing :
+    ((ts.value[index], ts.t[index], ts.t[index+1]), index + 1)
+
+Base.eltype(::Type{VariableIntervalTimeSeries}) = Tuple{Float64,DateTime,DateTime}
+Base.length(ts::VariableIntervalTimeSeries) = min(length(ts.value), length(ts.t) - 1)
+
 start_time(ts::VariableIntervalTimeSeries) = ts.t[1]
 
 end_time(ts::VariableIntervalTimeSeries) = ts.t[end]
@@ -42,7 +49,7 @@ function extract(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTim
         idx1 = findfirst(ts.t .> t1) - 1
         idx2 = findfirst(ts.t .≥ t2) - 1
         VariableIntervalTimeSeries(
-            [tStart, ts.t[idx1+1:idx2]..., tEnd],
+            [tStart, ts.t[idx1+1:idx2]..., t2],
             ts.value[idx1:idx2],
         )
     else
@@ -59,8 +66,10 @@ get_period(ts::VariableIntervalTimeSeries, t::DateTime) = begin
     if t ≥ ts.t[1] && t < ts.t[end]
         index = findfirst(ts.t .> t) - 1
         (ts.value[index], ts.t[index], ts.t[index+1])
+    elseif t < ts.t[1]
+        (zero(eltype(ts.value)), nothing, ts.t[1])
     else
-        (nothing, nothing, nothing)
+        (zero(eltype(ts.value)), ts.t[end], nothing)
     end
 end
 
@@ -69,6 +78,20 @@ struct FixedIntervalTimeSeries{R<:Dates.Period,V} <: TimeSeries{V}
     resolution::R
     value::Vector{V}
 end
+
+Base.iterate(ts::FixedIntervalTimeSeries, index = 1) =
+    index > length(ts.value) ? nothing :
+    (
+        (
+            ts.value[index],
+            ts.tStart + ts.resolution * (index - 1),
+            ts.tStart + ts.resolution * index,
+        ),
+        index + 1,
+    )
+
+Base.eltype(::Type{FixedIntervalTimeSeries}) = Tuple{Float64,DateTime,DateTime}
+Base.length(ts::FixedIntervalTimeSeries) = length(ts.value)
 
 start_time(ts::FixedIntervalTimeSeries) = ts.tStart
 
@@ -106,8 +129,10 @@ get_period(ts::FixedIntervalTimeSeries, t::DateTime) = begin
             ts.tStart + ts.resolution * (index - 1),
             ts.tStart + ts.resolution * index,
         )
+    elseif index < 1
+        (zero(eltype(ts.value)), nothing, start_time(ts))
     else
-        (nothing, nothing, nothing)
+        (zero(eltype(ts.value)), end_time(ts), nothing)
     end
 end
 
@@ -117,29 +142,79 @@ function dot_multiply_time_series(ts1::TimeSeries, ts2::TimeSeries)
 
     if tStart ≥ tEnd
         # The time ranges do not overlap
-        return 0
+        return zero(eltype(ts1.value))
     end
 
-    tPeriodStart = tStart
-    v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
-    v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
+    integrate(binary_operation(ts1, ts2, *))
+end
+
+integrate(ts::TimeSeries) = integrate(ts, start_time(ts), end_time(ts))
+
+integrate(ts::TimeSeries, tStart::DateTime, tEnd::DateTime) =
+    mapreduce(+, extract(ts, tStart, tEnd)) do (v, t1, t2)
+        v * /(promote(t2 - t1, Hour(1))...)
+    end
+
+function binary_operation(ts1::TimeSeries, ts2::TimeSeries, op)
+    tStart = min(start_time(ts1), start_time(ts2))
+    tEnd = max(end_time(ts1), end_time(ts2))
+    binary_operation(ts1, ts2, op, tStart, tEnd)
+end
+
+function binary_operation(
+    ts1::TimeSeries,
+    ts2::TimeSeries,
+    op,
+    tStart::DateTime,
+    tEnd::DateTime,
+)
+    t = [tStart]
+
+    v1, _, tPeriodEnd1 = get_period(ts1, tStart)
+    if isnothing(tPeriodEnd1)
+        tPeriodEnd1 = tEnd
+    end
+
+    v2, _, tPeriodEnd2 = get_period(ts2, tStart)
+    if isnothing(tPeriodEnd2)
+        tPeriodEnd2 = tEnd
+    end
+
     tPeriodEnd = min(tPeriodEnd1, tPeriodEnd2)
-    netIncome = v1 * v2 * /(promote(tPeriodEnd - tPeriodStart, Hour(1))...)
+    push!(t, tPeriodEnd)
+
+    v = op(v1, v2)
+    value = [v]
 
     while tPeriodEnd < tEnd
         tPeriodStart = tPeriodEnd
         if tPeriodEnd1 ≤ tPeriodEnd2
             # this means tPeriodEnd == tPeriodEnd1, move ts1 forward by one time period
             v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
+            if isnothing(tPeriodEnd1)
+                tPeriodEnd1 = tEnd
+            end
         else
             # this means tPeriodEnd == tPeriodEnd2, move ts2 forward by one time period
             v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
+            if isnothing(tPeriodEnd2)
+                tPeriodEnd2 = tEnd
+            end
         end
-        tPeriodEnd = min(tPeriodEnd1, tPeriodEnd2)
-        netIncome += v1 * v2 * /(promote(tPeriodEnd - tPeriodStart, Hour(1))...)
+        tPeriodEnd = min(tPeriodEnd1, tPeriodEnd2, tEnd)
+        v = op(v1, v2)
+        push!(t, tPeriodEnd)
+        push!(value, v)
     end
-    return netIncome
+    VariableIntervalTimeSeries(t, value)
 end
+
+Base.:+(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, +)
+Base.:-(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, -)
+Base.:*(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, *)
+Base.:/(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, /)
+Base.:maximum(ts::TimeSeries) = maximum(ts.value)
+Base.:minimum(ts::TimeSeries) = minimum(ts.value)
 
 LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(ts1, ts2)
 
@@ -162,6 +237,18 @@ function mean(ts::TimeSeries, t::AbstractVector{DateTime})
     values = [mean(ts, t[idx], t[idx+1]) for idx = 1:length(t)-1]
     VariableIntervalTimeSeries(t, values)
 end
+
+"""
+    std(ts, t1=start_time(ts), t2=end_time(ts))
+
+Calculate the standard deviation of `ts` during the time period from `t1` to `t2`.
+"""
+std(ts::TimeSeries, t1::DateTime, t2::DateTime) = begin
+    diff = ts - mean(ts, [t1, t2])
+    sqrt(mean(diff * diff))
+end
+
+std(ts::TimeSeries) = std(ts, start_time(ts), end_time(ts))
 
 struct ScheduleHistory
     t::Vector{Dates.DateTime}
@@ -199,17 +286,9 @@ charged_energy(op::OperationHistory) = begin
     -sum(op.powerKw[chargePeriods] .* durationHours[chargePeriods])
 end
 
-Base.iterate(op::OperationHistory, index=1) =
-    index > length(op.powerKw) || index + 1 > length(op.t) ?
-    nothing :
-    (
-        (
-            op.t[index],
-            op.t[index+1],
-            op.powerKw[index]
-        ),
-        index + 1
-    )
+Base.iterate(op::OperationHistory, index = 1) =
+    index > length(op.powerKw) || index + 1 > length(op.t) ? nothing :
+    ((op.t[index], op.t[index+1], op.powerKw[index]), index + 1)
 
 Base.eltype(::Type{OperationHistory}) = Tuple{DateTime,DateTime,Float64}
 Base.length(op::OperationHistory) = min(length(op.powerKw), length(op.t) - 1)
