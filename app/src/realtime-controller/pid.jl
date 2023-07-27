@@ -14,7 +14,7 @@ end
 function PIDController(resolution, Kp, Ti, Td)
     pid = DiscretePID(
         K=Kp,
-        Ts=Dates.value(convert(Second, resolution)),
+        Ts=resolution/Second(1),
         Ti=Ti,
         Td=Td
     )
