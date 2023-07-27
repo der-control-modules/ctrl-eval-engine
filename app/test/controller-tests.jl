@@ -7,7 +7,6 @@ using CtrlEvalEngine.EnergyStorageRTControl: control, PIDController, AMAControll
 using Dates
 using JSON
 using Test
-using DiscretePIDs
 
 @testset "PID Controller" begin
     ess = LiIonBattery(
