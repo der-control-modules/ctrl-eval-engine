@@ -1,120 +1,157 @@
-module MesaEss
+# module MesaEss
 
-    using Dates
-    using CtrlEvalEngine.EnergyStorageSimulators
-    using CtrlEvalEngine.EnergyStorageUseCases: UseCase, LoadFollowing
-    using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod
+using Dates
+using CtrlEvalEngine.EnergyStorageSimulators
+using CtrlEvalEngine.EnergyStorageUseCases: UseCase, LoadFollowing
+using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod
 
-    struct MesaMode
-        priority::Int
-        timeWindow::Dates.Second
-        rampTime::Dates.Second
-        reversionTimeout::Dates.Second
-    end
+# export MesaController, MesaMode, Vertex, VertexCurve, RampParams, apply_energy_limits, apply_ramps, apply_time_constants, control
+abstract type MesaMode end
 
-    struct MesaController <: RTController
-        modes::Vector{MesaMode}
-        resolution::Dates.Period
-        wip::FixedIntervalTimeSeries
-    end
+mutable struct MesaModeParams
+    priority::Int64
+    timeWindow::Dates.Second
+    rampTime::Dates.Second
+    reversionTimeout::Dates.Second
+    modeWIP::Union{FixedIntervalTimeSeries, Nothing}
+end
 
-    function MesaController(modes, resolution)
-        wip = FixedIntervalTimeSeries([], resolution)
-        return MesaController(modes, resolution, wip)
-    end
+function MesaModeParams(priority, timeWindow, rampTime, reversionTimeout)
+    wip = nothing
+    return MesaModeParams(priority, timeWindow, rampTime, reversionTimeout, wip)
+end
 
-    struct Vertex
-        x::Float64
-        y::Float64
-    end
+mutable struct MesaController <: RTController
+    modes::Vector{MesaMode}
+    resolution::Dates.Period
+    wip::Union{FixedIntervalTimeSeries, Nothing}
+end
 
-    struct VertexCurve
-        vertices::Array{Vertex}
-    end 
+function MesaController(modes, resolution)
+    wip = nothing
+    return MesaController(modes, resolution, wip)
+end
 
-    struct RampParams
-        rampUpTimeConstant::Dates.Second
-        rampDownTimeConstant::Dates.Second
-        dischargeRampUpRate::Float64  # The ramp rates are in units of a tenth of a percent per second -- i.e. divide by 1000 in constructor to get and store multiplier.
-        dischargeRampDownRate::Float64
-        chargeRampUpRate::Float64
-        chargeRampDownRate::Float64
-    end
+struct Vertex
+    x::Float64
+    y::Float64
+end
 
-    function apply_time_constants(
-        ess::EnergyStorageSystem,
-        rampParams::Float64,
-        currentPower::Float64,
-        targetPower::Float64
+struct VertexCurve
+    vertices::Array{Vertex}
+end 
+
+struct RampParams
+    rampUpTimeConstant::Dates.Second
+    rampDownTimeConstant::Dates.Second
+    dischargeRampUpRate::Float64  # The ramp rates are in units of a tenth of a percent per second -- i.e. divide by 1000 in constructor to get and store multiplier.
+    dischargeRampDownRate::Float64
+    chargeRampUpRate::Float64
+    chargeRampDownRate::Float64
+end
+
+function apply_time_constants(
+    ess::EnergyStorageSystem,
+    rampParams::Float64,
+    currentPower::Float64,
+    targetPower::Float64
+)
+    # Using time constants, not ramps.
+    # timeSinceStart = currentTime - startTime
+    # timeUntilEnd = endTime - currentTime
+    allowedPowerChange = 0.0
+    return currentPower + allowedPowerChange
+end
+
+function apply_ramps(
+    ess::EnergyStorageSystem,
+    rampParams::RampParams,
+    currentPower::Float64,
+    targetPower::Float64, 
     )
-        # Using time constants, not ramps.
-        # timeSinceStart = currentTime - startTime
-        # timeUntilEnd = endTime - currentTime
+    print("in apply_ramps: \n")
+    print("currentPower: ", currentPower, " | targetPower: ", targetPower)
+    print(" rampParams: ", rampParams, '\n')
+    # TODO: Assuming ramp rate is percentage per second of p_max or p_min. The actual units in DNP3 spec are just percent per second. 
+    #        Should this be percent of requested jump in power per second instead?
+    if targetPower > currentPower && targetPower >= 0  # TODO: This assumes percent per second refers to percent of max/min power.
+        allowedPowerChange = min(targetPower - currentPower, rampParams.dischargeRampUpRate * p_max(ess))
+    elseif targetPower < currentPower && targetPower >= 0
+        allowedPowerChange = min(targetPower - currentPower, rampParams.dischargeRampDownRate * p_max(ess))
+    elseif targetPower > currentPower && targetPower < 0
+        allowedPowerChange = max(targetPower - currentPower, rampParams.chargeRampUpRate * p_min(ess))
+    elseif targetPower < currentPower && targetPower < 0
+        allowedPowerChange = max(targetPower - currentPower, rampParams.chargeRampDownRate * p_min(ess))
+    else
         allowedPowerChange = 0.0
-        return currentPower + allowedPowerChange
     end
+    print("allowedPowerChange: ", allowedPowerChange, '\n')
+    return currentPower + allowedPowerChange
+end
 
-    function apply_ramps(
-        ess::EnergyStorageSystem,
-        rampParams::RampParams,
-        currentPower::Float64,
-        targetPower::Float64, 
-        )
-
-        # TODO: Assuming ramp rate is percentage per second of p_max or p_min. The actual units in DNP3 spec are just percent per second. 
-        #        Should this be percent of requested jump in power per second instead?
-        if targetPower > currentPower & targetPower >= 0  # TODO: This assumes percent per second refers to percent of max/min power.
-            allowedPowerChange = min(targetPower - current_power, rampParams.dischargeRampUpRate * p_max(ess))
-        elseif targetPower < currentPower & targetPower >= 0
-            allowedPowerChange = min(targetPower - current_power, rampParams.dischargeRampDownRate * p_max(ess))
-        elseif targetPower > currentPower & targetPower < 0
-            allowedPowerChange = max(targetPower - current_power, rampParams.chargeRampUpRate * p_min(ess))
-        elseif targetPower < currentPower & targetPower < 0
-            allowedPowerChange = max(targetPower - current_power, rampParams.chargeRampDownRate * p_min(ess))
-        else
-            allowedPowerChange = 0.0
-        end
-        return currentPower + allowedPowerChange
-    end
-
-    function apply_energy_limits(
-        ess::EnergyStorageSystem,
-        power::Float64,
-        duration::Dates.Period, 
-        minReserve::Float64=nothing, 
-        maxReserve::Float64=nothing
-        )
-        minEnergy = minReserve ≠ nothing ? minReserve * e_max(ess) : e_min(ess)
-        maxEnergy = maxReserve ≠ nothing ? maxReserve * e_max(ess) : e_max(ess)
-        proposedNewEnergy = energy_state(ess) + power * duration
-        if proposedNewEnergy > maxEnergy
-            return (maxEnergy - energy_state(ess)) / duration
-        elseif proposedNewEnergy < minEnergy
-            return (minEnergy - energy_state(ess)) / duration
-        else
-            return power
-        end
-    end
-
-    function control(
-        ess::EnergyStorageSystem,
-        controller::MesaController,
-        schedulePeriod::SchedulePeriod,
-        useCases::AbstractVector{<:UseCase},
-        t::Dates.DateTime,
-        spProgress::VariableIntervalTimeSeries,
+function apply_energy_limits(
+    ess::EnergyStorageSystem,
+    power::Float64,
+    duration::Dates.Period, 
+    minReserve::Union{Float64, Nothing}=nothing, 
+    maxReserve::Union{Float64, Nothing}=nothing
     )
-        # TODO: Implement handling of shared parameters which all modes have.
-        # TODO: Initialize WIP struct based on schedulePeriod and/or schedulePeriodProgress. (should probably be FixedIntervalTimeSeries.)
-        sort!(controller.modes, by=m->m.priority)
-        for mode in controller.modes
-            modecontrol(mode, ess, controller, schedulePeriod, useCases, t, spProgress)
-        end
-        for (i, p) in enumerate(controller.wip.value)
-            essLimitedPower = min(max(p, p_min(ess)), p_max(ess))
-            energyLimitedPower = apply_energy_limits(ess, essLimitedPower, Dates.Second(controller.resolution))
-            controller.wip.value[i] = energyLimitedPower
-        end
-        return ControlSequence(controller.wip)
+    print("minReserve: ", minReserve, " | maxReserve: ", maxReserve, " | power: ", power, " | duration: ", duration, '\n')
+    minEnergy = minReserve ≠ nothing ? minReserve * e_max(ess) : e_min(ess)
+    maxEnergy = maxReserve ≠ nothing ? maxReserve * e_max(ess) : e_max(ess)
+    print("minEnergy: ", minEnergy, " | maxEnergy: ", maxEnergy)
+    proposedNewEnergy = energy_state(ess) + power * Dates.value(Dates.Second(duration))
+    print( " | energy_state(ess): ", energy_state(ess), " | proposedNewEnergy: ", proposedNewEnergy, '\n')
+    if proposedNewEnergy > maxEnergy
+        return (maxEnergy - energy_state(ess)) / Dates.value(Second(duration))
+    elseif proposedNewEnergy < minEnergy
+        return (minEnergy - energy_state(ess)) / Dates.value(Second(duration))
+    else
+        return power
     end
 end
+
+function control(
+    ess::EnergyStorageSystem,
+    controller::MesaController,
+    schedulePeriod::SchedulePeriod,
+    useCases::AbstractVector{<:UseCase},
+    t::Dates.DateTime,
+    spProgress::VariableIntervalTimeSeries,
+)
+    # TODO: Implement handling of shared parameters which all modes have.
+
+    # Initialize WIP series:
+    if controller.wip === nothing
+        controller.wip = FixedIntervalTimeSeries(t, controller.resolution, [0.0])
+    else
+        push!(controller.wip.value, 0.0)
+    end
+    # Call each mode in order of priority:
+    sort!(controller.modes, by=m->m.priority)
+    p = 0.0
+    for mode in controller.modes
+        if mode.params.modeWIP === nothing
+            mode.params.modeWIP = FixedIntervalTimeSeries(t, controller.resolution, [0.0])
+        else
+            push!(mode.params.modeWIP, 0.0)
+        end    
+        modePower = modecontrol(mode, ess, controller, schedulePeriod, useCases, t, spProgress)
+        mode.params.modeWIP.value[end] = modePower
+        p = p + modePower
+    end
+    # Apply limits to the output before controlling:
+    essLimitedPower = min(max(p, p_min(ess)), p_max(ess))
+    energyLimitedPower = apply_energy_limits(ess, essLimitedPower, Dates.Second(controller.resolution))
+    controller.wip.value[end] = energyLimitedPower
+    return ControlSequence([energyLimitedPower], controller.resolution)
+end
+
+include("mesa-modes/mesa-active-power-limit-mode.jl")
+include("mesa-modes/mesa-active-power-smoothing-mode.jl")
+include("mesa-modes/mesa-active-response-mode.jl")
+include("mesa-modes/mesa-agc-mode.jl")
+include("mesa-modes/mesa-charge-discharge-storage-mode.jl")
+include("mesa-modes/mesa-frequency-watt-mode.jl")
+include("mesa-modes/mesa-volt-watt-mode.jl")
+# end

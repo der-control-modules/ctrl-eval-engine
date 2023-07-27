@@ -1,7 +1,8 @@
-using MesaEss: MesaController, VertexCurve, RampParams
+using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams
 
 
 struct FrequencyWattMode <: MesaMode
+    params::MesaModeParams
     useCurves::Bool
     frequencyWattCurve::VertexCurve
     lowHysteresisCurve::VertexCurve

@@ -1,16 +1,15 @@
-using MesaEss: MesaController, VertexCurve, RampParams
+using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams
 
-struct VoltWattMode <: MesaMode
-    referenceVoltageOffset::Float64
-    voltWattCurve::VertexCurve
-    gradient::Float64
-    filterTime::Dates.Second
-    lowerDeadband::Float64
-    upperDeadband::Float64
+struct AGCMode <: MesaMode
+    params::MesaModeParams
+    rampOrTimeConstant::Bool
+    rampParams::RampParams
+    minimumUsableSOC::Float64
+    maximumUsableSOC::Float64
 end
 
 function modecontrol(
-    mode::VoltWattMode,
+    mode::AGCMode,
     ess::EnergyStorageSystem,
     controller::MesaController,
     schedulePeriod::SchedulePeriod,

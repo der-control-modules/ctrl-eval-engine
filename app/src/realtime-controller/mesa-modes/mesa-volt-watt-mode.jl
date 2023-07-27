@@ -1,16 +1,17 @@
-using MesaEss: MesaController, VertexCurve, RampParams
+using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams
 
-struct ActivePowerSmoothingMode <: MesaMode
-    smoothingGradient::Float64
-    lowerSmoothingLimit::Float64
-    upperSmoothingLimit::Float64
-    smoothingFilterTime::Dates.Second
-    rampParams::RampParams
+struct VoltWattMode <: MesaMode
+    params::MesaModeParams
+    referenceVoltageOffset::Float64
+    voltWattCurve::VertexCurve
+    gradient::Float64
+    filterTime::Dates.Second
+    lowerDeadband::Float64
+    upperDeadband::Float64
 end
 
-
 function modecontrol(
-    mode::ActivePowerSmoothingMode,
+    mode::VoltWattMode,
     ess::EnergyStorageSystem,
     controller::MesaController,
     schedulePeriod::SchedulePeriod,
