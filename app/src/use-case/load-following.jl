@@ -67,19 +67,19 @@ function use_case_charts(operation::OperationHistory, ucLF::LoadFollowing)
             :data => [
                 Dict(
                     :x => timestamps(ucLF.forecastLoadPower),
-                    :y => values(ucLF.forecastLoadPower),
+                    :y => get_values(ucLF.forecastLoadPower),
                     :type => "interval",
                     :name => "Forecast Load Power"
                 ),
                 Dict(
                     :x => timestamps(ucLF.realtimeLoadPower),
-                    :y => values(ucLF.realtimeLoadPower),
+                    :y => get_values(ucLF.realtimeLoadPower),
                     :type => "interval",
                     :name => "Real-time Load Power"
                 ),
                 Dict(
                     :x => timestamps(ucLF.realtimeLoadPower),
-                    :y => zeros(length(values(ucLF.realtimeLoadPower))), # TODO: to be replaced with actual errors
+                    :y => zeros(length(get_values(ucLF.realtimeLoadPower))), # TODO: to be replaced with actual errors
                     :type => "interval",
                     :name => "Relative Error",
                     :yAxis => "right"

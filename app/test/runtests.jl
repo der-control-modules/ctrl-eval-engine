@@ -6,7 +6,8 @@ using Test
 
 using CtrlEvalEngine
 
-include("input_tests.jl")
+include("timeseries-tests.jl")
+include("input-tests.jl")
 include("simulator-tests.jl")
 include("use-case-tests.jl")
 include("scheduler-tests.jl")
