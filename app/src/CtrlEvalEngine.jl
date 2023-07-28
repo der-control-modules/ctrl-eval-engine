@@ -76,8 +76,8 @@ function generate_output_dict(
         vcat,
         useCases;
         init = [
-            Dict(:label => "Annual Benefit", :value => "\$$annualBenefit"),
-            Dict(:label => "Present Value Benefit", :value => "\$$pvBenefit"),
+            Dict(:label => "Annual Benefit", :value => annualBenefit, :type => "currency"),
+            Dict(:label => "Present Value Benefit", :value => pvBenefit, :type => "currency"),
             Dict(:label => "Annual Usage (Discharged Energy)", :value => annualUsageString),
             Dict(:label => "SOH Change", :value => "100% → $endingSohPct%"),
             Dict(

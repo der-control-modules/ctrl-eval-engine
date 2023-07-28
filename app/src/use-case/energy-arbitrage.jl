@@ -50,7 +50,7 @@ Summarize the benefit and cost associated with `useCase` given `operation`
 function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
     return [
         Dict(:sectionTitle => "Energy Arbitrage"),
-        Dict(:label => "Net Income", :value => power(operation) ⋅ ucEA.price),
+        Dict(:label => "Net Income", :value => power(operation) ⋅ ucEA.price, :type => "currency"),
     ]
 end
 
