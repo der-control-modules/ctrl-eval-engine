@@ -29,29 +29,23 @@ Construct a `LoadFollowing` object from `input` dictionary or array
 LoadFollowing(input::Dict) = LoadFollowing(
     FixedIntervalTimeSeries(
         DateTime(input["forecastLoadPower"][1]["DateTime"]),
-        DateTime(input["forecastLoadPower"][2]["DateTime"]) - DateTime(input["forecastLoadPower"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["forecastLoadPower"]]
+        DateTime(input["forecastLoadPower"][2]["DateTime"]) -
+        DateTime(input["forecastLoadPower"][1]["DateTime"]),
+        [float(row["Power"]) for row in input["forecastLoadPower"]],
     ),
     FixedIntervalTimeSeries(
         DateTime(input["realtimeLoadPower"][1]["DateTime"]),
-        DateTime(input["realtimeLoadPower"][2]["DateTime"]) - DateTime(input["realtimeLoadPower"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["realtimeLoadPower"]]
-    )
+        DateTime(input["realtimeLoadPower"][2]["DateTime"]) -
+        DateTime(input["realtimeLoadPower"][1]["DateTime"]),
+        [float(row["Power"]) for row in input["realtimeLoadPower"]],
+    ),
 )
 
 function calculate_metrics(operation::OperationHistory, ucLF::LoadFollowing)
     [
-        Dict(
-            :sectionTitle => "Load Following",
-        ),
-        Dict(
-            :label => "RMSE",
-            :value => 0
-        ),
-        Dict(
-            :label => "Maximum Deviation",
-            :value => 0
-        )
+        Dict(:sectionTitle => "Load Following"),
+        Dict(:label => "RMSE", :value => 0),
+        Dict(:label => "Maximum Deviation", :value => 0),
     ]
 end
 
@@ -69,22 +63,22 @@ function use_case_charts(operation::OperationHistory, ucLF::LoadFollowing)
                     :x => timestamps(ucLF.forecastLoadPower),
                     :y => get_values(ucLF.forecastLoadPower),
                     :type => "interval",
-                    :name => "Forecast Load Power"
+                    :name => "Forecast Load Power",
                 ),
                 Dict(
                     :x => timestamps(ucLF.realtimeLoadPower),
                     :y => get_values(ucLF.realtimeLoadPower),
                     :type => "interval",
-                    :name => "Real-time Load Power"
+                    :name => "Real-time Load Power",
                 ),
                 Dict(
                     :x => timestamps(ucLF.realtimeLoadPower),
                     :y => zeros(length(get_values(ucLF.realtimeLoadPower))), # TODO: to be replaced with actual errors
                     :type => "interval",
                     :name => "Relative Error",
-                    :yAxis => "right"
+                    :yAxis => "right",
                 ),
-            ]
+            ],
         ),
     ]
 end
