@@ -4,7 +4,8 @@ struct RegulationPricePoint
     servicePrice::Float64
 end
 
-Base.:zero(RegulationPricePoint) = RegulationPricePoint(0, 0)
+Base.:zero(::RegulationPricePoint) = RegulationPricePoint(0, 0)
+Base.:zero(::Type{RegulationPricePoint}) = RegulationPricePoint(0, 0)
 
 struct RegulationOperationPoint{
     TC<:Union{Real,JuMP.VariableRef},
@@ -14,7 +15,8 @@ struct RegulationOperationPoint{
     mileage::TM
 end
 
-Base.:zero(RegulationOperationPoint) = RegulationOperationPoint(0, 0)
+Base.:zero(::RegulationOperationPoint) = RegulationOperationPoint(0, 0)
+Base.:zero(::Type{RegulationOperationPoint}) = RegulationOperationPoint(0, 0)
 
 struct Regulation <: UseCase
     price::FixedIntervalTimeSeries{Hour,RegulationPricePoint}

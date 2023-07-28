@@ -1,7 +1,7 @@
 using Dates, DiscretePIDs
 using CtrlEvalEngine.EnergyStorageSimulators
 using CtrlEvalEngine.EnergyStorageUseCases: UseCase, LoadFollowing
-using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod, end_time
+using CtrlEvalEngine.EnergyStorageScheduling: SchedulePeriod
 
 struct PIDController <: RTController
     resolution::Dates.Period
@@ -46,14 +46,15 @@ function control(
             controller.resolution,
         )
     else
+        remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
         return ControlSequence(
             [
                 min(
-                    max(p_min(ess, controller.resolution), scheduled_bess_power),
-                    p_max(ess, controller.resolution),
+                    max(p_min(ess, remainingTime), scheduled_bess_power),
+                    p_max(ess, remainingTime),
                 ),
             ],
-            end_time(schedulePeriod) - t,
+            remainingTime,
         )
     end
 end

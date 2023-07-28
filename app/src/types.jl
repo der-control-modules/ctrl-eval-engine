@@ -148,12 +148,31 @@ function dot_multiply_time_series(ts1::TimeSeries, ts2::TimeSeries)
     integrate(binary_operation(ts1, ts2, *))
 end
 
+"""
+    integrate(ts::TimeSeries, tStart=start_time(ts), tEnd=end_time(ts))
+
+Integrate `ts` from `tStart` to `tEnd` and return the result.
+"""
 integrate(ts::TimeSeries) = integrate(ts, start_time(ts), end_time(ts))
 
 integrate(ts::TimeSeries, tStart::DateTime, tEnd::DateTime) =
     mapreduce(+, extract(ts, tStart, tEnd)) do (v, t1, t2)
         v * /(promote(t2 - t1, Hour(1))...)
     end
+
+"""
+    cum_integrate(ts::TimeSeries, tStart=start_time(ts), tEnd=end_time(ts))
+
+Cummulatively integrate `ts` from `tStart` to `tEnd` and return the resultant `VariableIntervalTimeSeries`.
+"""
+cum_integrate(ts::TimeSeries, tStart::DateTime, tEnd::DateTime) = begin
+    seg_integral = map(extract(ts, tStart, tEnd)) do (v, t1, t2)
+        v * /(promote(t2 - t1, Hour(1))...)
+    end
+    VariableIntervalTimeSeries(timestamps(ts), cumsum(seg_integral))
+end
+
+cum_integrate(ts::TimeSeries) = cum_integrate(ts, start_time(ts), end_time(ts))
 
 function binary_operation(ts1::TimeSeries, ts2::TimeSeries, op)
     tStart = min(start_time(ts1), start_time(ts2))

@@ -50,47 +50,51 @@ Summarize the benefit and cost associated with `useCase` given `operation`
 function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
     return [
         Dict(:sectionTitle => "Energy Arbitrage"),
-        Dict(:label => "Net Income", :value => power(operation) ⋅ ucEA.price, :type => "currency"),
+        Dict(
+            :label => "Net Income",
+            :value => power(operation) ⋅ ucEA.price,
+            :type => "currency",
+        ),
     ]
 end
 
-use_case_charts(op::OperationHistory, ucEA::EnergyArbitrage) = [
-    Dict(
-        :title => "Energy Arbitrage",
-        :xAxis => Dict(:title => "Time"),
-        :yAxisLeft => Dict(:title => "Power (kW)"),
-        :yAxisRight => Dict(:title => raw"Price ($/kWh)"),
-        :data => [
-            Dict(
-                :x => op.t,
-                :y => op.powerKw,
-                :type => "interval",
-                :name => "Actual Power",
-            ),
-            Dict(
-                :x => timestamps(ucEA.price),
-                :y => get_values(ucEA.price),
-                :type => "interval",
-                :name => "Energy Price",
-                :yAxis => "right",
-            ),
-        ],
-    ),
-    Dict(
-        :xAxis => Dict(:title => "Time"),
-        :yAxisLeft => Dict(:title => raw"Cumulative Net Income ($)"),
-        :data => [
-            Dict(
-                :x => timestamps(ucEA.price),
-                :y => pushfirst!(
-                    cumsum(
-                        get_values(mean(power(op), timestamps(ucEA.price))) .*
-                        get_values(ucEA.price),
-                    ),
-                    0,
+use_case_charts(op::OperationHistory, ucEA::EnergyArbitrage) = begin
+    @debug "Generating time series charts for Energy Arbitrage"
+
+    cumIncome = cum_integrate(power(op) * ucEA.price)
+
+    [
+        Dict(
+            :title => "Energy Arbitrage",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Power (kW)"),
+            :yAxisRight => Dict(:title => raw"Price ($/kWh)"),
+            :data => [
+                Dict(
+                    :x => op.t,
+                    :y => op.powerKw,
+                    :type => "interval",
+                    :name => "Actual Power",
                 ),
-                :type => "instance",
-            ),
-        ],
-    ),
-]
+                Dict(
+                    :x => timestamps(ucEA.price),
+                    :y => get_values(ucEA.price),
+                    :type => "interval",
+                    :name => "Energy Price",
+                    :yAxis => "right",
+                ),
+            ],
+        ),
+        Dict(
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => raw"Cumulative Net Income ($)"),
+            :data => [
+                Dict(
+                    :x => timestamps(cumIncome),
+                    :y => pushfirst!(get_values(cumIncome), 0),
+                    :type => "instance",
+                ),
+            ],
+        ),
+    ]
+end

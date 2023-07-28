@@ -11,6 +11,7 @@ export evaluate_controller,
     get_values,
     sample,
     integrate,
+    cum_integrate,
     mean,
     std,
     get_period,
@@ -45,6 +46,7 @@ function generate_output_dict(
     useCases::AbstractVector{<:UseCase},
     ess::EnergyStorageSystem,
 )
+    @debug "Calculating default metrics"
     netBenefit = mapreduce(uc -> calculate_net_benefit(progress, uc), +, useCases)
     simPeriodLengthInYear =
         (end_time(progress.operation) - start_time(progress.operation)) / Day(365)
@@ -71,6 +73,7 @@ function generate_output_dict(
 
     endingSohPct = round(SOH(ess) * 100)
 
+    @debug "Calculating use-case-specific metrics"
     metrics = mapreduce(
         uc -> calculate_metrics(progress.operation, uc),
         vcat,
@@ -89,6 +92,8 @@ function generate_output_dict(
             ),
         ],
     )
+
+    @debug "Generating data for time-series charts" useCases
     outputDict =
         Dict(:metrics => metrics, :timeCharts => generate_chart_data(progress, useCases))
     return outputDict
@@ -259,6 +264,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
         end
     end
 
+    @debug "Generating output..."
     return generate_output_dict(outputProgress, useCases, ess)
 end
 
