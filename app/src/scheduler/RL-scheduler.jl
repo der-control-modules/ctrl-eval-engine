@@ -43,5 +43,5 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseC
         batteryParameters,
         rlScheduler.numIter
     )
-    return Schedule(battery_power, tStart, rlScheduler.resolution)
+    return Schedule(-battery_power, tStart, rlScheduler.resolution)
 end
