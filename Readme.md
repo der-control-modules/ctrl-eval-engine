@@ -34,7 +34,15 @@ Now the repo should be ready to use.
 
 ## Local Testing and Debug
 
+### Running an evaluation
 ```sh
 cd app
 julia --project=. evaluation_engine.jl debug <input_file.json>
 ```
+
+### Visualize the output
+```sh
+julia --project=test test/visualize_results.jl <output_file.json>
+```
+An HTML file named `<output_file.json>-time-charts.html` will be created/updated.
+Open it in a web browser to see the plots.
