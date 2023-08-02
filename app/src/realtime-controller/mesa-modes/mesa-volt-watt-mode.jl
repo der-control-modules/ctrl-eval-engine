@@ -17,11 +17,8 @@ function modecontrol(
     schedulePeriod::SchedulePeriod,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
-    spProgress::VariableIntervalTimeSeries
+    spProgress::VariableIntervalTimeSeries,
+    currentIterationPower::Float64
 )
     # TODO: Stuff
-    controller.wip = [
-        i # TODO: Actual stuff
-        for i in t:mockController.resolution:tEnd
-    ]
 end

@@ -1,106 +1,160 @@
 using CtrlEvalEngine.EnergyStorageSimulators: LiIonBattery, LFP_LiIonBatterySpecs, LiIonBatteryStates, SOC, SOH, operate!
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageScheduling: end_time, schedule, ManualScheduler, SchedulePeriod
-using CtrlEvalEngine.EnergyStorageRTControl: control, PIDController, AMAController, MesaController, MesaModeParams, ActiveResponseMode
+using CtrlEvalEngine.EnergyStorageRTControl: control, PIDController, AMAController, MesaController, MesaModeParams, RampParams,
+ ActiveResponseMode, ChargeDischargeStorageMode, ActivePowerLimitMode
 using Dates
 using JSON
 
-@testset "PeakLimiting MESA Controller" begin
-    ess = LiIonBattery(
-        LFP_LiIonBatterySpecs(500, 100000, 0.85, 2000),
-        LiIonBatteryStates(0.5, 0)
-    )
-    tStart = floor(now(), Hour(1))
-    useCases = UseCase[
-        PeakLimiting(
-            30,
-            FixedIntervalTimeSeries(
-                tStart,
-                Dates.Minute(5),
-                [10, 20, 30, 40, 50, 40, 30, 20, 10, 0, -10, -20]
-            )
-        )
-    ]
+function run_controller(ess, controller, schedulePeriod, useCases, tStart)
     t = tStart
     opHist = CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
     setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
+    schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
+    spProgress = VariableIntervalTimeSeries([tStart], Float64[])
+    while t < schedulePeriodEnd
+        controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
+        for (powerSetpointKw, controlDuration) in controlSequence
+            actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
+            CtrlEvalEngine.update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
+            t += controlDuration
+            CtrlEvalEngine.update_operation_history!(opHist, t, ess, actualPowerKw)
+            if t > schedulePeriodEnd
+                break
+            end
+        end
+    end
+end
+
+ess = LiIonBattery(LFP_LiIonBatterySpecs(500, 10000, 0.85, 2000), LiIonBatteryStates(0.5, 0))
+tStart = floor(now(), Hour(1))
+
+@testset "Charge Discharge Storage MESA Mode" begin
+    useCases = UseCase[]
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    
+    # Test that mode follows the specified power percentage (53% of 500kW is 265kW).
+    controller = MesaController(
+        [ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true,
+         RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, 53.0)],
+         Dates.Minute(5)
+         )
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test controller.wip.value == [265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0]
+
+    # Test that mode follows the schedule if a power percentage is not specified .    
+    controller = MesaController(
+        [ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true,
+         RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
+         Dates.Minute(5)
+         )
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test controller.wip.value == [65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2]
+
+    # Test charging schedule (negative power):
+        # Test that mode follows the schedule if a power percentage is not specified .    
+        controller = MesaController(
+            [ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true,
+             RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
+             Dates.Minute(5)
+             )
+        schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
+        run_controller(ess, controller, schedulePeriod, useCases, tStart)
+        @test controller.wip.value == [-65.2, -65.2, -65.2, -65.2, -65.2, -65.2, -65.2, -65.2, -65.2, -65.2, -65.2, -65.2]
+end
+
+@testset "Active Power Limit MESA Mode" begin
+    useCases = UseCase[]
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    rampParams = RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0)
+    
+    # Test Discharge Limit:
+    controller = MesaController(
+        [
+            ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true, rampParams, 20.0, 80.0, nothing),
+            ActivePowerLimitMode(MesaModeParams(2, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 2.0, 1.0)
+        ],
+        Dates.Minute(5)
+        )
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test controller.wip.value == [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
+
+    # Test Charge Limit:
+    controller = MesaController(
+        [
+            ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true, rampParams, 20.0, 80.0, nothing),
+            ActivePowerLimitMode(MesaModeParams(2, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 2.0, 1.0)
+        ],
+        Dates.Minute(5)
+        )
+    schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test controller.wip.value == [-10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0]
+end
+
+@testset "PeakLimiting MESA Mode" begin
+    useCases = UseCase[
+        PeakLimiting(
+            30,
+            FixedIntervalTimeSeries(tStart, Dates.Minute(5), [10, 20, 30, 40, 50, 40, 30, 20, 10, 0, -10, -20])
+        )
+    ]
     controller = MesaController(
         [ActiveResponseMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 30.0, 1.0, 1000.0, 1000.0)],
          Dates.Minute(5)
          )
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
-    schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
-    spProgress = VariableIntervalTimeSeries([tStart], Float64[])
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
 
-    while t < schedulePeriodEnd
-        controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
-        print('\n', "at time: ", t, " controlSequence is: ", controlSequence)
-        for (powerSetpointKw, controlDuration) in controlSequence
-            actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
-            print('\n')
-            print(actualPowerKw)
-            print('\n')
-            CtrlEvalEngine.update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
-            t += controlDuration
-            CtrlEvalEngine.update_operation_history!(opHist, t, ess, actualPowerKw)
-            if t > schedulePeriodEnd
-                break
-            end
-        end
-    end
-    print('\n')
-    print(spProgress)
-    print('\n')
-    print(controller.modes[1].params.modeWIP)
-    print('\n')
-    print(controller.wip)
-    print('\n')
-    @test true
+    @test controller.wip.value == [0.0, 0.0, 0.0, 10.0, 20.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+end
+
+@testset "LoadFollowing MESA Mode" begin
+    useCases = UseCase[
+        LoadFollowing(
+            FixedIntervalTimeSeries(tStart, Dates.Minute(60), [30]),
+            FixedIntervalTimeSeries(tStart, Dates.Minute(5), [10, 20, 30, 40, 50, 40, 30, 20, 10, 0, -10, -20])
+        )
+    ]
+    controller = MesaController(
+        [ActiveResponseMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 30.0, 10.0, 1000.0, 1000.0)],
+         Dates.Minute(5)
+         )
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test controller.wip.value == [0.0, 0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+end
+
+@testset "GenerationFollowing MESA Mode" begin
+    useCases = UseCase[
+        GenerationFollowing(
+            FixedIntervalTimeSeries(tStart, Dates.Minute(60), [30]),
+            FixedIntervalTimeSeries(tStart, Dates.Minute(5), [10, 20, 30, 40, 50, 40, 30, 20, 10, 0, -10, -20])
+        )
+    ]
+    controller = MesaController(
+        [ActiveResponseMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 30.0, 10.0, 1000.0, 1000.0)],
+         Dates.Minute(5)
+         )
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test controller.wip.value == [-2.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, -2.0, -3.0, -4.0, -5.0]
 end
 
 @testset "PID Controller" begin
-    ess = LiIonBattery(
-        LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
-        LiIonBatteryStates(0.5, 0)
-    )
-    tStart = floor(now(), Hour(1))
     useCases = UseCase[
         EnergyArbitrage(
-            VariableIntervalTimeSeries(
-                range(tStart; step=Hour(1), length=5),
-                [10, 20, 1, 10]
-            )
+            VariableIntervalTimeSeries(range(tStart; step=Hour(1), length=5), [10, 20, 1, 10])
         )
     ]
-    t = tStart
-    opHist = CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
-    setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
     controller = PIDController(Minute(1), 8.0, 0.5, 0.01)
-
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
-    schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
-    spProgress = VariableIntervalTimeSeries([tStart], Float64[])
-    while t < schedulePeriodEnd
-        controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
-        for (powerSetpointKw, controlDuration) in controlSequence
-            actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
-            CtrlEvalEngine.update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
-            t += controlDuration
-            CtrlEvalEngine.update_operation_history!(opHist, t, ess, actualPowerKw)
-            if t > schedulePeriodEnd
-                break
-            end
-        end
-    end
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
     @test true
 end
 
 @testset "AMAC" begin
-    ess = LiIonBattery(
-        LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
-        LiIonBatteryStates(0.5, 0)
-    )
-    tStart = floor(now(), Hour(1))
     useCases = [
         VariabilityMitigation(
             FixedIntervalTimeSeries(
@@ -124,21 +178,7 @@ end
         ess,
         useCases
     )
-
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
-    schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
-    spProgress = VariableIntervalTimeSeries([tStart], Float64[])
-    t = tStart
-    while t < schedulePeriodEnd
-        controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
-        for (powerSetpointKw, controlDuration) in controlSequence
-            actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
-            CtrlEvalEngine.update_schedule_period_progress!(spProgress, actualPowerKw, controlDuration)
-            t += controlDuration
-            if t > schedulePeriodEnd
-                break
-            end
-        end
-    end
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
     @test true
 end

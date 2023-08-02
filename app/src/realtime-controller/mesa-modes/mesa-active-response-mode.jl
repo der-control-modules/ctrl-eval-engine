@@ -23,6 +23,7 @@ function modecontrol(
     _,
     useCases::AbstractVector{<:UseCase},
     t::Dates.DateTime,
+    _,
     _
 )
     idxPeakLimiting = findfirst(uc -> uc isa PeakLimiting, useCases)
@@ -32,17 +33,15 @@ function modecontrol(
     if idxPeakLimiting !== nothing && idxLoadFollowing === nothing && idxGenFollowing === nothing # Only peak following.
         useCase = useCases[idxPeakLimiting]
         (referencePower, _, _) = get_period(useCase.realtimePower, t)
-        print('\n', "At time: ", t, " referencePower is: ", referencePower)
         powerPastLimit = max(referencePower - mode.activationThreshold, 0)
-        print(" powerPastLimit is: ", powerPastLimit, '\n')
     elseif idxPeakLimiting === nothing && idxLoadFollowing !== nothing && idxGenFollowing === nothing # Only load following.
         useCase = useCases[idxLoadFollowing]
         (referencePower, _, _) = get_period(useCase.realtimeLoadPower, t)
-        powerPastLimit = max((referencePower - mode.activationThreshold) * mode.ratio / 100, 0)
+        powerPastLimit = max((referencePower - mode.activationThreshold) * mode.outputRatio / 100, 0)
     elseif idxPeakLimiting === nothing && idxLoadFollowing === nothing && idxGenFollowing !== nothing # Only generation follwing.
-        useCase = useCases[idxGenFollwing]
+        useCase = useCases[idxGenFollowing]
         (referencePower, _, _) = get_period(useCase.realtimePower, t)
-        powerPastLimit = min((referencePower - mode.activationThreshold) * mode.ratio / 100, 0)
+        powerPastLimit = min((referencePower - mode.activationThreshold) * mode.outputRatio / 100, 0)
     else
         if count([idxGenFollowing, idxLoadFollowing, idxPeakLimiting]) > 1
             error("Disallowed set of UseCases: Only one of \"PeakLimiting\", \"LoadFollowing\",

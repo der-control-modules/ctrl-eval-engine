@@ -69,9 +69,6 @@ function apply_ramps(
     currentPower::Float64,
     targetPower::Float64, 
     )
-    print("in apply_ramps: \n")
-    print("currentPower: ", currentPower, " | targetPower: ", targetPower)
-    print(" rampParams: ", rampParams, '\n')
     # TODO: Assuming ramp rate is percentage per second of p_max or p_min. The actual units in DNP3 spec are just percent per second. 
     #        Should this be percent of requested jump in power per second instead?
     if targetPower > currentPower && targetPower >= 0  # TODO: This assumes percent per second refers to percent of max/min power.
@@ -85,7 +82,6 @@ function apply_ramps(
     else
         allowedPowerChange = 0.0
     end
-    print("allowedPowerChange: ", allowedPowerChange, '\n')
     return currentPower + allowedPowerChange
 end
 
@@ -96,16 +92,13 @@ function apply_energy_limits(
     minReserve::Union{Float64, Nothing}=nothing, 
     maxReserve::Union{Float64, Nothing}=nothing
     )
-    print("minReserve: ", minReserve, " | maxReserve: ", maxReserve, " | power: ", power, " | duration: ", duration, '\n')
-    minEnergy = minReserve ≠ nothing ? minReserve * e_max(ess) : e_min(ess)
-    maxEnergy = maxReserve ≠ nothing ? maxReserve * e_max(ess) : e_max(ess)
-    print("minEnergy: ", minEnergy, " | maxEnergy: ", maxEnergy)
-    proposedNewEnergy = energy_state(ess) + power * Dates.value(Dates.Second(duration))
-    print( " | energy_state(ess): ", energy_state(ess), " | proposedNewEnergy: ", proposedNewEnergy, '\n')
+    minEnergy = minReserve ≠ nothing ? minReserve / 100 * e_max(ess) : e_min(ess)
+    maxEnergy = maxReserve ≠ nothing ? maxReserve / 100 * e_max(ess) : e_max(ess)
+    proposedNewEnergy = energy_state(ess) + (power * duration / Hour(1))
     if proposedNewEnergy > maxEnergy
-        return (maxEnergy - energy_state(ess)) / Dates.value(Second(duration))
+        return (maxEnergy - energy_state(ess)) / (duration / Hour(1))
     elseif proposedNewEnergy < minEnergy
-        return (minEnergy - energy_state(ess)) / Dates.value(Second(duration))
+        return (minEnergy - energy_state(ess)) / (duration / Hour(1))
     else
         return power
     end
@@ -128,15 +121,15 @@ function control(
         push!(controller.wip.value, 0.0)
     end
     # Call each mode in order of priority:
-    sort!(controller.modes, by=m->m.priority)
+    sort!(controller.modes, by=m->m.params.priority)
     p = 0.0
     for mode in controller.modes
         if mode.params.modeWIP === nothing
             mode.params.modeWIP = FixedIntervalTimeSeries(t, controller.resolution, [0.0])
         else
-            push!(mode.params.modeWIP, 0.0)
+            push!(mode.params.modeWIP.value, 0.0)
         end    
-        modePower = modecontrol(mode, ess, controller, schedulePeriod, useCases, t, spProgress)
+        modePower = modecontrol(mode, ess, controller, schedulePeriod, useCases, t, spProgress, p)
         mode.params.modeWIP.value[end] = modePower
         p = p + modePower
     end

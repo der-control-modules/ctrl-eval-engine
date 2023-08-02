@@ -20,9 +20,11 @@ function modecontrol(
     _,
     _,
     t::Dates.DateTime,
-    _
+    _,
+    currentIterationPower::Float64
 )
 maxAllowedChargePower = mode.maximumChargePercentage / 100 * p_min(ess)
-maxAllowedDishargePower = mode.maximumDishargePercentage / 100 * p_max(ess)
-return max(min(controller.wip.value[end], maxAllowedDishargePower), maxAllowedChargePower)
+maxAllowedDischargePower = mode.maximumDischargePercentage / 100 * p_max(ess)
+constrainedPower = max(min(currentIterationPower, maxAllowedDischargePower), maxAllowedChargePower)
+return constrainedPower - currentIterationPower
 end
