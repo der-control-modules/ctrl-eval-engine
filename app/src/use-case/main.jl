@@ -41,8 +41,8 @@ include("load-following.jl")
 get_use_cases(inputDict::Dict, setting::SimSetting) = [
     if name === "Energy Arbitrage"
         EnergyArbitrage(config["data"], setting.simStart, setting.simEnd)
-    elseif name === "Variability Mitigation"
-        VariabilityMitigation(config, setting.simStart, setting.simEnd)
+    elseif name === "Power Smoothing"
+        VariabilityMitigation(config["data"], setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
     end

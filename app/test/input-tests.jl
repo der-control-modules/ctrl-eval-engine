@@ -29,26 +29,28 @@ end
 @testset "Use Case Input" begin
     inputDict = JSON.parse("""
         {
-            "Variability Mitigation": {
-                "pvGenProfile": [
-                    {
-                        "DateTime": "2018-01-21T00:00",
-                        "Power": 351.54
-                    },
-                    {
-                        "DateTime": "2018-01-21T00:01",
-                        "Power": 351.5
-                    },
-                    {
-                        "DateTime": "2018-01-21T00:02",
-                        "Power": 35.54
-                    },
-                    {
-                        "DateTime": "2018-01-21T00:03",
-                        "Power": 51.54
-                    }
-                ],
-                "ratedPowerKw": 500
+            "Power Smoothing": {
+                "data": {
+                    "pvGenProfile": [
+                        {
+                            "DateTime": "2018-01-21T00:00",
+                            "Power": 351.54
+                        },
+                        {
+                            "DateTime": "2018-01-21T00:01",
+                            "Power": 351.5
+                        },
+                        {
+                            "DateTime": "2018-01-21T00:02",
+                            "Power": 35.54
+                        },
+                        {
+                            "DateTime": "2018-01-21T00:03",
+                            "Power": 51.54
+                        }
+                    ],
+                    "ratedPowerKw": 500
+                }
             }
         }"""
     )
