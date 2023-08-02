@@ -3,11 +3,15 @@ using PyCall
 using CtrlEvalEngine: start_time, end_time
 
 struct AMAController <: RTController
-    pyAmac
+    pyAmac::Any
     passive::Bool
 end
 
-function AMAController(controlConfig::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
+function AMAController(
+    controlConfig::Dict,
+    ess::EnergyStorageSystem,
+    useCases::AbstractArray{<:UseCase},
+)
     pyAmac = py"AMACOperation"(controlConfig)
     pyAmac.set_bess_data(
         p_max(ess),
@@ -27,7 +31,14 @@ function AMAController(controlConfig::Dict, ess::EnergyStorageSystem, useCases::
     AMAController(pyAmac, isnothing(idxVM))
 end
 
-function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::AbstractArray{<:UseCase}, t::DateTime, _::VariableIntervalTimeSeries)
+function control(
+    ess,
+    amac::AMAController,
+    sp::SchedulePeriod,
+    useCases::AbstractArray{<:UseCase},
+    t::DateTime,
+    ::VariableIntervalTimeSeries,
+)
     if amac.passive
         # Fall back to passive control according to schedule
         return ControlSequence([sp.powerKw], sp.duration)
@@ -39,7 +50,7 @@ function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::Abstrac
         # Passive control until start of PV generation or end of SchedulePeriod, whichever comes first
         return ControlSequence(
             [sp.powerKw],
-            min(start_time(ucVM.pvGenProfile), EnergyStorageScheduling.end_time(sp)) - t
+            min(start_time(ucVM.pvGenProfile), EnergyStorageScheduling.end_time(sp)) - t,
         )
     end
 
@@ -52,6 +63,9 @@ function control(ess, amac::AMAController, sp::SchedulePeriod, useCases::Abstrac
     # Active control if PV generation is present
     amac.pyAmac.set_load_data(currentPvGen, t)
     battery_power = amac.pyAmac.run_model()
-    battery_power = min(max(p_min(ess), battery_power + sp.powerKw), p_max(ess))
+    battery_power = min(
+        max(p_min(ess, ucVM.pvGenProfile.resolution), battery_power + sp.powerKw),
+        p_max(ess, ucVM.pvGenProfile.resolution),
+    )
     return ControlSequence([battery_power], ucVM.pvGenProfile.resolution)
 end

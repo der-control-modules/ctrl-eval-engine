@@ -9,16 +9,8 @@ using LinearAlgebra
         @test all(ts2.value .== [3, 4])
 
         ts3 = extract(ts1, DateTime(2022, 1, 1, 1, 30), DateTime(2022, 1, 1, 4, 30))
-        @test ts3 isa VariableIntervalTimeSeries
-        @test all(
-            timestamps(ts3) .== [
-                DateTime(2022, 1, 1, 1, 30),
-                DateTime(2022, 1, 1, 2),
-                DateTime(2022, 1, 1, 3),
-                DateTime(2022, 1, 1, 4),
-                DateTime(2022, 1, 1, 4, 30),
-            ],
-        )
+        @test ts3 isa FixedIntervalTimeSeries
+        @test start_time(ts3) == DateTime(2022, 1, 1, 1, 0)
         @test all(ts3.value .== 2:5)
     end
 
@@ -158,5 +150,11 @@ end
         @test mean(ts1) ≈ (2 * 30 + 3 * 25 + 5 * 75) / 130
         @test mean(ts1, DateTime(2023, 1, 1, 1), DateTime(2023, 1, 1, 3)) ≈
               (3 * 15 + 5 * 75) / 120
+        tsMean = mean(ts1, [DateTime(2023, 1, 1, 1), DateTime(2023, 1, 1, 3)])
+        @test tsMean isa VariableIntervalTimeSeries
+        @test tsMean.value[1] ≈ (3 * 15 + 5 * 75) / 120
+
+        m = (2 * 30 + 3 * 25 + 5 * 75) / 130
+        @test std(ts1) ≈ sqrt(((2 - m)^2 * 30 + (3 - m)^2 * 25 + (5 - m)^2 * 75) / 130)
     end
 end
