@@ -2,6 +2,8 @@ struct RuleBasedController <: RTController
     bound::Float64
 end
 
+RuleBasedController(config::Dict) = RuleBasedController(max(0, config["bound"]))
+
 function control(
     ess::EnergyStorageSystem,
     controller::RuleBasedController,

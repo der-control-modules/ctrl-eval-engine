@@ -12,7 +12,7 @@ using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
 
-export get_rt_controller, control, PIDController, AMAController
+export get_rt_controller, control, PIDController, AMAController, RuleBasedController
 
 abstract type RTController end
 
@@ -71,6 +71,8 @@ function get_rt_controller(
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
     elseif controllerType == "ama"
         AMAController(config, ess, useCases)
+    elseif controllerType == "rule"
+        RuleBasedController(config)
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))
     end
