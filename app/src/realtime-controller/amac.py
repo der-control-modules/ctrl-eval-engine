@@ -138,18 +138,14 @@ class AMACOperation:
         return (power / (self.bess_rated_kwh * self.data_interval) / 36) + soc_now
 
     def run_model(self, soc_pct):
+        instantaneous_residual, horizon = 0, 0
         self.publish_calculations(self.load_total_data)
         # A window size derived from std.
-        window_size = int((
-            self.max_window_size * (self.variability - self.min_variability)
-        ) / (
-            self.variability
-            + ((self.max_variability - self.variability) / self.damping_parameter)
-        ))
-
-        instantaneous_residual, horizon = 0, 0
-        if window_size > 2:
-            #print(f"window_size = {window_size}")
+        window_size = int(self.max_window_size * (self.variability - self.min_variability)/(self.variability + (
+            (self.max_variability - self.variability) / self.damping_parameter)))
+        #print(f"window size = {window_size}")
+        if window_size > 0:
+            # print(f"window_size = {window_size}")
             if self.variability > self.min_variability:
                 self.acceleration_parameter = min(
                     (self.variability - self.min_variability)
@@ -164,8 +160,8 @@ class AMACOperation:
                 self.asc_power = (
                     sign
                     * self.bess_rated_kw
-                    * self.acceleration_parameter
-                    * min(1, (abs(delta_soc) / (self.bess_soc_max - self.bess_soc_ref)))
+                    * min(1, (abs(delta_soc) / (self.bess_soc_max - self.bess_soc_ref))
+                    * self.acceleration_parameter)
                 )
             else:
                 self.asc_power = 0
@@ -174,25 +170,24 @@ class AMACOperation:
                 self.asc_power = 0
 
             ama_power = 0
-            if window_size > 0:
-                residuals = []
-                for horizon in [self.data_interval, window_size]:
-                    #print(f"horizon = {horizon}")
-                    # TODO: This should have a setting for the meter to use, or should only be reading one if appropriate.
-                    residual_forecast = self.persistence(
-                        self.load_total_data,
-                        window_size=horizon,
-                        forecast_delta=timedelta(seconds=self.data_interval),
-                    )
-                    #print(f"residual_forecast = {residual_forecast}")
-                    residuals.append(residual_forecast)
-                self.ama_power = residuals[0] - residuals[1]
-                instantaneous_residual = ama_power + self.asc_power
-                self.battery_power = self.load_power - instantaneous_residual
+            residuals = []
+            for horizon in [self.data_interval, window_size]:
+                #print(f"horizon = {horizon}")
+                residual_forecast = self.persistence(
+                    self.load_total_data,
+                    window_size=horizon,
+                    forecast_delta=timedelta(seconds=self.data_interval),
+                )
+                # print(f"residual_forecast = {residual_forecast}")
+                residuals.append(residual_forecast)
+            ama_power = residuals[0] - residuals[1]
+            instantaneous_residual = ama_power + self.asc_power
+            self.battery_power = self.load_power - instantaneous_residual
+            #self.battery_power = -self.load_power + instantaneous_residual
 
             message = [
                 {
-                    #"load_len": len(self.load_total_data),
+                    # "load_len": len(self.load_total_data),
                     "load": self.load_total_data.get_series() if len(self.load_total_data) > 0 else None,
                     "ama_power": ama_power,
                     "battery_power": self.battery_power,
@@ -201,6 +196,6 @@ class AMACOperation:
                 }
             ]
             #print(message)
-            return self.battery_power
-    
-        return 0
+            return self.battery_power, instantaneous_residual
+
+        return 0, instantaneous_residual
