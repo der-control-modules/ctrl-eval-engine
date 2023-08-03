@@ -17,7 +17,6 @@ function AMAController(
         p_max(ess),
         e_max(ess) - e_min(ess),
         ηRT(ess),
-        SOC(ess),
         100,
         e_min(ess) / e_max(ess) * 100,
     )
@@ -62,7 +61,7 @@ function control(
 
     # Active control if PV generation is present
     amac.pyAmac.set_load_data(currentPvGen, t)
-    battery_power = amac.pyAmac.run_model()
+    battery_power = amac.pyAmac.run_model(SOC(ess) * 100)
     battery_power = min(
         max(p_min(ess, ucVM.pvGenProfile.resolution), battery_power + sp.powerKw),
         p_max(ess, ucVM.pvGenProfile.resolution),
