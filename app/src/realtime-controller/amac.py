@@ -141,6 +141,7 @@ class AMACOperation:
         return (power / (self.bess_rated_kwh * self.data_interval) / 36) + soc_now
 
     def run_model(self, soc_pct):
+        instantaneous_residual, horizon = 0, 0
         self.publish_calculations(self.load_total_data)
         # A window size derived from std.
         window_size = int(self.max_window_size * (self.variability - self.min_variability)/(self.variability + (
