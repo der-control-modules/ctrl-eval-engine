@@ -70,27 +70,32 @@ class AMACOperation:
         self.acceleration_parameter = 0
         self.soc_pct = 50
         
-    def get_usecase_config(self, usecase_config):
-        # TODO: move maximumPvPower and dependent variables out of __init__
-        maximum_pv_power = usecase_config.get("maximumPvPower", 300)
-        maximum_allowable_variability_pct = usecase_config.get(
+        self.bess_soc_ref = amac_config.get("referenceSocPct", 50.0)
+
+        self.maximum_allowable_variability_pct = amac_config.get(
             "maximumAllowableVariabilityPct", 50
         )
-        reference_variability_pct = usecase_config.get("referenceVariabilityPct", 10)
-        minimum_allowable_variability_pct = usecase_config.get(
+        self.reference_variability_pct = amac_config.get("referenceVariabilityPct", 10)
+        self.minimum_allowable_variability_pct = amac_config.get(
             "minimumAllowableVariabilityPct", 2
         )
-        self.bess_soc_ref = usecase_config.get("referenceSocPct", 50.0)
+
         self.variability = 0.0
+        self.min_variability = 0.0
+        self.max_variability = 0.0
+        self.ref_variability = 0.0
+
+    
+    def set_PV_rated_power(self, maximum_pv_power):
         self.min_variability = (
-            maximum_pv_power * minimum_allowable_variability_pct
+            maximum_pv_power * self.minimum_allowable_variability_pct
         ) / 100
         self.max_variability = (
-            maximum_pv_power * maximum_allowable_variability_pct
+            maximum_pv_power * self.maximum_allowable_variability_pct
         ) / 100
-        self.ref_variability = (maximum_pv_power * reference_variability_pct) / 100
+        self.ref_variability = (maximum_pv_power * self.reference_variability_pct) / 100
 
-    def get_bess_data(self, rated_kw, rated_kwh, eta, soc_pct, soc_max, soc_min):
+    def set_bess_data(self, rated_kw, rated_kwh, eta, soc_pct, soc_max, soc_min):
         # BESS config
         self.bess_rated_kw = rated_kw
         self.bess_rated_kwh = rated_kwh
@@ -99,7 +104,7 @@ class AMACOperation:
         self.bess_soc_min = soc_min
         self.soc_pct = soc_pct
 
-    def get_load_data(self, load_data, d_time):
+    def set_load_data(self, load_data, d_time):
         self.load_power = load_data
         self.d_time = d_time
         self.load_total_data.append(self.load_power, self.d_time)
@@ -137,8 +142,7 @@ class AMACOperation:
     def calculate_soc(self, soc_now, power):
         return (power / (self.bess_rated_kwh * self.data_interval) / 36) + soc_now
 
-    def run_model(self, soc_pct):
-        instantaneous_residual, horizon = 0, 0
+    def run_model(self):
         self.publish_calculations(self.load_total_data)
         # A window size derived from std.
         window_size = int(self.max_window_size * (self.variability - self.min_variability)/(self.variability + (
@@ -154,7 +158,7 @@ class AMACOperation:
             else:
                 self.acceleration_parameter = 0
 
-            delta_soc = float(soc_pct) - float(self.bess_soc_ref)
+            delta_soc = float(self.soc_pct) - float(self.bess_soc_ref)
             sign = 1 if delta_soc <= 0 else -1
             if abs(delta_soc) > 0:
                 self.asc_power = (
@@ -185,16 +189,16 @@ class AMACOperation:
             self.battery_power = self.load_power - instantaneous_residual
             #self.battery_power = -self.load_power + instantaneous_residual
 
-            message = [
-                {
-                    # "load_len": len(self.load_total_data),
-                    "load": self.load_total_data.get_series() if len(self.load_total_data) > 0 else None,
-                    "ama_power": ama_power,
-                    "battery_power": self.battery_power,
-                    "instantaneous_residual": instantaneous_residual,
-                    "window": window_size,
-                }
-            ]
+            # message = [
+            #     {
+            #         #"load_len": len(self.load_total_data),
+            #         "load": self.load_total_data.get_series() if len(self.load_total_data) > 0 else None,
+            #         "ama_power": ama_power,
+            #         "battery_power": self.battery_power,
+            #         "instantaneous_residual": instantaneous_residual,
+            #         "window": window_size,
+            #     }
+            # ]
             #print(message)
             return self.battery_power, instantaneous_residual
 

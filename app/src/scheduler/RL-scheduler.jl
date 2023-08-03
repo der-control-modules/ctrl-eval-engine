@@ -31,7 +31,7 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseC
         range(
             tStart;
             step=rlScheduler.resolution,
-            stop=tStart + Hour(24) - Second(1)
+            stop=tStart + Hour(24) - Millisecond(1)
         )
     )
     @debug "RL-scheduler" t=tStart resolution=rlScheduler.resolution price batteryParameters
@@ -43,5 +43,5 @@ function schedule(ess, rlScheduler::RLScheduler, useCases::AbstractVector{<:UseC
         batteryParameters,
         rlScheduler.numIter
     )
-    return Schedule(battery_power, tStart, rlScheduler.resolution)
+    return Schedule(-battery_power, tStart, rlScheduler.resolution)
 end
