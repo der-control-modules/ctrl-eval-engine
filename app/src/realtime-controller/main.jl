@@ -46,6 +46,7 @@ control(ess, controller::RTController, schedulePeriod::SchedulePeriod, useCases)
 include("mock-rt-controller.jl")
 include("pid.jl")
 include("amac.jl")
+include("rule-based.jl")
 
 """
     get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
