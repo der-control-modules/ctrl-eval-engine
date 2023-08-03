@@ -200,6 +200,6 @@ class AMACOperation:
             #     }
             # ]
             #print(message)
-            return self.battery_power, instantaneous_residual
+            return self.battery_power
 
-        return 0, instantaneous_residual
+        return 0
