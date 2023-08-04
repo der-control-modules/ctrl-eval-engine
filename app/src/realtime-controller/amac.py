@@ -65,7 +65,6 @@ class AMACOperation:
         self.bess_eta = 0.925
         self.bess_soc_max = 90
         self.bess_soc_min = 10
-        self.asc_power = 0
         self.battery_power = 0
         self.acceleration_parameter = 0
         
@@ -198,7 +197,7 @@ class AMACOperation:
             #         "window": window_size,
             #     }
             # ]
-            #print(message)
-            return self.battery_power
+            # print(message)
+            return -instantaneous_residual
 
         return 0
