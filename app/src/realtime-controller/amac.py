@@ -93,6 +93,9 @@ class AMACOperation:
         ) / 100
         self.ref_variability = (maximum_pv_power * self.reference_variability_pct) / 100
 
+    def set_data_interval(self, dt_seconds):
+        self.data_interval = dt_seconds
+
     def set_bess_data(self, rated_kw, rated_kwh, eta, soc_max, soc_min):
         # BESS config
         self.bess_rated_kw = rated_kw

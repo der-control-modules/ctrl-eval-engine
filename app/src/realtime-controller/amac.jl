@@ -23,7 +23,10 @@ function AMAController(
 
     idxVM = findfirst(uc -> uc isa VariabilityMitigation, useCases)
     if !isnothing(idxVM)
-        pyAmac.set_PV_rated_power(useCases[idxVM].ratedPowerKw)
+        ucVM::VariabilityMitigation = useCases[idxVM]
+        # TODO: update data interval based on input profile
+        # pyAmac.set_data_interval(ucVM.pvGenProfile.resolution / Second(1))
+        pyAmac.set_PV_rated_power(ucVM.ratedPowerKw)
     end
 
     # If VariabilityMitigation use case isn't selected, fall back to passive control according to schedule
@@ -44,7 +47,7 @@ function control(
     end
 
     idxVM = findfirst(uc -> uc isa VariabilityMitigation, useCases)
-    ucVM = useCases[idxVM]
+    ucVM::VariabilityMitigation = useCases[idxVM]
     if start_time(ucVM.pvGenProfile) > t
         # Passive control until start of PV generation or end of SchedulePeriod, whichever comes first
         return ControlSequence(
@@ -53,18 +56,20 @@ function control(
         )
     end
 
-    currentPvGen, _, _ = get_period(ucVM.pvGenProfile, t)
-    if isnothing(currentPvGen)
+    if t ≥ end_time(ucVM.pvGenProfile)
         # Passive control to the end of SchedulePeriod if PV generation profile has ended
         return ControlSequence([sp.powerKw], EnergyStorageScheduling.end_time(sp) - t)
     end
 
     # Active control if PV generation is present
+    currentPvGen, _, tEndPvGenPeriod = get_period(ucVM.pvGenProfile, t)
+    controlDuration = tEndPvGenPeriod - t
     amac.pyAmac.set_load_data(currentPvGen, t)
     battery_power = amac.pyAmac.run_model(SOC(ess) * 100)
     battery_power = min(
-        max(p_min(ess, ucVM.pvGenProfile.resolution), battery_power + sp.powerKw),
-        p_max(ess, ucVM.pvGenProfile.resolution),
+        max(p_min(ess, controlDuration), battery_power + sp.powerKw),
+        p_max(ess, controlDuration),
     )
-    return ControlSequence([battery_power], ucVM.pvGenProfile.resolution)
+    @debug "Active AMAC" t controlDuration maxlog=20
+    return ControlSequence([battery_power], controlDuration)
 end
