@@ -46,6 +46,7 @@ moving_std(ts::TimeSeries, windowLength::Dates.TimePeriod, samplingRate::Dates.T
     end
 
 calculate_metrics(op::OperationHistory, ucVM::VariabilityMitigation) = begin
+    @debug "Calculating metrics for Power Smoothing"
     essPower = power(op)
     netPowerSmooth = essPower + ucVM.pvGenProfile
     originalMaxVariability =
@@ -63,6 +64,7 @@ calculate_metrics(op::OperationHistory, ucVM::VariabilityMitigation) = begin
 end
 
 use_case_charts(op::OperationHistory, ucVM::VariabilityMitigation) = begin
+    @debug "Generating time series charts for Power Smoothing"
     netPowerSmooth = power(op) + ucVM.pvGenProfile
     originalVariability =
         moving_std(ucVM.pvGenProfile, Minute(10), ucVM.pvGenProfile.resolution)

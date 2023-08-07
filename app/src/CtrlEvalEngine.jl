@@ -9,6 +9,8 @@ export evaluate_controller,
     VariableIntervalTimeSeries,
     timestamps,
     get_values,
+    start_time,
+    end_time,
     sample,
     integrate,
     cum_integrate,
@@ -80,7 +82,11 @@ function generate_output_dict(
         useCases;
         init = [
             Dict(:label => "Annual Benefit", :value => annualBenefit, :type => "currency"),
-            Dict(:label => "Present Value Benefit", :value => pvBenefit, :type => "currency"),
+            Dict(
+                :label => "Present Value Benefit",
+                :value => pvBenefit,
+                :type => "currency",
+            ),
             Dict(:label => "Annual Usage (Discharged Energy)", :value => annualUsageString),
             Dict(:label => "SOH Change", :value => "100% → $endingSohPct%"),
             Dict(
@@ -101,7 +107,7 @@ end
 
 function update_progress!(progress::Progress, t::Dates.DateTime, setting::SimSetting)
     progress.progressPct =
-        min((t - setting.simStart) / (setting.simEnd - setting.simStart), 1.0) * 100.0
+        min((t - setting.simStart) / (setting.simEnd - setting.simStart), 1.0) * 95.0 + 5.0
 end
 
 function update_operation_history!(
@@ -215,13 +221,19 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
 
     t = setting.simStart
     progress = Progress(
-        0.0,
+        5.0,
         ScheduleHistory([t], Float64[]),
         OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)]),
     )
+    if debug
+        @debug "Progress updated" t progress
+    else
+        s3_put(BUCKET_NAME, "$JOB_ID/progress.json", JSON.json(progress))
+    end
+    lastProgressUpdateTime = now()
 
     outputProgress = Progress(
-        0.0,
+        5.0,
         ScheduleHistory([t], Float64[]),
         OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)]),
     )
@@ -254,13 +266,16 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
                         break
                     end
                 end
+                if now() > lastProgressUpdateTime + Second(5)
+                    update_progress!(progress, t, setting)
+                    if debug
+                        @debug "Progress updated" t progress
+                    else
+                        s3_put(BUCKET_NAME, "$JOB_ID/progress.json", JSON.json(progress))
+                    end
+                    lastProgressUpdateTime = now()
+                end
             end
-        end
-        update_progress!(progress, t, setting)
-        if debug
-            @debug "Progress updated" t progress
-        else
-            s3_put(BUCKET_NAME, "$JOB_ID/progress.json", JSON.json(progress))
         end
     end
 

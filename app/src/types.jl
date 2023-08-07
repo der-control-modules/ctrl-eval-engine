@@ -48,10 +48,7 @@ function extract(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTim
         # some overlap time period
         idx1 = findfirst(ts.t .> t1) - 1
         idx2 = findfirst(ts.t .≥ t2) - 1
-        VariableIntervalTimeSeries(
-            [tStart, ts.t[idx1+1:idx2]..., t2],
-            ts.value[idx1:idx2],
-        )
+        VariableIntervalTimeSeries([tStart, ts.t[idx1+1:idx2]..., t2], ts.value[idx1:idx2])
     else
         VariableIntervalTimeSeries([tStart], [])
     end
@@ -64,7 +61,7 @@ Return the value of `ts` at `t` and the defined time period that encloses `t`.
 """
 get_period(ts::VariableIntervalTimeSeries, t::DateTime) = begin
     if t ≥ ts.t[1] && t < ts.t[end]
-        index = findfirst(ts.t .> t) - 1
+        index = findfirst(x -> x > t, ts.t) - 1
         (ts.value[index], ts.t[index], ts.t[index+1])
     elseif t < ts.t[1]
         (zero(eltype(ts.value)), nothing, ts.t[1])
@@ -106,18 +103,10 @@ function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
     if t1 < end_time(ts) && t2 ≥ start_time(ts)
         # some overlap time period
         idx1 = div(t1 - ts.tStart, ts.resolution) + 1
-        idx2 = div(t2 - ts.tStart, ts.resolution) + 1
-        if Dates.value((t1 - ts.tStart) % ts.resolution) == 0 &&
-           Dates.value((t2 - ts.tStart) % ts.resolution) == 0
-            FixedIntervalTimeSeries(tStart, ts.resolution, ts.value[idx1:idx2-1])
-        else
-            VariableIntervalTimeSeries(
-                [tStart, (ts.tStart .+ (idx1:idx2-1) .* ts.resolution)..., tEnd],
-                ts.value[idx1:idx2],
-            )
-        end
+        idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
+        FixedIntervalTimeSeries(ts.tStart + ts.resolution * (idx1 - 1), ts.resolution, ts.value[idx1:idx2])
     else
-        VariableIntervalTimeSeries([tStart], [])
+        FixedIntervalTimeSeries(tStart, ts.resolution, Float64[])
     end
 end
 
@@ -153,12 +142,11 @@ end
 
 Integrate `ts` from `tStart` to `tEnd` and return the result.
 """
-integrate(ts::TimeSeries) = integrate(ts, start_time(ts), end_time(ts))
+integrate(ts::VariableIntervalTimeSeries) = sum(ts.value .* (diff(ts.t) ./ Hour(1)))
+integrate(ts::FixedIntervalTimeSeries) = sum(ts.value) * (ts.resolution / Hour(1))
 
 integrate(ts::TimeSeries, tStart::DateTime, tEnd::DateTime) =
-    mapreduce(+, extract(ts, tStart, tEnd)) do (v, t1, t2)
-        v * /(promote(t2 - t1, Hour(1))...)
-    end
+    integrate(extract(ts, tStart, tEnd))
 
 """
     cum_integrate(ts::TimeSeries, tStart=start_time(ts), tEnd=end_time(ts))
@@ -179,6 +167,15 @@ function binary_operation(ts1::TimeSeries, ts2::TimeSeries, op)
     tEnd = max(end_time(ts1), end_time(ts2))
     binary_operation(ts1, ts2, op, tStart, tEnd)
 end
+
+binary_operation(ts::VariableIntervalTimeSeries, x::Number, op) =
+    VariableIntervalTimeSeries(ts.t, op.(ts.value, x))
+binary_operation(x::Number, ts::VariableIntervalTimeSeries, op) =
+    VariableIntervalTimeSeries(ts.t, op.(x, ts.value))
+binary_operation(ts::FixedIntervalTimeSeries, x::Number, op) =
+    FixedIntervalTimeSeries(ts.tStart, ts.resolution, op.(ts.value, x))
+binary_operation(x::Number, ts::FixedIntervalTimeSeries, op) =
+    FixedIntervalTimeSeries(ts.tStart, ts.resolution, op.(x, ts.value))
 
 function binary_operation(
     ts1::TimeSeries,
@@ -229,9 +226,22 @@ function binary_operation(
 end
 
 Base.:+(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, +)
+Base.:+(ts::TimeSeries, x::Number) = binary_operation(ts, x, +)
+Base.:+(x::Number, ts::TimeSeries) = binary_operation(x, ts, +)
 Base.:-(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, -)
+Base.:-(ts::TimeSeries, x::Number) = binary_operation(ts, x, -)
+Base.:-(x::Number, ts::TimeSeries) = binary_operation(x, ts, -)
 Base.:*(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, *)
+Base.:*(ts::TimeSeries, x::Number) = binary_operation(ts, x, *)
+Base.:*(x::Number, ts::TimeSeries) = binary_operation(x, ts, *)
 Base.:/(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, /)
+Base.:/(ts::TimeSeries, x::Number) = binary_operation(ts, x, /)
+
+Base.:^(ts::VariableIntervalTimeSeries, x::Number) =
+    VariableIntervalTimeSeries(ts.t, ts.value .^ x)
+Base.:^(ts::FixedIntervalTimeSeries, x::Number) =
+    FixedIntervalTimeSeries(ts.tStart, ts.resolution, ts.value .^ x)
+
 Base.:maximum(ts::TimeSeries) = maximum(ts.value)
 Base.:minimum(ts::TimeSeries) = minimum(ts.value)
 
@@ -243,9 +253,12 @@ LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(t
 Calculate the average value of `ts` during the time period from `t1` to `t2`.
 """
 mean(ts::TimeSeries, t1::DateTime, t2::DateTime) =
-    VariableIntervalTimeSeries([t1, t2], [1]) ⋅ ts / /(promote(t2 - t1, Hour(1))...)
+    integrate(ts, t1, t2) / ((t2 - t1) / Hour(1))
 
-mean(ts::TimeSeries) = mean(ts, start_time(ts), end_time(ts))
+mean(ts::VariableIntervalTimeSeries) =
+    sum(diff(ts.t) ./ Hour(1) .* ts.value) / ((ts.t[end] - ts.t[1]) / Hour(1))
+
+mean(ts::FixedIntervalTimeSeries) = sum(ts.value) / length(ts.value)
 
 """
     mean(ts::TimeSeries, t::AbstractVector{DateTime})
@@ -262,12 +275,12 @@ end
 
 Calculate the standard deviation of `ts` during the time period from `t1` to `t2`.
 """
-std(ts::TimeSeries, t1::DateTime, t2::DateTime) = begin
-    diff = ts - mean(ts, [t1, t2])
-    sqrt(mean(diff * diff))
-end
+std(ts::TimeSeries, t1::DateTime, t2::DateTime) = std(extract(ts, t1, t2))
 
-std(ts::TimeSeries) = std(ts, start_time(ts), end_time(ts))
+std(ts::TimeSeries) = begin
+    diff = ts - mean(ts)
+    sqrt(mean(diff^2))
+end
 
 struct ScheduleHistory
     t::Vector{Dates.DateTime}

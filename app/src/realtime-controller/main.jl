@@ -12,7 +12,7 @@ using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
 
-export get_rt_controller, control, PIDController, AMAController,
+export get_rt_controller, control, PIDController, AMAController, RuleBasedController
  MesaController, MesaMode, Vertex, VertexCurve, RampParams
 
 abstract type RTController end
@@ -47,6 +47,7 @@ control(ess, controller::RTController, schedulePeriod::SchedulePeriod, useCases)
 include("mock-rt-controller.jl")
 include("pid.jl")
 include("amac.jl")
+include("rule-based.jl")
 include("mesa.jl")
 
 """
@@ -72,6 +73,8 @@ function get_rt_controller(
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
     elseif controllerType == "ama"
         AMAController(config, ess, useCases)
+    elseif controllerType == "rule"
+        RuleBasedController(config)
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))
     end
