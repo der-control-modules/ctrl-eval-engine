@@ -12,7 +12,8 @@ using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
 
-export get_rt_controller, control, PIDController, AMAController, RuleBasedController
+export get_rt_controller, control, PIDController, AMAController, RuleBasedController,
+ MesaController, MesaMode, Vertex, VertexCurve, RampParams
 
 abstract type RTController end
 
@@ -47,6 +48,7 @@ include("mock-rt-controller.jl")
 include("pid.jl")
 include("amac.jl")
 include("rule-based.jl")
+include("mesa.jl")
 
 """
     get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})

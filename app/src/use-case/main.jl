@@ -15,7 +15,9 @@ export UseCase,
     RegulationOperationPoint,
     regulation_income,
     LoadFollowing,
-    VariabilityMitigation
+    VariabilityMitigation,
+    PeakLimiting,
+    GenerationFollowing
 
 abstract type UseCase end
 
@@ -37,6 +39,8 @@ include("energy-arbitrage.jl")
 include("regulation.jl")
 include("variability-mitigation.jl")
 include("load-following.jl")
+include("peak-limiting.jl")
+include("generation-following.jl")
 
 get_use_cases(inputDict::Dict, setting::SimSetting) = [
     if name === "Energy Arbitrage"
