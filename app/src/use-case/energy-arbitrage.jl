@@ -8,10 +8,16 @@ end
 
 Construct an `EnergyArbitrage` object from `input` dictionary or array
 """
-EnergyArbitrage(input::Dict) = EnergyArbitrage(
-    VariableIntervalTimeSeries(
-        push!(DateTime.(input["t"]), DateTime(input["t"][end]) + Hour(1)),
-        Float64.(input["actualPriceData"]),
+EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage(
+    extract(
+        FixedIntervalTimeSeries(
+            DateTime(input["actualEnergyPrice"][1]["date"]),
+            DateTime(input["actualEnergyPrice"][2]["date"]) -
+            DateTime(input["actualEnergyPrice"][1]["date"]),
+            [Float64(row["lmp"]) for row in input["actualEnergyPrice"]],
+        ),
+        tStart,
+        tEnd,
     ),
 )
 
