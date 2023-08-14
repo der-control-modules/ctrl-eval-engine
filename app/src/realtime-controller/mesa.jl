@@ -10,10 +10,18 @@ abstract type MesaMode end
 
 mutable struct MesaModeParams
     priority::Int64
-    timeWindow::Dates.Second
-    rampTime::Dates.Second
-    reversionTimeout::Dates.Second
+    timeWindow::Union{Dates.Second, Nothing}
+    rampTime::Union{Dates.Second, Nothing}
+    reversionTimeout::Union{Dates.Second, Nothing}
     modeWIP::Union{FixedIntervalTimeSeries, Nothing}
+end
+
+function MesaModeParams(priority)
+    timeWindow = nothing
+    rampTime = nothing
+    reversionTimeout = nothing
+    wip = nothing
+    return MesaModeParams(priority, timeWindow, rampTime, reversionTimeout, wip)
 end
 
 function MesaModeParams(priority, timeWindow, rampTime, reversionTimeout)
