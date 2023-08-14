@@ -1,6 +1,6 @@
 using CtrlEvalEngine
 
-struct FrequencyRegulation <: UseCase
+struct FrequencyResponse <: UseCase
     meteredFrequency::TimeSeries
     nominalFrequency::Float64
 end
