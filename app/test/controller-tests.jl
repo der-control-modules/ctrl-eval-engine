@@ -39,7 +39,7 @@ tStart = floor(now(), Hour(1))
     # Test that mode follows the specified power percentage (53% of 500kW is 265kW).
     controller = MesaController(
         [ChargeDischargeStorageMode(MesaModeParams(1), true,
-         RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, 53.0)],
+         RampParams(100.0, 200.0, 100.0, 200.0), 20.0, 80.0, 53.0)],
          Dates.Minute(5)
          )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
@@ -48,7 +48,7 @@ tStart = floor(now(), Hour(1))
     # Test that mode follows the schedule if a power percentage is not specified .
     controller = MesaController(
         [ChargeDischargeStorageMode(MesaModeParams(1), true,
-         RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
+         RampParams(100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
          Dates.Minute(5)
          )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
@@ -58,7 +58,7 @@ tStart = floor(now(), Hour(1))
         # Test that mode follows the schedule if a power percentage is not specified .
         controller = MesaController(
             [ChargeDischargeStorageMode(MesaModeParams(1), true,
-             RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
+             RampParams(100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
              Dates.Minute(5)
              )
         schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
@@ -69,7 +69,7 @@ end
 @testset "Active Power Limit MESA Mode" begin
     useCases = UseCase[]
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
-    rampParams = RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0)
+    rampParams = RampParams(100.0, 200.0, 100.0, 200.0)
 
     # Test Discharge Limit:
     controller = MesaController(
