@@ -10,10 +10,18 @@ abstract type MesaMode end
 
 mutable struct MesaModeParams
     priority::Int64
-    timeWindow::Dates.Second
-    rampTime::Dates.Second
-    reversionTimeout::Dates.Second
+    timeWindow::Union{Dates.Second, Nothing}
+    rampTime::Union{Dates.Second, Nothing}
+    reversionTimeout::Union{Dates.Second, Nothing}
     modeWIP::Union{FixedIntervalTimeSeries, Nothing}
+end
+
+function MesaModeParams(priority)
+    timeWindow = nothing
+    rampTime = nothing
+    reversionTimeout = nothing
+    wip = nothing
+    return MesaModeParams(priority, timeWindow, rampTime, reversionTimeout, wip)
 end
 
 function MesaModeParams(priority, timeWindow, rampTime, reversionTimeout)
@@ -42,12 +50,20 @@ struct VertexCurve
 end 
 
 struct RampParams
-    rampUpTimeConstant::Dates.Second
-    rampDownTimeConstant::Dates.Second
-    dischargeRampUpRate::Float64  # The ramp rates are in units of a tenth of a percent per second -- i.e. divide by 1000 in constructor to get and store multiplier.
-    dischargeRampDownRate::Float64
-    chargeRampUpRate::Float64
-    chargeRampDownRate::Float64
+    rampUpTimeConstant::Union{Dates.Second, Nothing}
+    rampDownTimeConstant::Union{Dates.Second, Nothing}
+    dischargeRampUpRate::Union{Float64, Nothing}  # The ramp rates are in units of a tenth of a percent per second -- i.e. divide by 1000 in constructor to get and store multiplier.
+    dischargeRampDownRate::Union{Float64, Nothing}
+    chargeRampUpRate::Union{Float64, Nothing}
+    chargeRampDownRate::Union{Float64, Nothing}
+end
+
+function RampParams(rampUpTimeConstant, rampDownTimeConstant)
+    return RampParams(rampUpTimeConstant, rampDownTimeConstant, nothing, nothing, nothing, nothing)
+end
+
+function RampParams(dischargeRampUpRate, dischargeRampDownRate, chargeRampUpRate, chargeRampDownRate)
+    return RampParams(nothing, nothing, dischargeRampUpRate, dischargeRampDownRate, chargeRampUpRate, chargeRampDownRate)
 end
 
 function apply_time_constants(

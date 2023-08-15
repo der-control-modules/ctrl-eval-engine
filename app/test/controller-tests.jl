@@ -38,8 +38,8 @@ tStart = floor(now(), Hour(1))
 
     # Test that mode follows the specified power percentage (53% of 500kW is 265kW).
     controller = MesaController(
-        [ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true,
-         RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, 53.0)],
+        [ChargeDischargeStorageMode(MesaModeParams(1), true,
+         RampParams(100.0, 200.0, 100.0, 200.0), 20.0, 80.0, 53.0)],
          Dates.Minute(5)
          )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
@@ -47,8 +47,8 @@ tStart = floor(now(), Hour(1))
 
     # Test that mode follows the schedule if a power percentage is not specified .
     controller = MesaController(
-        [ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true,
-         RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
+        [ChargeDischargeStorageMode(MesaModeParams(1), true,
+         RampParams(100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
          Dates.Minute(5)
          )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
@@ -57,8 +57,8 @@ tStart = floor(now(), Hour(1))
     # Test charging schedule (negative power):
         # Test that mode follows the schedule if a power percentage is not specified .
         controller = MesaController(
-            [ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true,
-             RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
+            [ChargeDischargeStorageMode(MesaModeParams(1), true,
+             RampParams(100.0, 200.0, 100.0, 200.0), 20.0, 80.0, nothing)],
              Dates.Minute(5)
              )
         schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
@@ -69,13 +69,13 @@ end
 @testset "Active Power Limit MESA Mode" begin
     useCases = UseCase[]
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
-    rampParams = RampParams(Dates.Second(1), Dates.Second(1), 100.0, 200.0, 100.0, 200.0)
+    rampParams = RampParams(100.0, 200.0, 100.0, 200.0)
 
     # Test Discharge Limit:
     controller = MesaController(
         [
-            ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true, rampParams, 20.0, 80.0, nothing),
-            ActivePowerLimitMode(MesaModeParams(2, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 2.0, 1.0)
+            ChargeDischargeStorageMode(MesaModeParams(1), true, rampParams, 20.0, 80.0, nothing),
+            ActivePowerLimitMode(MesaModeParams(2), 2.0, 1.0)
         ],
         Dates.Minute(5)
         )
@@ -86,8 +86,8 @@ end
     # Test Charge Limit:
     controller = MesaController(
         [
-            ChargeDischargeStorageMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), true, rampParams, 20.0, 80.0, nothing),
-            ActivePowerLimitMode(MesaModeParams(2, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 2.0, 1.0)
+            ChargeDischargeStorageMode(MesaModeParams(1), true, rampParams, 20.0, 80.0, nothing),
+            ActivePowerLimitMode(MesaModeParams(2), 2.0, 1.0)
         ],
         Dates.Minute(5)
         )
@@ -104,7 +104,7 @@ end
         )
     ]
     controller = MesaController(
-        [ActiveResponseMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 30.0, 1.0, 1000.0, 1000.0)],
+        [ActiveResponseMode(MesaModeParams(1), 30.0, 1.0, 1000.0, 1000.0)],
          Dates.Minute(5)
          )
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
@@ -121,7 +121,7 @@ end
         )
     ]
     controller = MesaController(
-        [ActiveResponseMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 30.0, 10.0, 1000.0, 1000.0)],
+        [ActiveResponseMode(MesaModeParams(1), 30.0, 10.0, 1000.0, 1000.0)],
          Dates.Minute(5)
          )
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
@@ -137,7 +137,7 @@ end
         )
     ]
     controller = MesaController(
-        [ActiveResponseMode(MesaModeParams(1, Dates.Second(1), Dates.Second(1), Dates.Second(1)), 30.0, 10.0, 1000.0, 1000.0)],
+        [ActiveResponseMode(MesaModeParams(1), 30.0, 10.0, 1000.0, 1000.0)],
          Dates.Minute(5)
          )
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
