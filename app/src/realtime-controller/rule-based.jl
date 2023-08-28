@@ -22,72 +22,20 @@ function control(
         theta_low = forecastLoad - controller.bound
         theta_high = forecastLoad + controller.bound
         η = sqrt(ηRT(ess))
-        if actualLoad > theta_high
-            if scheduledPower < 0
-                charging_power = scheduledPower
-                discharging_power = 0
-                batt = min(p_max(ess), max(0, (energy_state(ess) - e_min(ess)) * η))
-                batt_power =
-                    min(charging_power + discharging_power + actualLoad - theta_high, batt)
-                if batt_power < 0
-                    batt_soc = SOC(ess) + (-batt_power * η) / e_max(ess)
-                else
-                    batt_soc = SOC(ess) - batt_power / (e_max(ess) * η)
-                end
-            else
-                charging_power = 0
-                discharging_power = scheduledPower
-                batt = min(p_max(ess), max(0, (energy_state(ess) - e_min(ess)) * η))
-                batt_power =
-                    min(charging_power + discharging_power + actualLoad - theta_high, batt)
-                if batt_power < 0
-                    batt_soc = SOC(ess) + (-batt_power * η) / e_max(ess)
-                else
-                    batt_soc = SOC(ess) - batt_power / (e_max(ess) * η)
-                end
-            end
+        batt_power = if actualLoad > theta_high
+            min(
+                p_max(ess),
+                max(0, min(actualLoad - theta_high, (energy_state(ess) - e_min(ess)) * η)),
+            )
         elseif actualLoad < theta_low
-            if scheduledPower < 0
-                charging_power = scheduledPower
-                discharging_power = 0
-                batt = min(p_max(ess), e_max(ess) * (1 - SOC(ess)) / η)
-                batt_power =
-                    max(charging_power + discharging_power + actualLoad - theta_low, -batt)
-                if batt_power < 0
-                    batt_soc = SOC(ess) + (-batt_power * η) / e_max(ess)
-                else
-                    batt_soc = SOC(ess) - batt_power / (e_max(ess) * η)
-                end
-            else
-                charging_power = 0
-                discharging_power = scheduledPower
-                batt = min(p_max(ess), e_max(ess) * (1 - SOC(ess)) / η)
-                batt_power =
-                    max(charging_power + discharging_power + actualLoad - theta_low, -batt)
-                if batt_power < 0
-                    batt_soc = SOC(ess) + (-batt_power * η) / e_max(ess)
-                else
-                    batt_soc = SOC(ess) - batt_power / (e_max(ess) * η)
-                end
-            end
+            max(
+                p_min(ess),
+                min(0, max(actualLoad - theta_low, -e_max(ess) * (1 - SOC(ess)) / η)),
+            )
         else
-            if scheduledPower < 0
-                charging_power = scheduledPower
-                discharging_power = 0
-                batt = min(p_max(ess), e_max(ess) * (1 - SOC(ess)) / η)
-                batt_power = max(charging_power + discharging_power, -batt)
-                batt_soc = SOC(ess) + (-batt_power * η) / e_max(ess)
-            else
-                charging_power = 0
-                discharging_power = scheduledPower
-                batt = min(
-                    p_max(ess),
-                    max(0, (SOC(ess) - e_min(ess) / e_max(ess)) * e_max(ess) * η),
-                )
-                batt_power = min(charging_power + discharging_power, batt)
-                batt_soc = SOC(ess) - batt_power / (e_max(ess) * η)
-            end
+            0
         end
+
         @debug "Rule-based RT controller exiting" batt_power
         return ControlSequence([batt_power], tEndActualLoad - t)
     else
