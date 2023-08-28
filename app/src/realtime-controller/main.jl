@@ -13,7 +13,7 @@ using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
 
 export get_rt_controller, control, PIDController, AMAController, RuleBasedController,
- MesaController, MesaMode, Vertex, VertexCurve, RampParams
+ MesaController, MesaMode, Vertex, VertexCurve, RampParams, previous_WIP
 
 abstract type RTController end
 

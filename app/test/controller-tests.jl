@@ -4,7 +4,7 @@ using CtrlEvalEngine.EnergyStorageSimulators:
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageScheduling: end_time, schedule, ManualScheduler, SchedulePeriod
 using CtrlEvalEngine.EnergyStorageRTControl: control, PIDController, AMAController, MesaController, MesaModeParams, RampParams,
- ActiveResponseMode, ChargeDischargeStorageMode, ActivePowerLimitMode
+ ActiveResponseMode, ChargeDischargeStorageMode, ActivePowerLimitMode, AGCMode
 using Dates
 using JSON
 using Test
@@ -32,6 +32,24 @@ end
 ess = LiIonBattery(LFP_LiIonBatterySpecs(500, 10000, 0.85, 2000), LiIonBatteryStates(0.5, 0))
 tStart = floor(now(), Hour(1))
 
+@testset "AGC MESA Mode" begin
+    useCases = UseCase[
+        Regulation(
+            FixedIntervalTimeSeries(tStart, Dates.Second(4), [50.80047394, 50.80047394, 50.80047394, 50.80047394, 50.80047394, 50.80047394, 50.80047394, 50.80047394, 66.67162504, 66.67162504, 66.67162504, 66.67162504, 66.67162504, 66.67162504, 66.67162504, 66.67162504, 74.66479844, 74.66479844, 93.04748861, 93.04548861, 93.1176534, 93.1176534, 93.37098728, 93.37098728, 93.53773848, 93.53773848, 93.53773848, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -10.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319, -90.19101319]),
+            FixedIntervalTimeSeries(tStart, Dates.Hour(1), [RegulationPricePoint(0.05, 0.42)]),
+            50.0
+            )
+    ]
+    schedulePeriod = SchedulePeriod(65.2, tStart, Second(268))
+    controller = MesaController(
+        [AGCMode(MesaModeParams(1), true, RampParams(100, 200, 100, 200), 40.0, 60.0)],
+        Dates.Second(4)
+    )
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    print(controller.wip.value)
+    @test controller.wip.value == [50.0, 100.0, 150.0, 200.0, 250.0, 254.00236970000003, 254.00236970000003, 254.00236970000003, 304.00236970000003, 333.3581252, 333.3581252, 333.3581252, 333.3581252, 333.3581252, 333.3581252, 333.3581252, 373.3239922, 373.3239922, 423.3239922, 465.22744305, 465.588267, 465.588267, 466.8549364, 466.8549364, 467.6886924, 467.6886924, 467.6886924, 367.6886924, 267.6886924, 167.68869239999998, 67.68869239999998, -32.31130760000002, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -50.95506595, -150.95506595, -250.95506595, -350.95506595, -450.95506595, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006, -450.95506595000006]
+end
+
 @testset "Charge Discharge Storage MESA Mode" begin
     useCases = UseCase[]
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
@@ -43,7 +61,7 @@ tStart = floor(now(), Hour(1))
          Dates.Minute(5)
          )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value == [265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0]
+    @test controller.wip.value == [50.0, 100.0, 150.0, 200.0, 250.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0]
 
     # Test that mode follows the schedule if a power percentage is not specified .
     controller = MesaController(
@@ -52,7 +70,7 @@ tStart = floor(now(), Hour(1))
          Dates.Minute(5)
          )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value == [65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2]
+    @test controller.wip.value == [50.0, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2]
 
     # Test charging schedule (negative power):
         # Test that mode follows the schedule if a power percentage is not specified .

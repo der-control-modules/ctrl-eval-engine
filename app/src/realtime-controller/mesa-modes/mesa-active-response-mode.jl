@@ -1,4 +1,4 @@
-using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams
+using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams, previous_WIP
 
 struct ActiveResponseMode <: MesaMode
     params::MesaModeParams
@@ -29,7 +29,7 @@ function modecontrol(
     idxPeakLimiting = findfirst(uc -> uc isa PeakLimiting, useCases)
     idxLoadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
     idxGenFollowing = findfirst(uc -> uc isa GenerationFollowing, useCases)
-    currentPower = last(mode.params.modeWIP.value)
+    currentPower = previous_WIP(mode)
     if idxPeakLimiting !== nothing && idxLoadFollowing === nothing && idxGenFollowing === nothing # Only peak following.
         useCase = useCases[idxPeakLimiting]
         (referencePower, _, _) = get_period(useCase.realtimePower, t)
