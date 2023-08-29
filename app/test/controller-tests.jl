@@ -13,7 +13,8 @@ using CtrlEvalEngine.EnergyStorageRTControl:
     RampParams,
     ActiveResponseMode,
     ChargeDischargeStorageMode,
-    ActivePowerLimitMode
+    ActivePowerLimitMode,
+    RuleBasedController
 using Dates
 using JSON
 using Test
@@ -308,6 +309,25 @@ end
         useCases,
     )
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test true
+end
+
+@testset "Rule-based Controller" begin
+    useCases = UseCase[LoadFollowing(
+        Dict(
+            "forecastLoadPower" => Dict(
+                "DateTime" => range(tStart; step = Minute(15), length = 4),
+                "Power" => [20, 1, 10, 4],
+            ),
+            "realtimeLoadPower" => Dict(
+                "DateTime" => range(tStart; step = Minute(5), length = 12),
+                "Power" => [20.4, 18.2, 15, 6, 3, 0.5, 7, 6, 10, 11, 3, 2, 2.2],
+            ),
+        ),
+    ),]
+    controller = RuleBasedController(1.5)
+    schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15))
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     @test true
 end

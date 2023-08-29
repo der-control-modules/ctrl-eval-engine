@@ -18,7 +18,7 @@ function control(
     if idxloadFollowing !== nothing
         ucLF::LoadFollowing = useCases[idxloadFollowing]
         forecastLoad, _, _ = CtrlEvalEngine.get_period(ucLF.forecastLoadPower, t)
-        actualLoad, _, tEndActualLoad = CtrlEvalEngine.get_period(ucFL.realtimeLoadPower, t)
+        actualLoad, _, tEndActualLoad = CtrlEvalEngine.get_period(ucLF.realtimeLoadPower, t)
         theta_low = forecastLoad - controller.bound
         theta_high = forecastLoad + controller.bound
         η = sqrt(ηRT(ess))
