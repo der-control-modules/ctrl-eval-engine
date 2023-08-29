@@ -122,12 +122,19 @@ using LinearAlgebra
             ),
         )
 
-        ucEA = EnergyArbitrage([
-            Dict("date" => "2022-01-01T00:00", "lmp" => 10.0),
-            Dict("date" => "2022-01-01T01:00", "lmp" => 20.0),
-            Dict("date" => "2022-01-01T02:00", "lmp" => 50.0),
-            Dict("date" => "2022-01-01T03:00", "lmp" => 30.0),
-        ])
+        ucEA = EnergyArbitrage(
+            Dict(
+                "actualEnergyPrice" => Dict(
+                    "Time" => [
+                        "2022-01-01T00:00",
+                        "2022-01-01T01:00",
+                        "2022-01-01T02:00",
+                        "2022-01-01T03:00",
+                    ],
+                    "LMP" => [10.0, 20.0, 50.0, 30.0],
+                ),
+            ),
+        )
 
         @test calculate_net_benefit(outputProgress, ucEA) isa Float64
         @test calculate_metrics(outputProgress.operation, ucEA) isa AbstractVector
