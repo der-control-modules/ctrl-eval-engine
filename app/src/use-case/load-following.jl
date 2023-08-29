@@ -26,7 +26,7 @@ end
 
 Construct a `LoadFollowing` object from `input` dictionary or array
 """
-LoadFollowing(input::Dict) = LoadFollowing(
+LoadFollowing(input::Dict{String,<:AbstractVector}) = LoadFollowing(
     FixedIntervalTimeSeries(
         DateTime(input["forecastLoadPower"][1]["DateTime"]),
         DateTime(input["forecastLoadPower"][2]["DateTime"]) -
@@ -38,6 +38,21 @@ LoadFollowing(input::Dict) = LoadFollowing(
         DateTime(input["realtimeLoadPower"][2]["DateTime"]) -
         DateTime(input["realtimeLoadPower"][1]["DateTime"]),
         [float(row["Power"]) for row in input["realtimeLoadPower"]],
+    ),
+)
+
+LoadFollowing(input::Dict{String,<:Dict}) = LoadFollowing(
+    FixedIntervalTimeSeries(
+        input["forecastLoadPower"]["DateTime"][1],
+        input["forecastLoadPower"]["DateTime"][2] -
+        input["forecastLoadPower"]["DateTime"][1],
+        input["forecastLoadPower"]["Power"],
+    ),
+    FixedIntervalTimeSeries(
+        input["realtimeLoadPower"]["DateTime"][1],
+        input["realtimeLoadPower"]["DateTime"][2] -
+        input["realtimeLoadPower"]["DateTime"][1],
+        input["realtimeLoadPower"]["Power"],
     ),
 )
 
