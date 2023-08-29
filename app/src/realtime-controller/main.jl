@@ -44,7 +44,7 @@ will be executed before calling this function again with updated ESS states and 
 control(ess, controller::RTController, schedulePeriod::SchedulePeriod, useCases) =
     control(ess, controller, schedulePeriod, useCases, start_time(schedulePeriod), nothing)
 
-include("mock-rt-controller.jl")
+include("passthrough.jl")
 include("pid.jl")
 include("amac.jl")
 include("rule-based.jl")
@@ -67,8 +67,8 @@ function get_rt_controller(
             convert(Millisecond, Second(1)).value * get(config, "resolutionSec", 60),
         ),
     )
-    controller = if controllerType == "mock"
-        MockController(res)
+    controller = if controllerType == "passthrough"
+        PassThroughController(res)
     elseif controllerType == "pid"
         PIDController(res, config["Kp"], config["Ti"], config["Td"])
     elseif controllerType == "ama"
