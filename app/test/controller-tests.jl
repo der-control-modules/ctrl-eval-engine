@@ -133,75 +133,77 @@ tStart = floor(now(), Hour(1))
     )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     print(controller.wip.value)
-    @test controller.wip.value == [
-        50.0,
-        100.0,
-        150.0,
-        200.0,
-        250.0,
-        254.00236970000003,
-        254.00236970000003,
-        254.00236970000003,
-        304.00236970000003,
-        333.3581252,
-        333.3581252,
-        333.3581252,
-        333.3581252,
-        333.3581252,
-        333.3581252,
-        333.3581252,
-        373.3239922,
-        373.3239922,
-        423.3239922,
-        465.22744305,
-        465.588267,
-        465.588267,
-        466.8549364,
-        466.8549364,
-        467.6886924,
-        467.6886924,
-        467.6886924,
-        367.6886924,
-        267.6886924,
-        167.68869239999998,
-        67.68869239999998,
-        -32.31130760000002,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -50.95506595,
-        -150.95506595,
-        -250.95506595,
-        -350.95506595,
-        -450.95506595,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-        -450.95506595000006,
-    ]
+    @test all(
+        controller.wip.value .== [
+            50.0,
+            100.0,
+            150.0,
+            200.0,
+            250.0,
+            254.00236970000003,
+            254.00236970000003,
+            254.00236970000003,
+            304.00236970000003,
+            333.3581252,
+            333.3581252,
+            333.3581252,
+            333.3581252,
+            333.3581252,
+            333.3581252,
+            333.3581252,
+            373.3239922,
+            373.3239922,
+            423.3239922,
+            465.22744305,
+            465.588267,
+            465.588267,
+            466.8549364,
+            466.8549364,
+            467.6886924,
+            467.6886924,
+            467.6886924,
+            367.6886924,
+            267.6886924,
+            167.68869239999998,
+            67.68869239999998,
+            -32.31130760000002,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -50.95506595,
+            -150.95506595,
+            -250.95506595,
+            -350.95506595,
+            -450.95506595,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+            -450.95506595000006,
+        ],
+    )
 end
 
 @testset "Charge Discharge Storage MESA Mode" begin
@@ -223,20 +225,10 @@ end
         Dates.Minute(5),
     )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value == [
-        50.0,
-        100.0,
-        150.0,
-        200.0,
-        250.0,
-        265.0,
-        265.0,
-        265.0,
-        265.0,
-        265.0,
-        265.0,
-        265.0,
-    ]
+    @test all(
+        controller.wip.value .==
+        [50.0, 100.0, 150.0, 200.0, 250.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0, 265.0],
+    )
 
     # Test that mode follows the schedule if a power percentage is not specified .
     controller = MesaController(
@@ -253,8 +245,10 @@ end
         Dates.Minute(5),
     )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value ==
-          [50.0, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2]
+    @test all(
+        controller.wip.value .==
+        [50.0, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2, 65.2],
+    )
 
     # Test charging schedule (negative power):
     # Test that mode follows the schedule if a power percentage is not specified .
@@ -273,20 +267,22 @@ end
     )
     schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value == [
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-        -65.2,
-    ]
+    @test all(
+        controller.wip.value .== [
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+            -65.2,
+        ],
+    )
 end
 
 @testset "Active Power Limit MESA Mode" begin
@@ -311,7 +307,7 @@ end
     )
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value ==
+    @test controller.wip.value .==
           [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
 
     # Test Charge Limit:
@@ -331,20 +327,22 @@ end
     )
     schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value == [
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-        -10.0,
-    ]
+    @test all(
+        controller.wip.value .== [
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+            -10.0,
+        ],
+    )
 end
 
 @testset "PeakLimiting MESA Mode" begin
@@ -363,8 +361,10 @@ end
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
 
-    @test controller.wip.value ==
-          [0.0, 0.0, 0.0, 10.0, 20.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    @test all(
+        controller.wip.value .==
+        [0.0, 0.0, 0.0, 10.0, 20.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    )
 end
 
 @testset "LoadFollowing MESA Mode" begin
@@ -382,8 +382,10 @@ end
     )
     schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test controller.wip.value ==
-          [0.0, 0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    @test all(
+        controller.wip.value .==
+        [0.0, 0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    )
 end
 
 @testset "GenerationFollowing MESA Mode" begin

@@ -19,7 +19,7 @@ Base.:zero(::RegulationOperationPoint) = RegulationOperationPoint(0, 0)
 Base.:zero(::Type{RegulationOperationPoint}) = RegulationOperationPoint(0, 0)
 
 struct Regulation <: UseCase
-    AGCSignalPercentage::FixedIntervalTimeSeries{<:Dates.TimePeriod, Float64}
+    AGCSignalPu::FixedIntervalTimeSeries{<:Dates.TimePeriod, Float64}
     price::FixedIntervalTimeSeries{Hour,RegulationPricePoint}
     performanceScore::Float64
 end

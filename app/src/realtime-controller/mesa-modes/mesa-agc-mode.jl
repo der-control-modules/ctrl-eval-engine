@@ -26,11 +26,11 @@ function modecontrol(
     idxRegulation = findfirst(uc -> uc isa Regulation, useCases)
     if idxRegulation !== nothing
         regulationUC = useCases[idxRegulation]
-        # Get Current Active Power Target (in Percentage, to comply with use Case -- NOTE: MESA gives a power):
-        (AGCSignalPercentage, _, _) = get_period(regulationUC.AGCSignalPercentage, t)
+        # Get Current Active Power Target (in per unit, to comply with use Case -- NOTE: MESA gives a power):
+        (AGCSignalPu, _, _) = get_period(regulationUC.AGCSignalPu, t)
 
-        # Convert percentage to the actual AGC signal (in kW, not MW) based on the regulation capacity from the sceheuler.
-        activePowerTarget = regulation_capacity(schedulePeriod) * AGCSignalPercentage / 100
+        # Convert per unit to the actual AGC signal (in kW, not MW) based on the regulation capacity from the sceheuler.
+        activePowerTarget = regulation_capacity(schedulePeriod) * AGCSignalPu
         # Move towards the target power as approprate to time constant or ramp rate limits:
         ramping_func = mode.rampOrTimeConstant ? apply_ramps : apply_time_constants
         lastModePower = previous_WIP(mode)
