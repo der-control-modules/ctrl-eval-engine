@@ -46,13 +46,36 @@ LoadFollowing(input::Dict{String,<:Dict}) = LoadFollowing(
         input["forecastLoadPower"]["DateTime"][1],
         input["forecastLoadPower"]["DateTime"][2] -
         input["forecastLoadPower"]["DateTime"][1],
-        input["forecastLoadPower"]["Power"],
+        float.(input["forecastLoadPower"]["Power"]),
     ),
     FixedIntervalTimeSeries(
         input["realtimeLoadPower"]["DateTime"][1],
         input["realtimeLoadPower"]["DateTime"][2] -
         input["realtimeLoadPower"]["DateTime"][1],
-        input["realtimeLoadPower"]["Power"],
+        float.(input["realtimeLoadPower"]["Power"]),
+    ),
+)
+
+LoadFollowing(input::Dict{String,<:Dict}, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
+    extract(
+        FixedIntervalTimeSeries(
+            input["forecastLoadPower"]["DateTime"][1],
+            input["forecastLoadPower"]["DateTime"][2] -
+            input["forecastLoadPower"]["DateTime"][1],
+            float.(input["forecastLoadPower"]["Power"]),
+        ),
+        tStart,
+        tEnd,
+    ),
+    extract(
+        FixedIntervalTimeSeries(
+            input["realtimeLoadPower"]["DateTime"][1],
+            input["realtimeLoadPower"]["DateTime"][2] -
+            input["realtimeLoadPower"]["DateTime"][1],
+            float.(input["realtimeLoadPower"]["Power"]),
+        ),
+        tStart,
+        tEnd,
     ),
 )
 

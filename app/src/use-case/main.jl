@@ -47,6 +47,8 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
         EnergyArbitrage(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Power Smoothing"
         VariabilityMitigation(config["data"], setting.simStart, setting.simEnd)
+    elseif name === "Load Following"
+        LoadFollowing(config["data"], setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
     end
