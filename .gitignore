@@ -1,2 +1,4 @@
 .aws/credentials
 *.pyc
+.vscode/*
+.idea/*
