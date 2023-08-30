@@ -32,6 +32,7 @@ catch e
     else
         @error("Something went wrong during evaluation", exception = (e, bt))
     end
+    Dict(:error => string(e))
 end
 
 if debug
