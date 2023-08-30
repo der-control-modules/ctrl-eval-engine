@@ -3,7 +3,7 @@ using JSON
 using CtrlEvalEngine
 using AWSS3
 
-redirect_stdio(stderr=stdout)
+redirect_stdio(; stderr = stdout)
 BUCKET_NAME = get(ENV, "BUCKET_NAME", "long-running-jobs-test")
 
 inputDict, debug, JOB_ID = if length(ARGS) == 1
@@ -11,7 +11,7 @@ inputDict, debug, JOB_ID = if length(ARGS) == 1
     (
         JSON.parse(IOBuffer(read(S3Path("s3://$BUCKET_NAME/input/$inputJobId.json")))),
         false,
-        inputJobId
+        inputJobId,
     )
 elseif length(ARGS) == 2 && ARGS[1] == "debug"
     (JSON.parsefile(ARGS[2]), true, nothing)
@@ -32,7 +32,10 @@ catch e
     else
         @error("Something went wrong during evaluation", exception = (e, bt))
     end
-    Dict(:error => string(e))
+    strIO = IOBuffer()
+    show(strIO, "text/plain", stacktrace(bt))
+    strST = String(take!(strIO))
+    Dict(:error => string(e), :stacktrace => strST)
 end
 
 if debug
@@ -42,9 +45,9 @@ if debug
 else
     if haskey(outputDict, :error)
         @warn "Error occurred. Uploading info for debugging"
-        s3_copy(BUCKET_NAME, "input/$JOB_ID.json", to_path="error/$JOB_ID/input.json")
-        s3_copy(BUCKET_NAME, "$JOB_ID/log.txt", to_path="error/$JOB_ID/log.txt")
+        s3_copy(BUCKET_NAME, "input/$JOB_ID.json"; to_path = "error/$JOB_ID/input.json")
         s3_put(BUCKET_NAME, "error/$JOB_ID/output.json", JSON.json(outputDict, 4))
+        s3_put(BUCKET_NAME, "error/$JOB_ID/stacktrace.txt", outputDict[:stacktrace])
     end
 
     @info "Uploading output data"
