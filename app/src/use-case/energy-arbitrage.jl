@@ -8,24 +8,24 @@ end
 
 Construct an `EnergyArbitrage` object from `input` dictionary or array
 """
-EnergyArbitrage(input::Dict{String,<:Dict}) =
+EnergyArbitrage(input::Dict) =
     EnergyArbitrage(
         FixedIntervalTimeSeries(
             DateTime(input["actualEnergyPrice"]["Time"][1]),
             DateTime(input["actualEnergyPrice"]["Time"][2]) -
             DateTime(input["actualEnergyPrice"]["Time"][1]),
-            Float64.(input["actualEnergyPrice"]["LMP"]),
+            float.(input["actualEnergyPrice"]["LMP"]),
         ),
     )
 
-EnergyArbitrage(input::Dict{String,<:Dict}, tStart::DateTime, tEnd::DateTime) =
+EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) =
     EnergyArbitrage(
         extract(
             FixedIntervalTimeSeries(
                 DateTime(input["actualEnergyPrice"]["Time"][1]),
                 DateTime(input["actualEnergyPrice"]["Time"][2]) -
                 DateTime(input["actualEnergyPrice"]["Time"][1]),
-                Float64.(input["actualEnergyPrice"]["LMP"]),
+                float.(input["actualEnergyPrice"]["LMP"]),
             ),
             tStart,
             tEnd,

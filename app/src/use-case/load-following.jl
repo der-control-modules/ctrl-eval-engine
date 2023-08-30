@@ -26,53 +26,38 @@ end
 
 Construct a `LoadFollowing` object from `input` dictionary or array
 """
-LoadFollowing(input::Dict{String,<:AbstractVector}) = LoadFollowing(
+LoadFollowing(input::Dict) = LoadFollowing(
     FixedIntervalTimeSeries(
-        DateTime(input["forecastLoadPower"][1]["DateTime"]),
-        DateTime(input["forecastLoadPower"][2]["DateTime"]) -
-        DateTime(input["forecastLoadPower"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["forecastLoadPower"]],
-    ),
-    FixedIntervalTimeSeries(
-        DateTime(input["realtimeLoadPower"][1]["DateTime"]),
-        DateTime(input["realtimeLoadPower"][2]["DateTime"]) -
-        DateTime(input["realtimeLoadPower"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["realtimeLoadPower"]],
-    ),
-)
-
-LoadFollowing(input::Dict{String,<:Dict}) = LoadFollowing(
-    FixedIntervalTimeSeries(
-        input["forecastLoadPower"]["DateTime"][1],
-        input["forecastLoadPower"]["DateTime"][2] -
-        input["forecastLoadPower"]["DateTime"][1],
+        DateTime(input["forecastLoadPower"]["DateTime"][1]),
+        DateTime(input["forecastLoadPower"]["DateTime"][2]) -
+        DateTime(input["forecastLoadPower"]["DateTime"][1]),
         float.(input["forecastLoadPower"]["Power"]),
     ),
     FixedIntervalTimeSeries(
-        input["realtimeLoadPower"]["DateTime"][1],
-        input["realtimeLoadPower"]["DateTime"][2] -
-        input["realtimeLoadPower"]["DateTime"][1],
-        float.(input["realtimeLoadPower"]["Power"]),
+        DateTime(input["realTimeLoadPower"]["DateTime"][1]),
+        DateTime(input["realTimeLoadPower"]["DateTime"][2]) -
+        DateTime(input["realTimeLoadPower"]["DateTime"][1]),
+        float.(input["realTimeLoadPower"]["Power"]),
     ),
 )
 
-LoadFollowing(input::Dict{String,<:Dict}, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
+LoadFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
     extract(
         FixedIntervalTimeSeries(
-            input["forecastLoadPower"]["DateTime"][1],
-            input["forecastLoadPower"]["DateTime"][2] -
-            input["forecastLoadPower"]["DateTime"][1],
-            float.(input["forecastLoadPower"]["Power"]),
+            DateTime(input["forecastLoadProfile"]["DateTime"][1]),
+            DateTime(input["forecastLoadProfile"]["DateTime"][2]) -
+            DateTime(input["forecastLoadProfile"]["DateTime"][1]),
+            float.(input["forecastLoadProfile"]["Power"]),
         ),
         tStart,
         tEnd,
     ),
     extract(
         FixedIntervalTimeSeries(
-            input["realtimeLoadPower"]["DateTime"][1],
-            input["realtimeLoadPower"]["DateTime"][2] -
-            input["realtimeLoadPower"]["DateTime"][1],
-            float.(input["realtimeLoadPower"]["Power"]),
+            DateTime(input["realTimeLoadProfile"]["DateTime"][1]),
+            DateTime(input["realTimeLoadProfile"]["DateTime"][2]) -
+            DateTime(input["realTimeLoadProfile"]["DateTime"][1]),
+            float.(input["realTimeLoadProfile"]["Power"]),
         ),
         tStart,
         tEnd,
