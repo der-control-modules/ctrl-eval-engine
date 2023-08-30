@@ -32,10 +32,6 @@ catch e
     else
         @error("Something went wrong during evaluation", exception = (e, bt))
     end
-    strIO = IOBuffer()
-    show(strIO, "text/plain", stacktrace(bt))
-    strST = String(take!(strIO))
-    Dict(:error => string(e), :stacktrace => strST)
 end
 
 if debug
@@ -45,7 +41,9 @@ if debug
 else
     if haskey(outputDict, :error)
         @warn "Error occurred. Uploading info for debugging"
-        s3_put(BUCKET_NAME, "error/$JOB_ID.json", JSON.json(Dict(:input => inputDict, :output => outputDict), 4))
+        s3_copy(BUCKET_NAME, "input/$JOB_ID.json", to_path="error/$JOB_ID/input.json")
+        s3_copy(BUCKET_NAME, "$JOB_ID/log.txt", to_path="error/$JOB_ID/log.txt")
+        s3_put(BUCKET_NAME, "error/$JOB_ID/output.json", JSON.json(outputDict, 4))
     end
 
     @info "Uploading output data"
