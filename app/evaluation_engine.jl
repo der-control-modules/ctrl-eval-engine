@@ -26,12 +26,16 @@ catch e
     if debug
         throw(e)
     end
+    bt = catch_backtrace()
     if isa(e, InvalidInput)
-        @error("Invalid input", exception = (e, catch_backtrace()))
+        @error("Invalid input", exception = (e, bt))
     else
-        @error("Something went wrong during evaluation", exception = (e, catch_backtrace()))
+        @error("Something went wrong during evaluation", exception = (e, bt))
     end
-    Dict(:error => string(e))
+    strIO = IOBuffer()
+    show(strIO, "text/plain", stacktrace(bt))
+    strST = String(take!(strIO))
+    Dict(:error => string(e), :stacktrace => strST)
 end
 
 if debug
