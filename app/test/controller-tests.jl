@@ -263,20 +263,8 @@ end
 
 @testset "PID Controller" begin
     useCases = UseCase[LoadFollowing(
-        Dict(
-            "realtimeLoadPower" => [
-                Dict("DateTime" => tStart, "Power" => 10),
-                Dict("DateTime" => tStart + Minute(5), "Power" => 20),
-                Dict("DateTime" => tStart + Minute(10), "Power" => 1),
-                Dict("DateTime" => tStart + Minute(15), "Power" => 10),
-            ],
-            "forecastLoadPower" => [
-                Dict("DateTime" => tStart, "Power" => 15),
-                Dict("DateTime" => tStart + Minute(5), "Power" => 20),
-                Dict("DateTime" => tStart + Minute(10), "Power" => 1),
-                Dict("DateTime" => tStart + Minute(15), "Power" => 10),
-            ],
-        ),
+        FixedIntervalTimeSeries(tStart, Minute(5), [10, 20, 1, 10]),
+        FixedIntervalTimeSeries(tStart, Minute(5), [15, 20, 1, 10]),
     )]
     controller = PIDController(Second(1), 0.5, 0.5, 0.9)
     schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15))
@@ -315,17 +303,13 @@ end
 
 @testset "Rule-based Controller" begin
     useCases = UseCase[LoadFollowing(
-        Dict(
-            "forecastLoadPower" => Dict(
-                "DateTime" => range(tStart; step = Minute(15), length = 4),
-                "Power" => [20, 1, 10, 4],
-            ),
-            "realtimeLoadPower" => Dict(
-                "DateTime" => range(tStart; step = Minute(5), length = 12),
-                "Power" => [20.4, 18.2, 15, 6, 3, 0.5, 7, 6, 10, 11, 3, 2, 2.2],
-            ),
+        FixedIntervalTimeSeries(tStart, Minute(15), [20, 1, 10, 4]),
+        FixedIntervalTimeSeries(
+            tStart,
+            Minute(5),
+            [20.4, 18.2, 15, 6, 3, 0.5, 7, 6, 10, 11, 3, 2, 2.2],
         ),
-    ),]
+    )]
     controller = RuleBasedController(1.5)
     schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15))
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
