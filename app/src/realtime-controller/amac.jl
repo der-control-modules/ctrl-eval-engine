@@ -52,13 +52,13 @@ function control(
         # Passive control until start of PV generation or end of SchedulePeriod, whichever comes first
         return ControlSequence(
             [sp.powerKw],
-            min(start_time(ucVM.pvGenProfile), EnergyStorageScheduling.end_time(sp)) - t,
+            min(start_time(ucVM.pvGenProfile), end_time(sp)) - t,
         )
     end
 
     if t ≥ end_time(ucVM.pvGenProfile)
         # Passive control to the end of SchedulePeriod if PV generation profile has ended
-        return ControlSequence([sp.powerKw], EnergyStorageScheduling.end_time(sp) - t)
+        return ControlSequence([sp.powerKw], end_time(sp) - t)
     end
 
     # Active control if PV generation is present

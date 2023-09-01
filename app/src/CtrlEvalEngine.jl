@@ -127,7 +127,7 @@ function update_schedule_history!(
     currentSchedule::EnergyStorageScheduling.Schedule,
 )
     for schedulePeriod in currentSchedule
-        push!(scheduleHistory.t, EnergyStorageScheduling.end_time(schedulePeriod))
+        push!(scheduleHistory.t, end_time(schedulePeriod))
         push!(
             scheduleHistory.powerKw,
             EnergyStorageScheduling.average_power(schedulePeriod),
@@ -243,7 +243,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
         update_schedule_history!(outputProgress.schedule, currentSchedule)
         for schedulePeriod in currentSchedule
             schedulePeriodEnd =
-                min(EnergyStorageScheduling.end_time(schedulePeriod), setting.simEnd)
+                min(end_time(schedulePeriod), setting.simEnd)
             spProgress = VariableIntervalTimeSeries([t], Float64[])
             while t < schedulePeriodEnd
                 controlSequence =

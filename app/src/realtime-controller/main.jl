@@ -70,7 +70,7 @@ function get_rt_controller(
     controller = if controllerType == "passthrough"
         PassThroughController(res)
     elseif controllerType == "pid"
-        PIDController(res, config["Kp"], config["Ti"], config["Td"])
+        PIDController(res, float(config["Kp"]), float(config["Ti"]), float(config["Td"]))
     elseif controllerType == "ama"
         AMAController(config, ess, useCases)
     elseif controllerType == "rule"

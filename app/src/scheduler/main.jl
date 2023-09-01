@@ -16,6 +16,7 @@ export get_scheduler,
     SchedulePeriodProgress,
     duration,
     average_power,
+    ending_soc,
     OptScheduler,
     RLScheduler
 
@@ -25,18 +26,22 @@ struct Schedule
     powerKw::Vector{Float64}
     tStart::Dates.DateTime
     resolution::Dates.TimePeriod
+    soc::Vector{Float64}
 end
 
 struct SchedulePeriod
     powerKw::Float64
     tStart::Dates.DateTime
     duration::Dates.TimePeriod
+    socStart::Float64
+    socEnd::Float64
 end
 
 duration(sp::SchedulePeriod) = sp.duration
 CtrlEvalEngine.start_time(sp::SchedulePeriod) = sp.tStart
 CtrlEvalEngine.end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
 average_power(sp::SchedulePeriod) = sp.powerKw
+ending_soc(sp::SchedulePeriod) = sp.socEnd
 
 Base.iterate(s::Schedule, index = 1) =
     index > length(s.powerKw) ? nothing :
@@ -45,6 +50,8 @@ Base.iterate(s::Schedule, index = 1) =
             s.powerKw[index],
             s.tStart + s.resolution * (index - 1),
             s.resolution,
+            s.soc[index],
+            s.soc[index+1],
         ),
         index + 1,
     )
@@ -65,8 +72,8 @@ struct IdleScheduler <: Scheduler
     interval::Dates.Period
 end
 
-schedule(::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
-    Schedule([0], tStart, scheduler.interval)
+schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
+    Schedule([0], tStart, scheduler.interval, [SOC(ess), SOC(ess)])
 
 """
     get_scheduler(inputDict::Dict)

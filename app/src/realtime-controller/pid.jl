@@ -11,7 +11,7 @@ struct PIDController <: RTController
     pid::DiscretePID
 end
 
-function PIDController(resolution, Kp, Ti, Td)
+function PIDController(resolution, Kp::Float64, Ti::Float64, Td::Float64)
     pid = DiscretePID(; K = Kp, Ts = resolution / Second(1), Ti = Ti, Td = Td)
     return PIDController(resolution, Kp, Ti, Td, pid)
 end
@@ -46,7 +46,7 @@ function control(
             controller.resolution,
         )
     else
-        remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
+        remainingTime = end_time(schedulePeriod) - t
         return ControlSequence(
             [
                 min(
