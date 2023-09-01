@@ -12,14 +12,12 @@ Schedule the operation of `ess` with `scheduler` given `useCases` starting from 
 function schedule(ess, scheduler::ManualScheduler, _, tStart::Dates.DateTime)
     currentSchedule = Schedule(
         max.(
-            min.(
-                scheduler.powerKw,
-                p_max(ess, scheduler.resolution)
-            ),
-            p_min(ess, scheduler.resolution)
+            min.(scheduler.powerKw, p_max(ess, scheduler.resolution)),
+            p_min(ess, scheduler.resolution),
         ),
         tStart,
-        Second(scheduler.resolution)
+        Second(scheduler.resolution),
+        fill(SOC(ess), length(scheduler.powerKw) + 1),
     )
     return currentSchedule
 end

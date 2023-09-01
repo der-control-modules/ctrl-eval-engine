@@ -49,7 +49,7 @@ tStart = floor(now(), Hour(1))
 
 @testset "Charge Discharge Storage MESA Mode" begin
     useCases = UseCase[]
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
 
     # Test that mode follows the specified power percentage (53% of 500kW is 265kW).
     controller = MesaController(
@@ -114,7 +114,7 @@ tStart = floor(now(), Hour(1))
         ],
         Dates.Minute(5),
     )
-    schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1), 0.2, 0.5)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     # @test controller.wip.value == [
     #     -65.2,
@@ -134,7 +134,7 @@ end
 
 @testset "Active Power Limit MESA Mode" begin
     useCases = UseCase[]
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
     rampParams = RampParams(100.0, 200.0, 100.0, 200.0)
 
     # Test Discharge Limit:
@@ -152,7 +152,7 @@ end
         ],
         Dates.Minute(5),
     )
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     # @test controller.wip.value ==
     #       [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
@@ -172,7 +172,7 @@ end
         ],
         Dates.Minute(5),
     )
-    schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(-65.2, tStart, Hour(1), 0.2, 0.5)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     # @test controller.wip.value == [
     #     -10.0,
@@ -203,7 +203,7 @@ end
         [ActiveResponseMode(MesaModeParams(1), 30.0, 1.0, 1000.0, 1000.0)],
         Dates.Minute(5),
     )
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
 
     # @test controller.wip.value ==
@@ -223,7 +223,7 @@ end
         [ActiveResponseMode(MesaModeParams(1), 30.0, 10.0, 1000.0, 1000.0)],
         Dates.Minute(5),
     )
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     # @test controller.wip.value ==
     #       [0.0, 0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -242,7 +242,7 @@ end
         [ActiveResponseMode(MesaModeParams(1), 30.0, 10.0, 1000.0, 1000.0)],
         Dates.Minute(5),
     )
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     # @test controller.wip.value ==
     #       [-2.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, -2.0, -3.0, -4.0, -5.0]
@@ -256,7 +256,7 @@ end
         ),
     )]
     controller = PIDController(Minute(1), 8.0, 0.5, 0.01)
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     @test true
 end
@@ -267,7 +267,7 @@ end
         FixedIntervalTimeSeries(tStart, Minute(5), [15, 20, 1, 10]),
     )]
     controller = PIDController(Second(1), 0.5, 0.5, 0.9)
-    schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15), 0.5, 0.2)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     @test true
 end
@@ -296,7 +296,7 @@ end
         ess,
         useCases,
     )
-    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Hour(1), 0.5, 0.2)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     @test true
 end
@@ -311,7 +311,7 @@ end
         ),
     )]
     controller = RuleBasedController(1.5)
-    schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Minute(15), 0.5, 0.4)
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
     @test true
 end
