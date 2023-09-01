@@ -1,16 +1,14 @@
-struct RuleBasedController <: RTController
+struct RuleBasedScheduler <: Scheduler
     bound::Float64
 end
 
-RuleBasedController(config::Dict) = RuleBasedController(max(0, config["bound"]))
+RuleBasedScheduler(config::Dict) = RuleBasedScheduler(max(0, config["loadBound"]))
 
-function control(
+function schedule(
     ess::EnergyStorageSystem,
-    controller::RuleBasedController,
-    schedulePeriod::SchedulePeriod,
+    scheduler::RuleBasedScheduler,
     useCases::AbstractArray{<:UseCase},
-    t::DateTime,
-    _,
+    tStart::DateTime,
 )
     price_comb = combinations(price_forecast,2)
     feasible_theta = []
