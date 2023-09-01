@@ -34,8 +34,8 @@ struct SchedulePeriod
 end
 
 duration(sp::SchedulePeriod) = sp.duration
-start_time(sp::SchedulePeriod) = sp.tStart
-end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
+CtrlEvalEngine.start_time(sp::SchedulePeriod) = sp.tStart
+CtrlEvalEngine.end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
 average_power(sp::SchedulePeriod) = sp.powerKw
 
 Base.iterate(s::Schedule, index = 1) =

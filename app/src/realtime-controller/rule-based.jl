@@ -22,7 +22,7 @@ function control(
         actualLoad, _, tEndActualLoad = CtrlEvalEngine.get_period(ucLF.realtimeLoadPower, t)
         tCtrlPeriodEnd =
             isnothing(tEndActualLoad) || isnothing(tEndForecstLoad) ?
-            end_time(SchedulePeriod) : min(tEndForecstLoad, tEndActualLoad)
+            end_time(schedulePeriod) : min(tEndForecstLoad, tEndActualLoad)
         theta_low = forecastLoad - controller.bound
         theta_high = forecastLoad + controller.bound
         η = sqrt(ηRT(ess))

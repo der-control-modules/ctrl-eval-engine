@@ -104,7 +104,11 @@ function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
         # some overlap time period
         idx1 = div(t1 - ts.tStart, ts.resolution) + 1
         idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
-        FixedIntervalTimeSeries(ts.tStart + ts.resolution * (idx1 - 1), ts.resolution, ts.value[idx1:idx2])
+        FixedIntervalTimeSeries(
+            ts.tStart + ts.resolution * (idx1 - 1),
+            ts.resolution,
+            ts.value[idx1:idx2],
+        )
     else
         FixedIntervalTimeSeries(tStart, ts.resolution, Float64[])
     end
@@ -204,18 +208,22 @@ function binary_operation(
 
     while tPeriodEnd < tEnd
         tPeriodStart = tPeriodEnd
-        if tPeriodEnd1 ≤ tPeriodEnd2
+        if tPeriodEnd1 == tPeriodEnd2
+            # move both ts1 and ts2 forward by one time period
+            v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
+            v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
+        elseif tPeriodEnd1 < tPeriodEnd2
             # this means tPeriodEnd == tPeriodEnd1, move ts1 forward by one time period
             v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
-            if isnothing(tPeriodEnd1)
-                tPeriodEnd1 = tEnd
-            end
         else
             # this means tPeriodEnd == tPeriodEnd2, move ts2 forward by one time period
             v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
-            if isnothing(tPeriodEnd2)
-                tPeriodEnd2 = tEnd
-            end
+        end
+        if isnothing(tPeriodEnd1)
+            tPeriodEnd1 = tEnd
+        end
+        if isnothing(tPeriodEnd2)
+            tPeriodEnd2 = tEnd
         end
         tPeriodEnd = min(tPeriodEnd1, tPeriodEnd2, tEnd)
         v = op(v1, v2)
