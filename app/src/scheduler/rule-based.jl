@@ -1,8 +1,9 @@
 struct RuleBasedScheduler <: Scheduler
-    bound::Float64
+    resolution::Dates.Period
+    interval::Dates.Period
 end
 
-RuleBasedScheduler(config::Dict) = RuleBasedScheduler(max(0, config["loadBound"]))
+#RuleBasedScheduler(config::Dict) = RuleBasedScheduler(max(0, config["loadBound"]))
 
 function schedule(
     ess::EnergyStorageSystem,
@@ -10,7 +11,25 @@ function schedule(
     useCases::AbstractArray{<:UseCase},
     tStart::DateTime,
 )
-    price_comb = combinations(price_forecast,2)
+    scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
+
+    eaIdx = findfirst(uc -> uc isa EnergyArbitrage, useCases)
+    if isnothing(eaIdx)
+        error("No supported use case is found by Rule-based scheduler")
+    end
+    ucEA = useCases[eaIdx]
+
+    price = sample(
+        ucEA.price,
+        range(
+            tStart;
+            step=scheduler.resolution,
+            length = scheduleLength
+            #stop=tStart + Hour(24) - Millisecond(1)
+        )
+    )
+
+    price_comb = combinations(price,2)
     feasible_theta = []
 
     for p in 1:size(price_comb, 1)
@@ -20,8 +39,8 @@ function schedule(
         end
     end
 
-    all_state_trans = zeros(size(price_forecast, 2),size(feasible_theta, 1))
-    all_power = zeros(size(price_forecast, 2),size(feasible_theta, 1))
+    all_state_trans = zeros(scheduleLength,size(feasible_theta, 1)) #size(price_forecast, 2)
+    all_power = zeros(scheduleLength,size(feasible_theta, 1))
     all_total_cost = []
 
     for i in 1:size(feasible_theta, 1)
@@ -32,26 +51,26 @@ function schedule(
 
         cost = [];
         output = [];
-        day_hours = len(price)
+        #day_hours = len(price)
 
-        for h in 1:size(price_forecast, 2):
+        for h in 1:scheduleLength:
 
-            if price_forecast[1,h] <= theta_low
+            if price[1,h] <= theta_low
                 batt = min(p_max(ess), e_max(ess) * (1 - stateK0) / η) 
                 stateK0 = stateK0 + (batt*η)/e_max(ess)
-                cost_cal = -batt*price_forecast[1,h]
+                cost_cal = -batt*price[h]
                 append!(cost,cost_cal)
                 output = -batt
-            elseif price_forecast[1,h] >= theta_high
+            elseif price[1,h] >= theta_high
                 batt = min(p_max(ess),max(0,(energy_state(ess) - e_min(ess))*η)) 
                 stateK0 = stateK0 - batt/(e_max(ess)*η)
-                cost_cal = batt*price_forecast[1,h]
+                cost_cal = batt*price[h]
                 append!(cost,cost_cal)
                 output = batt
             else:
                 batt = 0
                 stateK0 = stateK0
-                cost_cal = batt*price_forecast[1,h]
+                cost_cal = batt*price[h]
                 append!(cost,cost_cal)
                 output = batt
             end
@@ -66,7 +85,7 @@ function schedule(
     optimal_power = all_power[:,optimal_index]
     optimal_states = all_state_trans[:,optimal_index]
     
-
+    return Schedule(optimal_power, tStart, rlScheduler.resolution, [SOC(ess),optimal_states...])
     # scheduledPower = average_power(schedulePeriod)
 
     # idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
