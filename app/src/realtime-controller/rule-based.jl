@@ -2,7 +2,7 @@ struct RuleBasedController <: RTController
     bound::Float64
 end
 
-RuleBasedController(config::Dict) = RuleBasedController(max(0, config["bound"]))
+RuleBasedController(config::Dict) = RuleBasedController(max(0, config["loadBound"]))
 
 function control(
     ess::EnergyStorageSystem,
@@ -17,8 +17,12 @@ function control(
     idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
     if idxloadFollowing !== nothing
         ucLF::LoadFollowing = useCases[idxloadFollowing]
-        forecastLoad, _, _ = CtrlEvalEngine.get_period(ucLF.forecastLoadPower, t)
+        forecastLoad, _, tEndForecstLoad =
+            CtrlEvalEngine.get_period(ucLF.forecastLoadPower, t)
         actualLoad, _, tEndActualLoad = CtrlEvalEngine.get_period(ucLF.realtimeLoadPower, t)
+        tCtrlPeriodEnd =
+            isnothing(tEndActualLoad) || isnothing(tEndForecstLoad) ?
+            end_time(schedulePeriod) : min(tEndForecstLoad, tEndActualLoad)
         theta_low = forecastLoad - controller.bound
         theta_high = forecastLoad + controller.bound
         η = sqrt(ηRT(ess))
@@ -37,10 +41,10 @@ function control(
         end
 
         @debug "Rule-based RT controller exiting" batt_power
-        return ControlSequence([batt_power], tEndActualLoad - t)
+        return ControlSequence([batt_power], tCtrlPeriodEnd - t)
     else
         # Load Following isn't selected, follow schedule
-        remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
+        remainingTime = end_time(schedulePeriod) - t
         return ControlSequence(
             [
                 min(

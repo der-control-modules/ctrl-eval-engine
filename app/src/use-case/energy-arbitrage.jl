@@ -8,42 +8,29 @@ end
 
 Construct an `EnergyArbitrage` object from `input` dictionary or array
 """
-EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage(
-    extract(
+EnergyArbitrage(input::Dict) =
+    EnergyArbitrage(
         FixedIntervalTimeSeries(
-            DateTime(input["actualEnergyPrice"][1]["date"]),
-            DateTime(input["actualEnergyPrice"][2]["date"]) -
-            DateTime(input["actualEnergyPrice"][1]["date"]),
-            [Float64(row["lmp"]) for row in input["actualEnergyPrice"]],
+            DateTime(input["actualEnergyPrice"]["Time"][1]),
+            DateTime(input["actualEnergyPrice"]["Time"][2]) -
+            DateTime(input["actualEnergyPrice"]["Time"][1]),
+            float.(input["actualEnergyPrice"]["LMP"]),
         ),
-        tStart,
-        tEnd,
-    ),
-)
+    )
 
-EnergyArbitrage(input::AbstractVector) = EnergyArbitrage(
-    VariableIntervalTimeSeries(
-        push!(
-            [DateTime(row["date"]) for row in input],
-            DateTime(input[end]["date"]) + Hour(1),
-        ),
-        [Float64(row["lmp"]) for row in input],
-    ),
-)
-
-EnergyArbitrage(input::AbstractVector, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage(
-    extract(
-        VariableIntervalTimeSeries(
-            push!(
-                [DateTime(row["date"]) for row in input],
-                DateTime(input[end]["date"]) + Hour(1),
+EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) =
+    EnergyArbitrage(
+        extract(
+            FixedIntervalTimeSeries(
+                DateTime(input["actualEnergyPrice"]["Time"][1]),
+                DateTime(input["actualEnergyPrice"]["Time"][2]) -
+                DateTime(input["actualEnergyPrice"]["Time"][1]),
+                float.(input["actualEnergyPrice"]["LMP"]),
             ),
-            [Float64(row["lmp"]) for row in input],
+            tStart,
+            tEnd,
         ),
-        tStart,
-        tEnd,
-    ),
-)
+    )
 
 calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) =
     power(progress.operation) ⋅ ucEA.price

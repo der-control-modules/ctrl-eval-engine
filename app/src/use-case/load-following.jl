@@ -26,47 +26,61 @@ end
 
 Construct a `LoadFollowing` object from `input` dictionary or array
 """
-LoadFollowing(input::Dict{String,<:AbstractVector}) = LoadFollowing(
+LoadFollowing(input::Dict) = LoadFollowing(
     FixedIntervalTimeSeries(
-        DateTime(input["forecastLoadPower"][1]["DateTime"]),
-        DateTime(input["forecastLoadPower"][2]["DateTime"]) -
-        DateTime(input["forecastLoadPower"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["forecastLoadPower"]],
+        DateTime(input["forecastLoadPower"]["DateTime"][1]),
+        DateTime(input["forecastLoadPower"]["DateTime"][2]) -
+        DateTime(input["forecastLoadPower"]["DateTime"][1]),
+        float.(input["forecastLoadPower"]["Power"]),
     ),
     FixedIntervalTimeSeries(
-        DateTime(input["realtimeLoadPower"][1]["DateTime"]),
-        DateTime(input["realtimeLoadPower"][2]["DateTime"]) -
-        DateTime(input["realtimeLoadPower"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["realtimeLoadPower"]],
+        DateTime(input["realTimeLoadPower"]["DateTime"][1]),
+        DateTime(input["realTimeLoadPower"]["DateTime"][2]) -
+        DateTime(input["realTimeLoadPower"]["DateTime"][1]),
+        float.(input["realTimeLoadPower"]["Power"]),
     ),
 )
 
-LoadFollowing(input::Dict{String,<:Dict}) = LoadFollowing(
-    FixedIntervalTimeSeries(
-        input["forecastLoadPower"]["DateTime"][1],
-        input["forecastLoadPower"]["DateTime"][2] -
-        input["forecastLoadPower"]["DateTime"][1],
-        input["forecastLoadPower"]["Power"],
+LoadFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
+    extract(
+        FixedIntervalTimeSeries(
+            DateTime(input["forecastLoadProfile"]["DateTime"][1]),
+            DateTime(input["forecastLoadProfile"]["DateTime"][2]) -
+            DateTime(input["forecastLoadProfile"]["DateTime"][1]),
+            float.(input["forecastLoadProfile"]["Power"]),
+        ),
+        tStart,
+        tEnd,
     ),
-    FixedIntervalTimeSeries(
-        input["realtimeLoadPower"]["DateTime"][1],
-        input["realtimeLoadPower"]["DateTime"][2] -
-        input["realtimeLoadPower"]["DateTime"][1],
-        input["realtimeLoadPower"]["Power"],
+    extract(
+        FixedIntervalTimeSeries(
+            DateTime(input["realTimeLoadProfile"]["DateTime"][1]),
+            DateTime(input["realTimeLoadProfile"]["DateTime"][2]) -
+            DateTime(input["realTimeLoadProfile"]["DateTime"][1]),
+            float.(input["realTimeLoadProfile"]["Power"]),
+        ),
+        tStart,
+        tEnd,
     ),
 )
 
 function calculate_metrics(operation::OperationHistory, ucLF::LoadFollowing)
+    tsNetLoad = ucLF.realtimeLoadPower - power(operation)
+    tsError = tsNetLoad - ucLF.forecastLoadPower
     [
         Dict(:sectionTitle => "Load Following"),
-        Dict(:label => "RMSE", :value => 0),
-        Dict(:label => "Maximum Deviation", :value => 0),
+        Dict(:label => "RMSE", :value => "$(round(sqrt(mean(tsError^2)), sigdigits=2)) kW"),
+        Dict(
+            :label => "Maximum Deviation",
+            :value => "$(round(maximum(abs.(get_values(tsError))), sigdigits=2)) kW",
+        ),
     ]
 end
 
 function use_case_charts(operation::OperationHistory, ucLF::LoadFollowing)
+    tsNetLoad = ucLF.realtimeLoadPower - power(operation)
+    tsRelError = (tsNetLoad - ucLF.forecastLoadPower) / ucLF.forecastLoadPower
     [
-        # TODO: this is an example to be replaced
         Dict(
             :title => "Load Following Performance",
             :height => "400px",
@@ -78,17 +92,23 @@ function use_case_charts(operation::OperationHistory, ucLF::LoadFollowing)
                     :x => timestamps(ucLF.forecastLoadPower),
                     :y => get_values(ucLF.forecastLoadPower),
                     :type => "interval",
-                    :name => "Forecast Load Power",
+                    :name => "Forecast Load",
                 ),
                 Dict(
                     :x => timestamps(ucLF.realtimeLoadPower),
                     :y => get_values(ucLF.realtimeLoadPower),
                     :type => "interval",
-                    :name => "Real-time Load Power",
+                    :name => "Real-time Load",
                 ),
                 Dict(
-                    :x => timestamps(ucLF.realtimeLoadPower),
-                    :y => zeros(length(get_values(ucLF.realtimeLoadPower))), # TODO: to be replaced with actual errors
+                    :x => timestamps(tsNetLoad),
+                    :y => get_values(tsNetLoad),
+                    :type => "interval",
+                    :name => "Real-time Net Load",
+                ),
+                Dict(
+                    :x => timestamps(tsRelError),
+                    :y => get_values(tsRelError),
                     :type => "interval",
                     :name => "Relative Error",
                     :yAxis => "right",
