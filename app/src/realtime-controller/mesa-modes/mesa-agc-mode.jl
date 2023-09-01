@@ -1,4 +1,5 @@
 using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams, previous_WIP
+using CtrlEvalEngine.EnergyStorageScheduling: regulation_capacity
 
 struct AGCMode <: MesaMode
     params::MesaModeParams
@@ -6,11 +7,6 @@ struct AGCMode <: MesaMode
     rampParams::RampParams
     minimumUsableSOC::Float64
     maximumUsableSOC::Float64
-end
-
-# TODO: This is a mock regulation_capacity function. Remove this and import when the real one is available.
-function regulation_capacity(schedulePeriod)
-    return 500.0
 end
 
 function modecontrol(
