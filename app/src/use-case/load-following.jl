@@ -64,7 +64,11 @@ LoadFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
     ),
 )
 
-function calculate_metrics(operation::OperationHistory, ucLF::LoadFollowing)
+function calculate_metrics(
+    ::ScheduleHistory,
+    operation::OperationHistory,
+    ucLF::LoadFollowing,
+)
     tsNetLoad = ucLF.realtimeLoadPower - power(operation)
     tsError = tsNetLoad - ucLF.forecastLoadPower
     [
@@ -77,7 +81,7 @@ function calculate_metrics(operation::OperationHistory, ucLF::LoadFollowing)
     ]
 end
 
-function use_case_charts(operation::OperationHistory, ucLF::LoadFollowing)
+function use_case_charts(::ScheduleHistory, operation::OperationHistory, ucLF::LoadFollowing)
     tsNetLoad = ucLF.realtimeLoadPower - power(operation)
     tsRelError = (tsNetLoad - ucLF.forecastLoadPower) / ucLF.forecastLoadPower
     [

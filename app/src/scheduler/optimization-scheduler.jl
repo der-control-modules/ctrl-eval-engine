@@ -78,7 +78,7 @@ function schedule(
             r_p .<= p_max(ess) .- pBatt
             r_p .+ spn .≤ p_max(ess) .- pBatt
             eng[1:end-1] .-
-            (scheduler.regulationReserve .* r_p .+ spn ./ rte) .* resolutionHrs .≥ 0
+            (scheduler.regulationReserve .* r_p .+ spn) ./ rte .* resolutionHrs .≥ 0
             # regulation down
             r_n .<= -p_min(ess) .+ pBatt
             eng[1:end-1] .+ (scheduler.regulationReserve .* r_n .* rte) .* resolutionHrs .<=
@@ -155,6 +155,7 @@ function schedule(
         tStart,
         scheduler.resolution,
         (sol_eng[1:scheduleLength+1] .- e_min(ess)) ./ (e_max(ess) - e_min(ess)),
+        sol_r_c[1:scheduleLength]
     )
     @debug "Schedule updated" currentSchedule
     return currentSchedule

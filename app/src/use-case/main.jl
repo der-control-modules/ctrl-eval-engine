@@ -12,7 +12,6 @@ export UseCase,
     use_case_charts,
     EnergyArbitrage,
     Regulation,
-    RegulationPricePoint,
     RegulationOperationPoint,
     regulation_income,
     LoadFollowing,
@@ -50,6 +49,8 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
         VariabilityMitigation(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Load Following"
         LoadFollowing(config["data"], setting.simStart, setting.simEnd)
+    elseif name === "Frequency Regulation"
+        Regulation(config["data"], setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
     end
@@ -60,9 +61,9 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
 calculate_net_benefit(::Progress, ::UseCase) = 0.0
 
 # Return an empty vector if a use-case-specific method is not implemented
-calculate_metrics(::OperationHistory, ::UseCase) = []
+calculate_metrics(::ScheduleHistory, ::OperationHistory, ::UseCase) = []
 
 # Return an empty vector if a use-case-specific method is not implemented
-use_case_charts(::OperationHistory, ::UseCase) = []
+use_case_charts(::ScheduleHistory, ::OperationHistory, ::UseCase) = []
 
 end

@@ -40,7 +40,7 @@ calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) =
 
 Summarize the benefit and cost associated with `useCase` given `operation`
 """
-function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
+function calculate_metrics(::ScheduleHistory, operation::OperationHistory, ucEA::EnergyArbitrage)
     return [
         Dict(:sectionTitle => "Energy Arbitrage"),
         Dict(
@@ -51,7 +51,7 @@ function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
     ]
 end
 
-use_case_charts(op::OperationHistory, ucEA::EnergyArbitrage) = begin
+use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) = begin
     @debug "Generating time series charts for Energy Arbitrage"
 
     cumIncome = cum_integrate(power(op) * ucEA.price)

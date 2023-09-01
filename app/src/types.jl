@@ -38,6 +38,33 @@ timestamps(ts::VariableIntervalTimeSeries) = ts.t
 
 get_values(ts::TimeSeries) = ts.value
 
+function get_values(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+    t1 = max(tStart, start_time(ts))
+    t2 = min(tEnd, end_time(ts))
+    ts.value
+    if t1 < ts.t[end] && t2 ≥ ts.t[1]
+        # some overlap time period
+        idx1 = findfirst(ts.t .> t1) - 1
+        idx2 = findfirst(ts.t .≥ t2) - 1
+        ts.value[idx1:idx2]
+    else
+        []
+    end
+end
+
+function get_values(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+    t1 = max(tStart, start_time(ts))
+    t2 = min(tEnd, end_time(ts))
+    if t1 < end_time(ts) && t2 ≥ start_time(ts)
+        # some overlap time period
+        idx1 = div(t1 - ts.tStart, ts.resolution) + 1
+        idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
+        ts.value[idx1:idx2]
+    else
+        []
+    end
+end
+
 sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) =
     map(t -> get_period(ts, t)[1], tArray)
 
@@ -293,6 +320,8 @@ end
 struct ScheduleHistory
     t::Vector{Dates.DateTime}
     powerKw::Vector{Float64}
+    soc::Vector{Float64}
+    regCapKw::Vector{Float64}
 end
 
 """

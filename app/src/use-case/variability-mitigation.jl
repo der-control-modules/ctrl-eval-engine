@@ -45,7 +45,7 @@ moving_std(ts::TimeSeries, windowLength::Dates.TimePeriod, samplingRate::Dates.T
         return FixedIntervalTimeSeries(tStart, samplingRate, v)
     end
 
-calculate_metrics(op::OperationHistory, ucVM::VariabilityMitigation) = begin
+calculate_metrics(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Calculating metrics for Power Smoothing"
     essPower = power(op)
     netPowerSmooth = essPower + ucVM.pvGenProfile
@@ -63,7 +63,7 @@ calculate_metrics(op::OperationHistory, ucVM::VariabilityMitigation) = begin
     ]
 end
 
-use_case_charts(op::OperationHistory, ucVM::VariabilityMitigation) = begin
+use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Generating time series charts for Power Smoothing"
     netPowerSmooth = power(op) + ucVM.pvGenProfile
     originalVariability =

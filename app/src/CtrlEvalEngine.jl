@@ -77,7 +77,7 @@ function generate_output_dict(
 
     @debug "Calculating use-case-specific metrics"
     metrics = mapreduce(
-        uc -> calculate_metrics(progress.operation, uc),
+        uc -> calculate_metrics(progress.schedule, progress.operation, uc),
         vcat,
         useCases;
         init = [
@@ -132,6 +132,14 @@ function update_schedule_history!(
             scheduleHistory.powerKw,
             EnergyStorageScheduling.average_power(schedulePeriod),
         )
+        push!(
+            scheduleHistory.soc,
+            EnergyStorageScheduling.ending_soc(schedulePeriod),
+        )
+        push!(
+            scheduleHistory.regCapKw,
+            EnergyStorageScheduling.regulation_capacity(schedulePeriod),
+        )
     end
 end
 
@@ -150,7 +158,7 @@ end
 
 function generate_chart_data(progress::Progress, useCases)
     mapreduce(
-        uc -> use_case_charts(progress.operation, uc),
+        uc -> use_case_charts(progress.schedule, progress.operation, uc),
         vcat,
         useCases;
         init = [
@@ -172,6 +180,13 @@ function generate_chart_data(progress::Progress, useCases)
                         :y => progress.operation.powerKw,
                         :type => "interval",
                         :name => "Actual Power",
+                    ),
+                    Dict(
+                        :x => progress.schedule.t,
+                        :y => progress.schedule.soc,
+                        :type => "instance",
+                        :name => "Scheduled SOC",
+                        :yAxis => "right"
                     ),
                     Dict(
                         :x => progress.operation.t,
@@ -222,7 +237,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
     t = setting.simStart
     progress = Progress(
         5.0,
-        ScheduleHistory([t], Float64[]),
+        ScheduleHistory([t], Float64[], Float64[SOC(ess)], Float64[]),
         OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)]),
     )
     if debug
@@ -234,7 +249,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
 
     outputProgress = Progress(
         5.0,
-        ScheduleHistory([t], Float64[]),
+        ScheduleHistory([t], Float64[], Float64[SOC(ess)], Float64[]),
         OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)]),
     )
 
