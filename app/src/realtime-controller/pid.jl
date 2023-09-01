@@ -46,7 +46,7 @@ function control(
             controller.resolution,
         )
     else
-        remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
+        remainingTime = end_time(schedulePeriod) - t
         return ControlSequence(
             [
                 min(

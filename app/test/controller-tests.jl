@@ -3,7 +3,7 @@ using CtrlEvalEngine.EnergyStorageSimulators:
     LiIonBattery, LFP_LiIonBatterySpecs, LiIonBatteryStates, SOC, SOH, operate!
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageScheduling:
-    end_time, schedule, ManualScheduler, SchedulePeriod
+    schedule, ManualScheduler, SchedulePeriod
 using CtrlEvalEngine.EnergyStorageRTControl:
     control,
     PIDController,

@@ -44,7 +44,7 @@ function control(
         return ControlSequence([batt_power], tCtrlPeriodEnd - t)
     else
         # Load Following isn't selected, follow schedule
-        remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
+        remainingTime = end_time(schedulePeriod) - t
         return ControlSequence(
             [
                 min(
