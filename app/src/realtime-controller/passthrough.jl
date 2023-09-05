@@ -1,20 +1,27 @@
 
-struct PassThroughController <: RTController
-    resolution::Dates.Period
-end
+struct PassThroughController <: RTController end
 
 function control(
     _,
     controller::PassThroughController,
     schedulePeriod::SchedulePeriod,
-    _,
+    useCases::AbstractVector{<:UseCase},
     t,
     _,
 )
-    tEnd =
-        t + ceil(end_time(schedulePeriod) - t, controller.resolution) -
-        controller.resolution
-    controlOps = [average_power(schedulePeriod) for _ = t:controller.resolution:tEnd]
+    idxReg = findfirst(uc -> uc isa Regulation, useCases)
+    if idxReg !== nothing
+        # Regulation is selected
+        ucReg::Regulation = useCases[idxReg]
+        regCap = regulation_capacity(schedulePeriod)
+        return scheduledPower +
+               extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
+    end
+
     @debug "Control sequence updated" controlOps
-    return ControlSequence(controlOps, controller.resolution)
+    return FixedIntervalTimeSeries(
+        t,
+        end_time(schedulePeriod) - t,
+        [average_power(schedulePeriod)],
+    )
 end

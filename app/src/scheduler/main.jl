@@ -35,8 +35,8 @@ Schedule(
     powerKw::Vector{Float64},
     tStart::Dates.DateTime;
     resolution::Dates.TimePeriod = Hour(1),
-    soc::Vector{Float64} = zeros(length(powerKw) + 1),
-) = Schedule(powerKw, tStart, resolution, soc, zeros(length(powerKw)))
+    SOC::Vector{Float64} = zeros(length(powerKw) + 1),
+) = Schedule(powerKw, tStart, resolution, SOC, zeros(length(powerKw)))
 
 struct SchedulePeriod
     powerKw::Float64
@@ -93,7 +93,7 @@ struct IdleScheduler <: Scheduler
 end
 
 schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
-    Schedule([0], tStart; resolution = scheduler.interval, soc = [SOC(ess), SOC(ess)])
+    Schedule([0], tStart; resolution = scheduler.interval, SOC = [SOC(ess), SOC(ess)])
 
 """
     get_scheduler(inputDict::Dict)

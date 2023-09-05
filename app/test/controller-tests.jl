@@ -29,7 +29,8 @@ function run_controller(ess, controller, schedulePeriod, useCases, tStart)
     spProgress = VariableIntervalTimeSeries([tStart], Float64[])
     while t < schedulePeriodEnd
         controlSequence = control(ess, controller, schedulePeriod, useCases, t, spProgress)
-        for (powerSetpointKw, controlDuration) in controlSequence
+        for (powerSetpointKw, _, controlPeriodEnd) in controlSequence
+            controlDuration = controlPeriodEnd - t
             actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
             CtrlEvalEngine.update_schedule_period_progress!(
                 spProgress,
