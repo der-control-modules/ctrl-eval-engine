@@ -126,6 +126,17 @@ function get_scheduler(schedulerConfig::Dict)
         )
     elseif schedulerType == "idle"
         IdleScheduler(Hour(24))
+    elseif schedulerType == "rule"
+        res = Minute(
+            round(
+                Int,
+                convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"],
+            ),
+        )
+        interval = Minute(
+            round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
+        )
+        RuleBasedScheduler(res, interval)
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end
