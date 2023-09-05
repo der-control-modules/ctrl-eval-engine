@@ -13,12 +13,43 @@ struct OptScheduler <: Scheduler
     regulationReserve::Float64
 end
 
-OptScheduler(res, interval, win, es=nothing; powerLimitPu=1, minNetLoadKw=nothing, regulationReserve=0.5) = OptScheduler(res, interval, win, es, powerLimitPu, minNetLoadKw, regulationReserve)
-OptScheduler(res, interval, win, es::Float64, powerLimitPu, minNetLoadKw, regulationReserve) = OptScheduler(res, interval, win, (es, es), powerLimitPu, minNetLoadKw, regulationReserve)
+OptScheduler(
+    res,
+    interval,
+    win,
+    es = nothing;
+    powerLimitPu = 1,
+    minNetLoadKw = nothing,
+    regulationReserve = 0.5,
+) = OptScheduler(res, interval, win, es, powerLimitPu, minNetLoadKw, regulationReserve)
 
-function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{<:UseCase}, tStart::Dates.DateTime)
+OptScheduler(
+    res,
+    interval,
+    win,
+    es::Float64,
+    powerLimitPu,
+    minNetLoadKw,
+    regulationReserve,
+) = OptScheduler(
+    res,
+    interval,
+    win,
+    (es, es),
+    powerLimitPu,
+    minNetLoadKw,
+    regulationReserve,
+)
+
+function schedule(
+    ess,
+    scheduler::OptScheduler,
+    useCases::AbstractVector{<:UseCase},
+    tStart::Dates.DateTime,
+)
     K = scheduler.optWindow
-    scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
+    scheduleLength =
+        Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
     rte = ηRT(ess)
     resolutionHrs = /(promote(scheduler.resolution, Hour(1))...)
 
@@ -38,26 +69,30 @@ function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{<:UseCa
         pvp[1:K] ≥ 0  # PV power output
     end)
 
-
-    @constraints(m, begin
-        eng[1] == energy_state(ess)
-        pBatt .== p_p .- p_n
-        # regulation up
-        r_p .<= p_max(ess) .- pBatt
-        r_p .+ spn .≤ p_max(ess) .- pBatt
-        eng[1:end-1] .- (scheduler.regulationReserve .* r_p .+ spn ./ rte) .* resolutionHrs .≥ 0
-        # regulation down
-        r_n .<= -p_min(ess) .+ pBatt
-        eng[1:end-1] .+ (scheduler.regulationReserve .* r_n .* rte) .* resolutionHrs .<= e_max(ess)
-        # regulation
-        # energy state dynamics
-        eng[2:end] .== eng[1:end-1] .- (p_p ./ rte .- p_n .* rte) .* resolutionHrs
-        # TODO: PV generation dump
-        pvp .== 0
-    end)
+    @constraints(
+        m,
+        begin
+            eng[1] == energy_state(ess)
+            pBatt .== p_p .- p_n
+            # regulation up
+            r_p .<= p_max(ess) .- pBatt
+            r_p .+ spn .≤ p_max(ess) .- pBatt
+            eng[1:end-1] .-
+            (scheduler.regulationReserve .* r_p .+ spn) ./ rte .* resolutionHrs .≥ 0
+            # regulation down
+            r_n .<= -p_min(ess) .+ pBatt
+            eng[1:end-1] .+ (scheduler.regulationReserve .* r_n .* rte) .* resolutionHrs .<=
+            e_max(ess)
+            # regulation
+            # energy state dynamics
+            eng[2:end] .== eng[1:end-1] .- (p_p ./ rte .- p_n .* rte) .* resolutionHrs
+            # TODO: PV generation dump
+            pvp .== 0
+        end
+    )
 
     # Build expression of power output to grid
-    pOut = mapreduce(uc -> power_output(uc, tStart), .+, useCases; init=pBatt .+ pvp)
+    pOut = mapreduce(uc -> power_output(uc, tStart), .+, useCases; init = pBatt .+ pvp)
 
     if isnothing(scheduler.endSoc)
         @constraint(m, engy_final_condition, eng[end] == eng[1])
@@ -94,7 +129,6 @@ function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{<:UseCa
     #     @constraint(m, spn .== 0)
     # end
 
-
     # Initialize objective function expression (to be maximized)
     objective_exp = mapreduce(uc -> objective_term(m, uc, scheduler, tStart), +, useCases)
 
@@ -116,19 +150,38 @@ function schedule(ess, scheduler::OptScheduler, useCases::AbstractVector{<:UseCa
         append!(sol_pBatt, zeros(scheduleLength - K))
     end
 
-    currentSchedule = Schedule(sol_pBatt[1:scheduleLength], tStart, scheduler.resolution)
+    currentSchedule = Schedule(
+        sol_pBatt[1:scheduleLength],
+        tStart,
+        scheduler.resolution,
+        (sol_eng[1:scheduleLength+1] .- e_min(ess)) ./ (e_max(ess) - e_min(ess)),
+        sol_r_c[1:scheduleLength]
+    )
     @debug "Schedule updated" currentSchedule
     return currentSchedule
 end
 
 objective_term(::JuMP.Model, ::UseCase, ::OptScheduler, ::Dates.DateTime) = 0
 
-objective_term(m::JuMP.Model, ucEA::EnergyArbitrage, scheduler::OptScheduler, tStart::Dates.DateTime) =
-    FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pBatt]) ⋅ ucEA.price
+objective_term(
+    m::JuMP.Model,
+    ucEA::EnergyArbitrage,
+    scheduler::OptScheduler,
+    tStart::Dates.DateTime,
+) = FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pBatt]) ⋅ ucEA.price
 
-function objective_term(m::JuMP.Model, ucReg::Regulation, scheduler::OptScheduler, tStart::Dates.DateTime)
+function objective_term(
+    m::JuMP.Model,
+    ucReg::Regulation,
+    scheduler::OptScheduler,
+    tStart::Dates.DateTime,
+)
     # regulation capacity and service performance
-    regOp = FixedIntervalTimeSeries(tStart, scheduler.resolution, [RegulationOperationPoint(x, 0) for x in m[:r_c]])
+    regOp = FixedIntervalTimeSeries(
+        tStart,
+        scheduler.resolution,
+        [RegulationOperationPoint(x, 0) for x in m[:r_c]],
+    )
     regulation_income(regOp, ucReg)
 
     # TODO: regulation up and down

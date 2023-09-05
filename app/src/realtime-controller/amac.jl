@@ -43,22 +43,23 @@ function control(
 )
     if amac.passive
         # Fall back to passive control according to schedule
-        return ControlSequence([sp.powerKw], sp.duration)
+        return FixedIntervalTimeSeries(t, sp.duration, [sp.powerKw])
     end
 
     idxVM = findfirst(uc -> uc isa VariabilityMitigation, useCases)
     ucVM::VariabilityMitigation = useCases[idxVM]
     if start_time(ucVM.pvGenProfile) > t
         # Passive control until start of PV generation or end of SchedulePeriod, whichever comes first
-        return ControlSequence(
+        return FixedIntervalTimeSeries(
+            t,
+            min(start_time(ucVM.pvGenProfile), end_time(sp)) - t,
             [sp.powerKw],
-            min(start_time(ucVM.pvGenProfile), EnergyStorageScheduling.end_time(sp)) - t,
         )
     end
 
     if t ≥ end_time(ucVM.pvGenProfile)
         # Passive control to the end of SchedulePeriod if PV generation profile has ended
-        return ControlSequence([sp.powerKw], EnergyStorageScheduling.end_time(sp) - t)
+        return FixedIntervalTimeSeries(t, end_time(sp) - t, [sp.powerKw])
     end
 
     # Active control if PV generation is present
@@ -71,5 +72,5 @@ function control(
         p_max(ess, controlDuration),
     )
     @debug "Active AMAC" t controlDuration maxlog=20
-    return ControlSequence([battery_power], controlDuration)
+    return FixedIntervalTimeSeries(t, controlDuration, [battery_power])
 end

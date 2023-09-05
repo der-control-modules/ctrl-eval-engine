@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/julia:1.8
+FROM public.ecr.aws/docker/library/julia:1.9
 
 ADD pnnl_web_proxy.pem /usr/local/share/ca-certificates/pnnl_web_proxy.crt
 RUN update-ca-certificates
@@ -13,4 +13,4 @@ ENV CONDA_JL_HOME=/root/miniconda/envs/conda_jl
 
 WORKDIR /app
 COPY app/Project.toml app/Manifest.toml /app/
-RUN julia --project=. -e "using Pkg; Pkg.instantiate()"
+RUN julia --project=. -e "using Pkg; Pkg.Registry.update(); Pkg.instantiate()"

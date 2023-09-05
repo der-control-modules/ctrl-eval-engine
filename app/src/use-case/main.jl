@@ -12,6 +12,7 @@ export UseCase,
     use_case_charts,
     EnergyArbitrage,
     Regulation,
+    RegulationPricePoint,
     RegulationOperationPoint,
     regulation_income,
     LoadFollowing,
@@ -22,16 +23,8 @@ export UseCase,
 abstract type UseCase end
 
 using Dates
-using CtrlEvalEngine:
-    SimSetting,
-    Progress,
-    OperationHistory,
-    power,
-    TimeSeries,
-    FixedIntervalTimeSeries,
-    VariableIntervalTimeSeries,
-    start_time,
-    end_time
+using CtrlEvalEngine
+using CtrlEvalEngine: SimSetting, Progress, ScheduleHistory, OperationHistory
 using LinearAlgebra
 using JuMP
 
@@ -47,19 +40,22 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
         EnergyArbitrage(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Power Smoothing"
         VariabilityMitigation(config["data"], setting.simStart, setting.simEnd)
+    elseif name === "Load Following"
+        LoadFollowing(config["data"], setting.simStart, setting.simEnd)
+    elseif name === "Frequency Regulation"
+        Regulation(config["data"], setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
-    end
-    for (name, config) in inputDict
+    end for (name, config) in inputDict
 ]
 
 # Return zero if a use-case-specific method is not implemented
 calculate_net_benefit(::Progress, ::UseCase) = 0.0
 
 # Return an empty vector if a use-case-specific method is not implemented
-calculate_metrics(::OperationHistory, ::UseCase) = []
+calculate_metrics(::ScheduleHistory, ::OperationHistory, ::UseCase) = []
 
 # Return an empty vector if a use-case-specific method is not implemented
-use_case_charts(::OperationHistory, ::UseCase) = []
+use_case_charts(::ScheduleHistory, ::OperationHistory, ::UseCase) = []
 
 end

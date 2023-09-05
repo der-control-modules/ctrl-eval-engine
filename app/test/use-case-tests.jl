@@ -122,15 +122,73 @@ using LinearAlgebra
             ),
         )
 
-        ucEA = EnergyArbitrage([
-            Dict("date" => "2022-01-01T00:00", "lmp" => 10.0),
-            Dict("date" => "2022-01-01T01:00", "lmp" => 20.0),
-            Dict("date" => "2022-01-01T02:00", "lmp" => 50.0),
-            Dict("date" => "2022-01-01T03:00", "lmp" => 30.0),
-        ])
+        ucEA = EnergyArbitrage(
+            Dict(
+                "actualEnergyPrice" => Dict(
+                    "Time" => [
+                        "2022-01-01T00:00",
+                        "2022-01-01T01:00",
+                        "2022-01-01T02:00",
+                        "2022-01-01T03:00",
+                    ],
+                    "LMP" => [10.0, 20.0, 50.0, 30.0],
+                ),
+            ),
+        )
 
         @test calculate_net_benefit(outputProgress, ucEA) isa Float64
-        @test calculate_metrics(outputProgress.operation, ucEA) isa AbstractVector
-        @test use_case_charts(outputProgress.operation, ucEA) isa AbstractVector
+        @test calculate_metrics(outputProgress.schedule, outputProgress.operation, ucEA) isa
+              AbstractVector
+        @test use_case_charts(outputProgress.schedule, outputProgress.operation, ucEA) isa
+              AbstractVector
+    end
+
+    @testset "Regulation/AGC" begin
+        tOperation = DateTime(2022):Second(4):DateTime(2022, 1, 1, 3)
+        outputProgress = Progress(
+            100,
+            ScheduleHistory(
+                DateTime(2022):Hour(1):DateTime(2022, 1, 1, 3),
+                [0.5, 1.0, 0],
+                [0.5, 0.4, 0.25, 0.2],
+                [0.5, 0, 1.0],
+            ),
+            OperationHistory(
+                tOperation,
+                rand(length(tOperation) - 1),
+                zeros(length(tOperation)),
+                ones(length(tOperation)),
+            ),
+        )
+
+        ucReg = Regulation(
+            FixedIntervalTimeSeries(DateTime(2022), Second(4), rand(3 * 900) .* 2 .- 1),
+            FixedIntervalTimeSeries(
+                DateTime(2022),
+                Hour(1),
+                [
+                    RegulationPricePoint(30.0, 1.0),
+                    RegulationPricePoint(10.0, 1.0),
+                    RegulationPricePoint(50.0, 2.0),
+                ],
+            ),
+            0.9,
+        )
+
+        mileagePerHour = sum(
+            abs.(diff(reshape(get_values(ucReg.AGCSignalPu), 900, :); dims = 1));
+            dims = 1,
+        )[:]
+
+        @test calculate_net_benefit(outputProgress, ucReg) ≈
+              (0.5 * (30 + 1 * mileagePerHour[1]) + 1 * (50 + 2 * mileagePerHour[3])) *
+              ucReg.performanceScore
+        @test calculate_metrics(
+            outputProgress.schedule,
+            outputProgress.operation,
+            ucReg,
+        ) isa AbstractVector
+        @test use_case_charts(outputProgress.schedule, outputProgress.operation, ucReg) isa
+              AbstractVector
     end
 end

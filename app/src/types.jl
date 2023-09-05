@@ -38,6 +38,20 @@ timestamps(ts::VariableIntervalTimeSeries) = ts.t
 
 get_values(ts::TimeSeries) = ts.value
 
+function get_values(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+    t1 = max(tStart, start_time(ts))
+    t2 = min(tEnd, end_time(ts))
+    ts.value
+    if t1 < ts.t[end] && t2 ≥ ts.t[1]
+        # some overlap time period
+        idx1 = findfirst(ts.t .> t1) - 1
+        idx2 = findfirst(ts.t .≥ t2) - 1
+        ts.value[idx1:idx2]
+    else
+        []
+    end
+end
+
 sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) =
     map(t -> get_period(ts, t)[1], tArray)
 
@@ -97,6 +111,19 @@ end_time(ts::FixedIntervalTimeSeries) = ts.tStart + ts.resolution * length(ts.va
 timestamps(ts::FixedIntervalTimeSeries) =
     range(ts.tStart; step = ts.resolution, length = length(ts.value) + 1)
 
+function get_values(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+    t1 = max(tStart, start_time(ts))
+    t2 = min(tEnd, end_time(ts))
+    if t1 < end_time(ts) && t2 ≥ start_time(ts)
+        # some overlap time period
+        idx1 = div(t1 - ts.tStart, ts.resolution) + 1
+        idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
+        ts.value[idx1:idx2]
+    else
+        []
+    end
+end
+
 function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
     t1 = max(tStart, start_time(ts))
     t2 = min(tEnd, end_time(ts))
@@ -104,7 +131,11 @@ function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
         # some overlap time period
         idx1 = div(t1 - ts.tStart, ts.resolution) + 1
         idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
-        FixedIntervalTimeSeries(ts.tStart + ts.resolution * (idx1 - 1), ts.resolution, ts.value[idx1:idx2])
+        FixedIntervalTimeSeries(
+            ts.tStart + ts.resolution * (idx1 - 1),
+            ts.resolution,
+            ts.value[idx1:idx2],
+        )
     else
         FixedIntervalTimeSeries(tStart, ts.resolution, Float64[])
     end
@@ -204,18 +235,22 @@ function binary_operation(
 
     while tPeriodEnd < tEnd
         tPeriodStart = tPeriodEnd
-        if tPeriodEnd1 ≤ tPeriodEnd2
+        if tPeriodEnd1 == tPeriodEnd2
+            # move both ts1 and ts2 forward by one time period
+            v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
+            v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
+        elseif tPeriodEnd1 < tPeriodEnd2
             # this means tPeriodEnd == tPeriodEnd1, move ts1 forward by one time period
             v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
-            if isnothing(tPeriodEnd1)
-                tPeriodEnd1 = tEnd
-            end
         else
             # this means tPeriodEnd == tPeriodEnd2, move ts2 forward by one time period
             v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
-            if isnothing(tPeriodEnd2)
-                tPeriodEnd2 = tEnd
-            end
+        end
+        if isnothing(tPeriodEnd1)
+            tPeriodEnd1 = tEnd
+        end
+        if isnothing(tPeriodEnd2)
+            tPeriodEnd2 = tEnd
         end
         tPeriodEnd = min(tPeriodEnd1, tPeriodEnd2, tEnd)
         v = op(v1, v2)
@@ -283,9 +318,16 @@ std(ts::TimeSeries) = begin
 end
 
 struct ScheduleHistory
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
+    t::AbstractVector{Dates.DateTime}
+    powerKw::AbstractVector{Float64}
+    SOC::AbstractVector{Float64}
+    regCapKw::AbstractVector{Float64}
 end
+
+ScheduleHistory(
+    t::AbstractVector{Dates.DateTime},
+    p::AbstractVector{Float64}
+) = ScheduleHistory(t, p, zeros(length(p)+1), zeros(length(p)))
 
 """
     OperationHistory
@@ -294,10 +336,10 @@ end
 Both `length(t)` and `length(SOC)` should equal to `length(powerKw) + 1`.
 """
 struct OperationHistory
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
-    SOC::Vector{Float64}
-    SOH::Vector{Float64}
+    t::AbstractVector{Dates.DateTime}
+    powerKw::AbstractVector{Float64}
+    SOC::AbstractVector{Float64}
+    SOH::AbstractVector{Float64}
 end
 
 start_time(op::OperationHistory) = op.t[1]

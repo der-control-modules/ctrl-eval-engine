@@ -12,21 +12,19 @@ using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
 
-export get_rt_controller, control, PIDController, AMAController, RuleBasedController,
- MesaController, MesaMode, Vertex, VertexCurve, RampParams
+export get_rt_controller,
+    control,
+    PIDController,
+    AMAController,
+    RuleBasedController,
+    MesaController,
+    MesaMode,
+    Vertex,
+    VertexCurve,
+    RampParams,
+    previous_WIP
 
 abstract type RTController end
-
-struct ControlSequence
-    powerKw::Vector{Float64}
-    resolution::Dates.TimePeriod
-end
-
-Base.iterate(ops::ControlSequence, index = 1) =
-    index > length(ops.powerKw) ? nothing :
-    ((ops.powerKw[index], ops.resolution), index + 1)
-Base.eltype(::Type{ControlSequence}) = Tuple{Float64,Dates.TimePeriod}
-Base.length(ops::ControlSequence) = length(ops.powerKw)
 
 """
     control(ess, controller, schedulePeriod, useCases, t, spProgress=nothing)
@@ -44,7 +42,7 @@ will be executed before calling this function again with updated ESS states and 
 control(ess, controller::RTController, schedulePeriod::SchedulePeriod, useCases) =
     control(ess, controller, schedulePeriod, useCases, start_time(schedulePeriod), nothing)
 
-include("mock-rt-controller.jl")
+include("passthrough.jl")
 include("pid.jl")
 include("amac.jl")
 include("rule-based.jl")
@@ -67,10 +65,10 @@ function get_rt_controller(
             convert(Millisecond, Second(1)).value * get(config, "resolutionSec", 60),
         ),
     )
-    controller = if controllerType == "mock"
-        MockController(res)
+    controller = if controllerType == "passthrough"
+        PassThroughController()
     elseif controllerType == "pid"
-        PIDController(res, config["Kp"], config["Ti"], config["Td"])
+        PIDController(res, float(config["Kp"]), float(config["Ti"]), float(config["Td"]))
     elseif controllerType == "ama"
         AMAController(config, ess, useCases)
     elseif controllerType == "rule"
