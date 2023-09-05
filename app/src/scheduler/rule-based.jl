@@ -28,7 +28,6 @@ function schedule(
             tStart;
             step = scheduler.resolution,
             length = scheduleLength,
-            #stop=tStart + Hour(24) - Millisecond(1)
         ),
     )
 
@@ -45,13 +44,13 @@ function schedule(
 
         for h = 1:scheduleLength
             if price[h] <= theta_low
-                batt = min(p_max(ess), e_max(ess) * (1 - stateK0) / η)
-                stateK0 = stateK0 + (batt * η) / e_max(ess)
+                batt = min(p_max(ess), e_max(ess) * (1 - stateK0) / ηRT(ess))
+                stateK0 = stateK0 + (batt * ηRT(ess)) / e_max(ess)
                 cost_cal = -batt * price[h]
                 output = -batt
             elseif price[h] >= theta_high
-                batt = min(p_max(ess), max(0, (energy_state(ess) - e_min(ess)) * η))
-                stateK0 = stateK0 - batt / (e_max(ess) * η)
+                batt = min(p_max(ess), max(0, (energy_state(ess) - e_min(ess)) * ηRT(ess)))
+                stateK0 = stateK0 - batt / (e_max(ess) * ηRT(ess))
                 cost_cal = batt * price[h]
                 output = batt
             else
