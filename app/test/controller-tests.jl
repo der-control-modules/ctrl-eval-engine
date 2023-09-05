@@ -2,6 +2,8 @@ using CtrlEvalEngine
 using CtrlEvalEngine.EnergyStorageSimulators:
     LiIonBattery, LFP_LiIonBatterySpecs, LiIonBatteryStates, SOC, SOH, operate!
 using CtrlEvalEngine.EnergyStorageUseCases
+using CtrlEvalEngine.EnergyStorageUseCases: RegulationPricePoint
+
 using CtrlEvalEngine.EnergyStorageScheduling:
     schedule, ManualScheduler, SchedulePeriod
 using CtrlEvalEngine.EnergyStorageRTControl:
@@ -126,7 +128,7 @@ tStart = floor(now(), Hour(1))
         FixedIntervalTimeSeries(tStart, Dates.Hour(1), [RegulationPricePoint(0.05, 0.42)]),
         50.0,
     )]
-    schedulePeriod = SchedulePeriod(65.2, tStart, Second(268))
+    schedulePeriod = SchedulePeriod(65.2, tStart, duration=Second(268))
     controller = MesaController(
         [AGCMode(MesaModeParams(1), true, RampParams(100, 200, 100, 200), 40.0, 60.0)],
         Dates.Second(4),

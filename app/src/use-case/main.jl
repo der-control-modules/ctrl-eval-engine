@@ -22,16 +22,8 @@ export UseCase,
 abstract type UseCase end
 
 using Dates
-using CtrlEvalEngine:
-    SimSetting,
-    Progress,
-    OperationHistory,
-    power,
-    TimeSeries,
-    FixedIntervalTimeSeries,
-    VariableIntervalTimeSeries,
-    start_time,
-    end_time
+using CtrlEvalEngine
+using CtrlEvalEngine: SimSetting, Progress, ScheduleHistory, OperationHistory
 using LinearAlgebra
 using JuMP
 

@@ -18,6 +18,7 @@ export evaluate_controller,
     std,
     get_period,
     extract,
+    power,
     InvalidInput
 
 include("types.jl")
@@ -133,7 +134,7 @@ function update_schedule_history!(
             EnergyStorageScheduling.average_power(schedulePeriod),
         )
         push!(
-            scheduleHistory.soc,
+            scheduleHistory.SOC,
             EnergyStorageScheduling.ending_soc(schedulePeriod),
         )
         push!(
@@ -183,7 +184,7 @@ function generate_chart_data(progress::Progress, useCases)
                     ),
                     Dict(
                         :x => progress.schedule.t,
-                        :y => progress.schedule.soc,
+                        :y => progress.schedule.SOC,
                         :type => "instance",
                         :name => "Scheduled SOC",
                         :yAxis => "right"

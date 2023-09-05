@@ -137,7 +137,11 @@ using LinearAlgebra
         )
 
         @test calculate_net_benefit(outputProgress, ucEA) isa Float64
-        @test calculate_metrics(outputProgress.operation, ucEA) isa AbstractVector
-        @test use_case_charts(outputProgress.operation, ucEA) isa AbstractVector
+        @test calculate_metrics(outputProgress.schedule, outputProgress.operation, ucEA) isa AbstractVector
+        @test use_case_charts(outputProgress.schedule, outputProgress.operation, ucEA) isa AbstractVector
+    end
+
+    @testset "Regulation/AGC" begin
+
     end
 end

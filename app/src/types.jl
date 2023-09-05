@@ -52,19 +52,6 @@ function get_values(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::Date
     end
 end
 
-function get_values(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
-    t1 = max(tStart, start_time(ts))
-    t2 = min(tEnd, end_time(ts))
-    if t1 < end_time(ts) && t2 ≥ start_time(ts)
-        # some overlap time period
-        idx1 = div(t1 - ts.tStart, ts.resolution) + 1
-        idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
-        ts.value[idx1:idx2]
-    else
-        []
-    end
-end
-
 sample(ts::TimeSeries, tArray::AbstractArray{DateTime}) =
     map(t -> get_period(ts, t)[1], tArray)
 
@@ -123,6 +110,19 @@ end_time(ts::FixedIntervalTimeSeries) = ts.tStart + ts.resolution * length(ts.va
 
 timestamps(ts::FixedIntervalTimeSeries) =
     range(ts.tStart; step = ts.resolution, length = length(ts.value) + 1)
+
+function get_values(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
+    t1 = max(tStart, start_time(ts))
+    t2 = min(tEnd, end_time(ts))
+    if t1 < end_time(ts) && t2 ≥ start_time(ts)
+        # some overlap time period
+        idx1 = div(t1 - ts.tStart, ts.resolution) + 1
+        idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
+        ts.value[idx1:idx2]
+    else
+        []
+    end
+end
 
 function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
     t1 = max(tStart, start_time(ts))
@@ -318,11 +318,16 @@ std(ts::TimeSeries) = begin
 end
 
 struct ScheduleHistory
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
-    soc::Vector{Float64}
-    regCapKw::Vector{Float64}
+    t::AbstractVector{Dates.DateTime}
+    powerKw::AbstractVector{Float64}
+    SOC::AbstractVector{Float64}
+    regCapKw::AbstractVector{Float64}
 end
+
+ScheduleHistory(
+    t::AbstractVector{Dates.DateTime},
+    p::AbstractVector{Float64}
+) = ScheduleHistory(t, p, zeros(length(p)+1), zeros(length(p)))
 
 """
     OperationHistory
@@ -331,10 +336,10 @@ end
 Both `length(t)` and `length(SOC)` should equal to `length(powerKw) + 1`.
 """
 struct OperationHistory
-    t::Vector{Dates.DateTime}
-    powerKw::Vector{Float64}
-    SOC::Vector{Float64}
-    SOH::Vector{Float64}
+    t::AbstractVector{Dates.DateTime}
+    powerKw::AbstractVector{Float64}
+    SOC::AbstractVector{Float64}
+    SOH::AbstractVector{Float64}
 end
 
 start_time(op::OperationHistory) = op.t[1]

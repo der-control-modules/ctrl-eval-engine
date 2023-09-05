@@ -18,6 +18,7 @@ function schedule(ess, scheduler::ManualScheduler, _, tStart::Dates.DateTime)
         tStart,
         Second(scheduler.resolution),
         fill(SOC(ess), length(scheduler.powerKw) + 1),
+        zeros(length(scheduler.powerKw))
     )
     return currentSchedule
 end

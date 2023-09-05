@@ -76,7 +76,7 @@ function regulation_history(sh::ScheduleHistory, op::OperationHistory, ucReg::Re
                     abs.(
                         diff(
                             get_values(
-                                agcSignalSeg,
+                                ucReg.AGCSignalPu,
                                 sh.t[iSchedulePeriod],
                                 sh.t[iSchedulePeriod+1],
                             ),
