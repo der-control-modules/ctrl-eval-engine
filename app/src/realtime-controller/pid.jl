@@ -36,25 +36,36 @@ function control(
         process_variable = actual_bess_power - actual_load
         control_signal = controller.pid(set_point, process_variable)
         push!(control_signals, control_signal)
-        return ControlSequence(
+        return FixedIntervalTimeSeries(
+            t,
+            controller.resolution,
             [
                 min(
                     max(p_min(ess, controller.resolution), control_signal),
                     p_max(ess, controller.resolution),
                 ),
             ],
-            controller.resolution,
         )
     else
         remainingTime = end_time(schedulePeriod) - t
-        return ControlSequence(
+        idxReg = findfirst(uc -> uc isa Regulation, useCases)
+        if idxReg !== nothing
+            # Regulation is selected
+            ucReg::Regulation = useCases[idxReg]
+            regCap = regulation_capacity(schedulePeriod)
+            return scheduled_bess_power +
+                   extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
+        end
+
+        return FixedIntervalTimeSeries(
+            t,
+            remainingTime,
             [
                 min(
                     max(p_min(ess, remainingTime), scheduled_bess_power),
                     p_max(ess, remainingTime),
                 ),
             ],
-            remainingTime,
         )
     end
 end

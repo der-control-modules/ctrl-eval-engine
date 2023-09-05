@@ -264,7 +264,8 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
             while t < schedulePeriodEnd
                 controlSequence =
                     control(ess, rtController, schedulePeriod, useCases, t, spProgress)
-                for (powerSetpointKw, controlDuration) in controlSequence
+                for (powerSetpointKw, _, controlPeriodEnd) in controlSequence
+                    controlDuration = controlPeriodEnd - t
                     actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
                     update_schedule_period_progress!(
                         spProgress,

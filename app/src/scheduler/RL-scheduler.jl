@@ -50,6 +50,6 @@ function schedule(
         -battery_power,
         tStart;
         resolution = rlScheduler.resolution,
-        soc = [SOC(ess), batterySocs...],
+        SOC = [SOC(ess), batterySocs...],
     )
 end

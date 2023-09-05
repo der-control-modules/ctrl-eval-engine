@@ -12,21 +12,19 @@ using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
 
-export get_rt_controller, control, PIDController, AMAController, RuleBasedController,
- MesaController, MesaMode, Vertex, VertexCurve, RampParams, previous_WIP
+export get_rt_controller,
+    control,
+    PIDController,
+    AMAController,
+    RuleBasedController,
+    MesaController,
+    MesaMode,
+    Vertex,
+    VertexCurve,
+    RampParams,
+    previous_WIP
 
 abstract type RTController end
-
-struct ControlSequence
-    powerKw::Vector{Float64}
-    resolution::Dates.TimePeriod
-end
-
-Base.iterate(ops::ControlSequence, index = 1) =
-    index > length(ops.powerKw) ? nothing :
-    ((ops.powerKw[index], ops.resolution), index + 1)
-Base.eltype(::Type{ControlSequence}) = Tuple{Float64,Dates.TimePeriod}
-Base.length(ops::ControlSequence) = length(ops.powerKw)
 
 """
     control(ess, controller, schedulePeriod, useCases, t, spProgress=nothing)
@@ -68,7 +66,7 @@ function get_rt_controller(
         ),
     )
     controller = if controllerType == "passthrough"
-        PassThroughController(res)
+        PassThroughController()
     elseif controllerType == "pid"
         PIDController(res, float(config["Kp"]), float(config["Ti"]), float(config["Td"]))
     elseif controllerType == "ama"

@@ -41,18 +41,28 @@ function control(
         end
 
         @debug "Rule-based RT controller exiting" batt_power
-        return ControlSequence([batt_power], tCtrlPeriodEnd - t)
+        return FixedIntervalTimeSeries(t, tCtrlPeriodEnd - t, [batt_power])
     else
         # Load Following isn't selected, follow schedule
-        remainingTime = end_time(schedulePeriod) - t
-        return ControlSequence(
-            [
-                min(
-                    max(p_min(ess, remainingTime), scheduledPower),
-                    p_max(ess, remainingTime),
-                ),
-            ],
-            remainingTime,
-        )
+        idxReg = findfirst(uc -> uc isa Regulation, useCases)
+        if idxReg !== nothing
+            # Regulation is selected
+            ucReg::Regulation = useCases[idxReg]
+            regCap = regulation_capacity(schedulePeriod)
+            return scheduledPower +
+                   extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
+        else
+            remainingTime = end_time(schedulePeriod) - t
+            return FixedIntervalTimeSeries(
+                t,
+                remainingTime,
+                [
+                    min(
+                        max(p_min(ess, remainingTime), scheduledPower),
+                        p_max(ess, remainingTime),
+                    ),
+                ],
+            )
+        end
     end
 end

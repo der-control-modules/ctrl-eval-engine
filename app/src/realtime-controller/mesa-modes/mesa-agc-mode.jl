@@ -38,14 +38,15 @@ function modecontrol(
     else
         # Load Following isn't selected, follow schedule
         remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
-        return ControlSequence(
+        return FixedIntervalTimeSeries(
+            t,
+            remainingTime,
             [
                 min(
                     max(p_min(ess, remainingTime), scheduledPower),
                     p_max(ess, remainingTime),
                 ),
             ],
-            remainingTime,
         )
     end
 end

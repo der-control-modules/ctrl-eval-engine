@@ -160,7 +160,7 @@ function control(
     essLimitedPower = min(max(p, p_min(ess)), p_max(ess))
     energyLimitedPower = apply_energy_limits(ess, essLimitedPower, Dates.Second(controller.resolution))
     controller.wip.value[end] = energyLimitedPower
-    return ControlSequence([energyLimitedPower], controller.resolution)
+    return FixedIntervalTimeSeries(t, controller.resolution, [energyLimitedPower])
 end
 
 include("mesa-modes/mesa-active-power-limit-mode.jl")

@@ -100,11 +100,11 @@ function control(
     #     end
 
     #     @debug "Rule-based RT controller exiting" batt_power
-    #     return ControlSequence([batt_power], tEndActualLoad - t)
+    #     return FixedIntervalTimeSeries([batt_power], tEndActualLoad - t)
     # else
     #     # Load Following isn't selected, follow schedule
     #     remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
-    #     return ControlSequence(
+    #     return FixedIntervalTimeSeries(
     #         [
     #             min(
     #                 max(p_min(ess, remainingTime), scheduledPower),
