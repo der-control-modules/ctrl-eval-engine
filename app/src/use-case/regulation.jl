@@ -66,7 +66,7 @@ import Base: *
 *(op::RegulationOperationPoint, pp::RegulationPricePoint) =
     pp.capacityPrice * op.capacity + pp.servicePrice * op.capacity * op.mileage
 
-function regulation_history(sh::ScheduleHistory, op::OperationHistory, ucReg::Regulation)
+function regulation_history(sh::ScheduleHistory, ucReg::Regulation)
     VariableIntervalTimeSeries(
         sh.t,
         [
@@ -88,8 +88,13 @@ function regulation_history(sh::ScheduleHistory, op::OperationHistory, ucReg::Re
     )
 end
 
-function calculate_metrics(sh::ScheduleHistory, op::OperationHistory, ucReg::Regulation)
-    regIncome = regulation_income(regulation_history(sh, op, ucReg), ucReg)
+calculate_net_benefit(progress::Progress, ucReg::Regulation) = regulation_income(
+    regulation_history(progress.schedule, ucReg),
+    ucReg,
+)
+
+function calculate_metrics(sh::ScheduleHistory, ::OperationHistory, ucReg::Regulation)
+    regIncome = regulation_income(regulation_history(sh, ucReg), ucReg)
     return [
         Dict(:sectionTitle => "Frequency Regulation"),
         Dict(:label => "Revenue", :value => regIncome, :type => "currency"),
@@ -97,7 +102,7 @@ function calculate_metrics(sh::ScheduleHistory, op::OperationHistory, ucReg::Reg
     ]
 end
 
-function use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucReg::Regulation) 
+function use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucReg::Regulation)
     scaledAgcSignal = ucReg.AGCSignalPu * VariableIntervalTimeSeries(sh.t, sh.regCapKw)
     [
         Dict(

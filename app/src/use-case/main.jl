@@ -12,6 +12,7 @@ export UseCase,
     use_case_charts,
     EnergyArbitrage,
     Regulation,
+    RegulationPricePoint,
     RegulationOperationPoint,
     regulation_income,
     LoadFollowing,
@@ -45,8 +46,7 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
         Regulation(config["data"], setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
-    end
-    for (name, config) in inputDict
+    end for (name, config) in inputDict
 ]
 
 # Return zero if a use-case-specific method is not implemented
