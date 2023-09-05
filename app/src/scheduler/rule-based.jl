@@ -74,7 +74,7 @@ function schedule(
     return Schedule(
         optimal_power,
         tStart;
-        resolution = rlScheduler.resolution,
+        resolution = scheduler.resolution,
         SOC = [SOC(ess), optimal_states...],
     )
 end
