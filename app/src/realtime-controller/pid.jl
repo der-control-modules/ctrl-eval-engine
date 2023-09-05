@@ -48,6 +48,15 @@ function control(
         )
     else
         remainingTime = end_time(schedulePeriod) - t
+        idxReg = findfirst(uc -> uc isa Regulation, useCases)
+        if idxReg !== nothing
+            # Regulation is selected
+            ucReg::Regulation = useCases[idxReg]
+            regCap = regulation_capacity(schedulePeriod)
+            return scheduled_bess_power +
+                   extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
+        end
+
         return FixedIntervalTimeSeries(
             t,
             remainingTime,
