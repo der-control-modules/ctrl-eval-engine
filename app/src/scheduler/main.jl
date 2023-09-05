@@ -87,6 +87,7 @@ include("optimization-scheduler.jl")
 include("mock-python-scheduler.jl")
 include("manual-scheduler.jl")
 include("RL-scheduler.jl")
+include("rule-based.jl")
 
 struct IdleScheduler <: Scheduler
     interval::Dates.Period

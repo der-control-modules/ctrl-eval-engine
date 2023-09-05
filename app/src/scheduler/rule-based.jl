@@ -37,7 +37,7 @@ function schedule(
     all_power = zeros(scheduleLength, length(feasible_theta))
     all_total_cost = zeros(length(feasible_theta))
 
-    for i = eachindex(feasible_theta)
+    for i in eachindex(feasible_theta)
         theta_low = feasible_theta[i][1]
         theta_high = feasible_theta[i][2]
         stateK0 = SOC(ess)
@@ -74,8 +74,8 @@ function schedule(
 
     return Schedule(
         optimal_power,
-        tStart,
-        rlScheduler.resolution,
-        [SOC(ess), optimal_states...],
+        tStart;
+        resolution = rlScheduler.resolution,
+        SOC = [SOC(ess), optimal_states...],
     )
 end
