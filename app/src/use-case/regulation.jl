@@ -88,10 +88,8 @@ function regulation_history(sh::ScheduleHistory, ucReg::Regulation)
     )
 end
 
-calculate_net_benefit(progress::Progress, ucReg::Regulation) = regulation_income(
-    regulation_history(progress.schedule, ucReg),
-    ucReg,
-)
+calculate_net_benefit(progress::Progress, ucReg::Regulation) =
+    regulation_income(regulation_history(progress.schedule, ucReg), ucReg)
 
 function calculate_metrics(sh::ScheduleHistory, ::OperationHistory, ucReg::Regulation)
     regIncome = regulation_income(regulation_history(sh, ucReg), ucReg)
@@ -131,9 +129,12 @@ function use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucReg::Regul
                 ),
                 Dict(
                     :x => timestamps(ucReg.price),
-                    :y => get_values(ucReg.price),
+                    :y => map(
+                        (pricePoint::RegulationPricePoint) -> pricePoint.capacityPrice,
+                        get_values(ucReg.price),
+                    ),
                     :type => "interval",
-                    :name => "Regulation Price",
+                    :name => "Regulation Capacity Price",
                     :yAxis => "right",
                 ),
             ],
