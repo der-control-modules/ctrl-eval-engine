@@ -4,7 +4,7 @@ using CtrlEvalEngine.EnergyStorageSimulators:
 using CtrlEvalEngine.EnergyStorageUseCases:
     UseCase, EnergyArbitrage, Regulation, RegulationPricePoint
 using CtrlEvalEngine.EnergyStorageScheduling:
-    schedule, OptScheduler, ManualScheduler, RLScheduler
+    schedule, OptScheduler, ManualScheduler, RLScheduler, RuleBasedScheduler
 using Dates
 
 @testset "Manual Scheduler" begin
@@ -103,4 +103,22 @@ end
     rlScheduler = RLScheduler(Minute(15), "Q-learning", 4000)
     sRL3 = schedule(ess, rlScheduler, useCases, tStart)
     @test length(sRL3.powerKw) == 96
+end
+
+@testset "Rule-based Scheduler" begin
+    ess = LiIonBattery(
+        LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+        LiIonBatteryStates(0.5, 0),
+    )
+
+    ruleBasedScheduler = RuleBasedScheduler(Hour(1), Hour(24))
+    tStart = floor(now(), Hour(1))
+    useCases = UseCase[EnergyArbitrage(
+        VariableIntervalTimeSeries(
+            range(tStart; step = Hour(6), length = 6),
+            [10, 20, 1, 10, 5],
+        ),
+    )]
+    sRB = schedule(ess, ruleBasedScheduler, useCases, tStart)
+    @test length(sRB.powerKw) == 24
 end
