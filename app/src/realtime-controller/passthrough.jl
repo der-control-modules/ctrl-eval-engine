@@ -14,7 +14,7 @@ function control(
         # Regulation is selected
         ucReg::Regulation = useCases[idxReg]
         regCap = regulation_capacity(schedulePeriod)
-        return scheduledPower +
+        return FixedIntervalTimeSeries(t, remainingTime, [scheduled_bess_power]) +
                extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
     end
 
