@@ -37,13 +37,13 @@ Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = Regulation(
     ),
     extract(
         FixedIntervalTimeSeries(
-            DateTime(input["regulationPrice"]["DateTime"][1]),
-            DateTime(input["regulationPrice"]["DateTime"][2]) -
-            DateTime(input["regulationPrice"]["DateTime"][1]),
+            DateTime(input["regulationPrices"]["Time"][1]),
+            DateTime(input["regulationPrices"]["Time"][2]) -
+            DateTime(input["regulationPrices"]["Time"][1]),
             [
                 RegulationPricePoint(cap, mil) for (cap, mil) in zip(
-                    input["regulationPrice"]["CapacityPrice"],
-                    input["regulationPrice"]["MileagePrice"],
+                    input["regulationPrices"]["CapacityPrice"],
+                    input["regulationPrices"]["MileagePrice"],
                 )
             ],
         ),
