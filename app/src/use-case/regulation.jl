@@ -20,7 +20,7 @@ Base.:zero(::Type{RegulationOperationPoint}) = RegulationOperationPoint(0, 0)
 
 struct Regulation <: UseCase
     AGCSignalPu::FixedIntervalTimeSeries{<:Dates.TimePeriod,Float64}
-    price::FixedIntervalTimeSeries{Hour,RegulationPricePoint}
+    price::FixedIntervalTimeSeries{<:Dates.TimePeriod,RegulationPricePoint}
     performanceScore::Float64
 end
 
@@ -41,9 +41,9 @@ Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = Regulation(
             DateTime(input["regulationPrices"]["Time"][2]) -
             DateTime(input["regulationPrices"]["Time"][1]),
             [
-                RegulationPricePoint(cap, mil) for (cap, mil) in zip(
-                    input["regulationPrices"]["CapacityPrice"],
-                    input["regulationPrices"]["MileagePrice"],
+                RegulationPricePoint(cap / 1000, mil / 1000) for (cap, mil) in zip(
+                    input["regulationPrices"]["CapacityPrice_per_MW"],
+                    input["regulationPrices"]["MileagePrice_per_MW"],
                 )
             ],
         ),

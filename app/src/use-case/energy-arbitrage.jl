@@ -14,7 +14,7 @@ EnergyArbitrage(input::Dict) =
             DateTime(input["actualEnergyPrice"]["Time"][1]),
             DateTime(input["actualEnergyPrice"]["Time"][2]) -
             DateTime(input["actualEnergyPrice"]["Time"][1]),
-            float.(input["actualEnergyPrice"]["LMP"]),
+            float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
         ),
     )
 
@@ -25,7 +25,7 @@ EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) =
                 DateTime(input["actualEnergyPrice"]["Time"][1]),
                 DateTime(input["actualEnergyPrice"]["Time"][2]) -
                 DateTime(input["actualEnergyPrice"]["Time"][1]),
-                float.(input["actualEnergyPrice"]["LMP"]),
+                float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
             ),
             tStart,
             tEnd,
