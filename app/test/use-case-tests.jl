@@ -123,17 +123,7 @@ using LinearAlgebra
         )
 
         ucEA = EnergyArbitrage(
-            Dict(
-                "actualEnergyPrice" => Dict(
-                    "Time" => [
-                        "2022-01-01T00:00",
-                        "2022-01-01T01:00",
-                        "2022-01-01T02:00",
-                        "2022-01-01T03:00",
-                    ],
-                    "LMP" => [10.0, 20.0, 50.0, 30.0],
-                ),
-            ),
+            FixedIntervalTimeSeries(DateTime(2022), Hour(1), [10.0, 20.0, 50.0, 30.0]),
         )
 
         @test calculate_net_benefit(outputProgress, ucEA) isa Float64
