@@ -44,15 +44,15 @@ function control(
         return FixedIntervalTimeSeries(t, tCtrlPeriodEnd - t, [batt_power])
     else
         # Load Following isn't selected, follow schedule
+        remainingTime = end_time(schedulePeriod) - t
         idxReg = findfirst(uc -> uc isa Regulation, useCases)
         if idxReg !== nothing
             # Regulation is selected
             ucReg::Regulation = useCases[idxReg]
             regCap = regulation_capacity(schedulePeriod)
-            return FixedIntervalTimeSeries(t, remainingTime, [scheduled_bess_power]) +
+            return FixedIntervalTimeSeries(t, remainingTime, [scheduledPower]) +
                    extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
         else
-            remainingTime = end_time(schedulePeriod) - t
             return FixedIntervalTimeSeries(
                 t,
                 remainingTime,
