@@ -94,7 +94,7 @@ struct IdleScheduler <: Scheduler
 end
 
 schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
-    Schedule([0], tStart; resolution = scheduler.interval, SOC = [SOC(ess), SOC(ess)])
+    Schedule([0.0], tStart; resolution = scheduler.interval, SOC = [SOC(ess), SOC(ess)])
 
 """
     get_scheduler(inputDict::Dict)
