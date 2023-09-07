@@ -83,7 +83,7 @@ end
     @testset "OptScheduler" begin
         inputDict = JSON.parse("""
             {
-                "type": "optimization",
+                "type": "schedulerOptimization",
                 "scheduleResolutionHrs": 1,
                 "optWindowLenHrs":24,
                 "intervalHrs": 24,
@@ -100,7 +100,7 @@ end
 
         inputDict = JSON.parse("""
             {
-                "type": "optimization",
+                "type": "schedulerOptimization",
                 "scheduleResolutionHrs": 0.5,
                 "optWindowLenHrs": 24.1,
                 "intervalHrs": 2.6,
