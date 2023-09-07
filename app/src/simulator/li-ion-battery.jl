@@ -14,8 +14,8 @@ end
 function LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D::NTuple{3,Float64}, R; lifespanCutoff=0.8, cyclesPerDay=1, depthOfDischarge=0.8)
     Cp = -1 - C0 * E / P
     Cn = C0 * E / P - ηRT
-    tCharge = depthOfDischarge / (C0 - Cn * P)
-    tDischarge = -depthOfDischarge / (C0 + Cp * P)
+    tCharge = depthOfDischarge / (C0 - Cn * P / E)
+    tDischarge = -depthOfDischarge / (C0 + Cp * P / E)
     tIdlePerCycle = 24 / cyclesPerDay - tCharge - tDischarge
 
     d_NCycles = cycleLife * (
@@ -31,14 +31,14 @@ end
 
 function LFP_LiIonBatterySpecs(P, E, ηRT, cycleLife; lifespanCutoff=0.8, cyclesPerDay=1, depthOfDischarge=0.8)
     C0 = -2.309E-03
-    D = (4.638901, -0.06408468, 2.067501)
+    D = (1.93, -0.335, 0.986)
     R = 1 / 1.1
     LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D, R; lifespanCutoff, cyclesPerDay, depthOfDischarge)
 end
 
 function NMC_LiIonBatterySpecs(P, E, ηRT, cycleLife; lifespanCutoff=0.8, cyclesPerDay=1, depthOfDischarge=0.8)
     C0 = -4.13E-03
-    D = (4.837429, -0.75372186, 1.184455)
+    D = (1.9, -2.34, 1.21)
     R = 1 / 1.32
     LiIonBatterySpecs(P, E, ηRT, cycleLife, C0, D, R; lifespanCutoff, cyclesPerDay, depthOfDischarge)
 end
