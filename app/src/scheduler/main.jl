@@ -105,7 +105,7 @@ function get_scheduler(schedulerConfig::Dict)
     schedulerType = schedulerConfig["type"]
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
-    elseif schedulerType == "optimization"
+    elseif schedulerType == "schedulerOptimization"
         endSocInput = get(schedulerConfig, "endSocPct", nothing)
         endSoc = if isnothing(endSocInput)
             nothing
@@ -139,7 +139,7 @@ function get_scheduler(schedulerConfig::Dict)
             minNetLoadKw = get(schedulerConfig, "minNetLoadKw", nothing),
             powerLimitPu = powerLimitPct / 100,
         )
-    elseif schedulerType == "ml"
+    elseif schedulerType == "schedulerML"
         res = Minute(
             round(
                 Int,
@@ -154,7 +154,7 @@ function get_scheduler(schedulerConfig::Dict)
         )
     elseif schedulerType == "idle"
         IdleScheduler(Hour(24))
-    elseif schedulerType == "rule"
+    elseif schedulerType == "schedulerRule"
         res = Minute(
             round(
                 Int,

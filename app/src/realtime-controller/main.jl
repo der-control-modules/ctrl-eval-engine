@@ -71,7 +71,7 @@ function get_rt_controller(
         PIDController(res, float(config["Kp"]), float(config["Ti"]), float(config["Td"]))
     elseif controllerType == "ama"
         AMAController(config, ess, useCases)
-    elseif controllerType == "rule"
+    elseif controllerType == "realTimeRule"
         RuleBasedController(config)
     else
         throw(InvalidInput("Invalid real-time controller type: $controllerType"))
