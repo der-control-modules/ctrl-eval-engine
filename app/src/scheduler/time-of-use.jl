@@ -41,6 +41,15 @@ struct TimeOfUseScheduler <: Scheduler
     rule_set::TimeOfUseRuleSet
 end
 
+TimeOfUseScheduler(resolution::Dates.Period, interval::Dates.Period, ruleSet::Dict) = TimeOfUseScheduler(
+    resolution,
+    interval,
+    TimeOfUseRuleSet(
+        ruleSet["PriceThreshold"],
+        ruleSet["TargetPct"]
+    )
+)
+
 """
     schedule(ess, TimeOfUseScheduler, useCases, t)
 
