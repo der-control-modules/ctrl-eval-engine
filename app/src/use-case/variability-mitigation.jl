@@ -11,10 +11,10 @@ Construct an `VariabilityMitigation` object from `input` dictionary or array
 """
 VariabilityMitigation(config::Dict) = VariabilityMitigation(
     FixedIntervalTimeSeries(
-        DateTime(config["pvGenProfile"][1]["DateTime"]),
-        DateTime(config["pvGenProfile"][2]["DateTime"]) -
-        DateTime(config["pvGenProfile"][1]["DateTime"]),
-        [Float64(row["Power"]) for row in config["pvGenProfile"]],
+        DateTime(config["pvGenProfile"]["DateTime"][1]),
+        DateTime(config["pvGenProfile"]["DateTime"][2]) -
+        DateTime(config["pvGenProfile"]["DateTime"][1]),
+        Float64.(config["pvGenProfile"]["Power"]),
     ),
     config["ratedPowerKw"],
 )
@@ -23,10 +23,10 @@ VariabilityMitigation(config::Dict, tStart::DateTime, tEnd::DateTime) =
     VariabilityMitigation(
         extract(
             FixedIntervalTimeSeries(
-                DateTime(config["pvGenProfile"][1]["DateTime"]),
-                DateTime(config["pvGenProfile"][2]["DateTime"]) -
-                DateTime(config["pvGenProfile"][1]["DateTime"]),
-                [Float64(row["Power"]) for row in config["pvGenProfile"]],
+                DateTime(config["pvGenProfile"]["DateTime"][1]),
+                DateTime(config["pvGenProfile"]["DateTime"][2]) -
+                DateTime(config["pvGenProfile"]["DateTime"][1]),
+                float.(config["pvGenProfile"]["Power"]),
             ),
             tStart,
             tEnd,
@@ -45,7 +45,7 @@ moving_std(ts::TimeSeries, windowLength::Dates.TimePeriod, samplingRate::Dates.T
         return FixedIntervalTimeSeries(tStart, samplingRate, v)
     end
 
-calculate_metrics(op::OperationHistory, ucVM::VariabilityMitigation) = begin
+calculate_metrics(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Calculating metrics for Power Smoothing"
     essPower = power(op)
     netPowerSmooth = essPower + ucVM.pvGenProfile
@@ -63,7 +63,7 @@ calculate_metrics(op::OperationHistory, ucVM::VariabilityMitigation) = begin
     ]
 end
 
-use_case_charts(op::OperationHistory, ucVM::VariabilityMitigation) = begin
+use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Generating time series charts for Power Smoothing"
     netPowerSmooth = power(op) + ucVM.pvGenProfile
     originalVariability =

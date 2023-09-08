@@ -11,7 +11,7 @@ struct PIDController <: RTController
     pid::DiscretePID
 end
 
-function PIDController(resolution, Kp, Ti, Td)
+function PIDController(resolution, Kp::Float64, Ti::Float64, Td::Float64)
     pid = DiscretePID(; K = Kp, Ts = resolution / Second(1), Ti = Ti, Td = Td)
     return PIDController(resolution, Kp, Ti, Td, pid)
 end
@@ -36,25 +36,36 @@ function control(
         process_variable = actual_bess_power - actual_load
         control_signal = controller.pid(set_point, process_variable)
         push!(control_signals, control_signal)
-        return ControlSequence(
+        return FixedIntervalTimeSeries(
+            t,
+            controller.resolution,
             [
                 min(
                     max(p_min(ess, controller.resolution), control_signal),
                     p_max(ess, controller.resolution),
                 ),
             ],
-            controller.resolution,
         )
     else
-        remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
-        return ControlSequence(
+        remainingTime = end_time(schedulePeriod) - t
+        idxReg = findfirst(uc -> uc isa Regulation, useCases)
+        if idxReg !== nothing
+            # Regulation is selected
+            ucReg::Regulation = useCases[idxReg]
+            regCap = regulation_capacity(schedulePeriod)
+            return FixedIntervalTimeSeries(t, remainingTime, [scheduled_bess_power]) +
+                   extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
+        end
+
+        return FixedIntervalTimeSeries(
+            t,
+            remainingTime,
             [
                 min(
                     max(p_min(ess, remainingTime), scheduled_bess_power),
                     p_max(ess, remainingTime),
                 ),
             ],
-            remainingTime,
         )
     end
 end

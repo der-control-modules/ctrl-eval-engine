@@ -16,6 +16,8 @@ export get_scheduler,
     SchedulePeriodProgress,
     duration,
     average_power,
+    ending_soc,
+    regulation_capacity,
     OptScheduler,
     RLScheduler
 
@@ -25,18 +27,40 @@ struct Schedule
     powerKw::Vector{Float64}
     tStart::Dates.DateTime
     resolution::Dates.TimePeriod
+    soc::Vector{Float64}
+    regCapKw::Vector{Float64}
 end
+
+Schedule(
+    powerKw::Vector{Float64},
+    tStart::Dates.DateTime;
+    resolution::Dates.TimePeriod = Hour(1),
+    SOC::Vector{Float64} = zeros(length(powerKw) + 1),
+) = Schedule(powerKw, tStart, resolution, SOC, zeros(length(powerKw)))
 
 struct SchedulePeriod
     powerKw::Float64
     tStart::Dates.DateTime
     duration::Dates.TimePeriod
+    socStart::Float64
+    socEnd::Float64
+    regCapKw::Float64
 end
 
+SchedulePeriod(
+    p::Float64,
+    tStart::Dates.DateTime;
+    duration::Dates.TimePeriod = Hour(1),
+    socStart::Float64 = 0.0,
+    socEnd::Float64 = 0.0,
+) = SchedulePeriod(p, tStart, duration, socStart, socEnd, 0.0)
+
 duration(sp::SchedulePeriod) = sp.duration
-start_time(sp::SchedulePeriod) = sp.tStart
-end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
+CtrlEvalEngine.start_time(sp::SchedulePeriod) = sp.tStart
+CtrlEvalEngine.end_time(sp::SchedulePeriod) = sp.tStart + sp.duration
 average_power(sp::SchedulePeriod) = sp.powerKw
+ending_soc(sp::SchedulePeriod) = sp.socEnd
+regulation_capacity(sp::SchedulePeriod) = sp.regCapKw
 
 Base.iterate(s::Schedule, index = 1) =
     index > length(s.powerKw) ? nothing :
@@ -45,6 +69,9 @@ Base.iterate(s::Schedule, index = 1) =
             s.powerKw[index],
             s.tStart + s.resolution * (index - 1),
             s.resolution,
+            s.soc[index],
+            s.soc[index+1],
+            s.regCapKw[index],
         ),
         index + 1,
     )
@@ -60,13 +87,14 @@ include("optimization-scheduler.jl")
 include("mock-python-scheduler.jl")
 include("manual-scheduler.jl")
 include("RL-scheduler.jl")
+include("rule-based.jl")
 
 struct IdleScheduler <: Scheduler
     interval::Dates.Period
 end
 
-schedule(::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
-    Schedule([0], tStart, scheduler.interval)
+schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
+    Schedule([0.0], tStart; resolution = scheduler.interval, SOC = [SOC(ess), SOC(ess)])
 
 """
     get_scheduler(inputDict::Dict)
@@ -77,7 +105,7 @@ function get_scheduler(schedulerConfig::Dict)
     schedulerType = schedulerConfig["type"]
     scheduler = if schedulerType == "mock"
         MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
-    elseif schedulerType == "optimization"
+    elseif schedulerType == "schedulerOptimization"
         endSocInput = get(schedulerConfig, "endSocPct", nothing)
         endSoc = if isnothing(endSocInput)
             nothing
@@ -111,7 +139,7 @@ function get_scheduler(schedulerConfig::Dict)
             minNetLoadKw = get(schedulerConfig, "minNetLoadKw", nothing),
             powerLimitPu = powerLimitPct / 100,
         )
-    elseif schedulerType == "ml"
+    elseif schedulerType == "schedulerML"
         res = Minute(
             round(
                 Int,
@@ -126,6 +154,17 @@ function get_scheduler(schedulerConfig::Dict)
         )
     elseif schedulerType == "idle"
         IdleScheduler(Hour(24))
+    elseif schedulerType == "schedulerRule"
+        res = Minute(
+            round(
+                Int,
+                convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"],
+            ),
+        )
+        interval = Minute(
+            round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
+        )
+        RuleBasedScheduler(res, interval)
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end

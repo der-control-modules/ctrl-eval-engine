@@ -8,36 +8,29 @@ end
 
 Construct an `EnergyArbitrage` object from `input` dictionary or array
 """
-EnergyArbitrage(input::Dict) = EnergyArbitrage(
-    VariableIntervalTimeSeries(
-        push!(DateTime.(input["t"]), DateTime(input["t"][end]) + Hour(1)),
-        Float64.(input["actualPriceData"]),
-    ),
-)
-
-EnergyArbitrage(input::AbstractVector) = EnergyArbitrage(
-    VariableIntervalTimeSeries(
-        push!(
-            [DateTime(row["date"]) for row in input],
-            DateTime(input[end]["date"]) + Hour(1),
+EnergyArbitrage(input::Dict) =
+    EnergyArbitrage(
+        FixedIntervalTimeSeries(
+            DateTime(input["actualEnergyPrice"]["Time"][1]),
+            DateTime(input["actualEnergyPrice"]["Time"][2]) -
+            DateTime(input["actualEnergyPrice"]["Time"][1]),
+            float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
         ),
-        [Float64(row["lmp"]) for row in input],
-    ),
-)
+    )
 
-EnergyArbitrage(input::AbstractVector, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage(
-    extract(
-        VariableIntervalTimeSeries(
-            push!(
-                [DateTime(row["date"]) for row in input],
-                DateTime(input[end]["date"]) + Hour(1),
+EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) =
+    EnergyArbitrage(
+        extract(
+            FixedIntervalTimeSeries(
+                DateTime(input["actualEnergyPrice"]["Time"][1]),
+                DateTime(input["actualEnergyPrice"]["Time"][2]) -
+                DateTime(input["actualEnergyPrice"]["Time"][1]),
+                float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
             ),
-            [Float64(row["lmp"]) for row in input],
+            tStart,
+            tEnd,
         ),
-        tStart,
-        tEnd,
-    ),
-)
+    )
 
 calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) =
     power(progress.operation) ⋅ ucEA.price
@@ -47,7 +40,7 @@ calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) =
 
 Summarize the benefit and cost associated with `useCase` given `operation`
 """
-function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
+function calculate_metrics(::ScheduleHistory, operation::OperationHistory, ucEA::EnergyArbitrage)
     return [
         Dict(:sectionTitle => "Energy Arbitrage"),
         Dict(
@@ -58,7 +51,7 @@ function calculate_metrics(operation::OperationHistory, ucEA::EnergyArbitrage)
     ]
 end
 
-use_case_charts(op::OperationHistory, ucEA::EnergyArbitrage) = begin
+use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) = begin
     @debug "Generating time series charts for Energy Arbitrage"
 
     cumIncome = cum_integrate(power(op) * ucEA.price)
