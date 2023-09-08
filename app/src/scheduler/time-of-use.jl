@@ -27,11 +27,11 @@ Return the target of `rs` at `price` and the defined price range that encloses `
 get_target(rs::TimeOfUseRuleSet, price::Float64) = begin
     if price ≥ rs.price[1] && price < rs.price[end]
         index = findfirst(x -> x > price, rs.price) - 1
-        (rs.target[index], rs.price[index], rs.price[index+1])
+        (rs.target[index + 1], rs.price[index], rs.price[index + 1])
     elseif price < rs.price[1]
-        (zero(eltype(rs.target)), nothing, rs.price[1])
+        (rs.target[1], -Inf, rs.price[1])
     else
-        (zero(eltype(rs.target)), rs.price[end], nothing)
+        (rs.target[end], rs.price[end], Inf)
     end
 end
 

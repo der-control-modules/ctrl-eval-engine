@@ -31,7 +31,7 @@ end
             [0.2, 0.5, 0.9, 0.4, 0.1],
         ),
     )]
-    scheduler = TimeOfUseScheduler(Hour(1), Hour(5), TimeOfUseRuleSet([0.0, 0.4, 0.7, 1000], [90, nothing, 10]))
+    scheduler = TimeOfUseScheduler(Hour(1), Hour(5), TimeOfUseRuleSet([0.4, 0.7], [90, nothing, 10]))
     sched = schedule(ess, scheduler, useCases, floor(now(), Hour(1)))
     @test sched.powerKw == [-0.1300126034217757, 0.0, 0.22325320552533823, 0.0, -0.2600252068435514]
 end
