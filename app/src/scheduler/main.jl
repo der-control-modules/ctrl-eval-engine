@@ -103,84 +103,95 @@ schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.Da
 Create a scheduler of appropriate type from the input dictionary
 """
 function get_scheduler(schedulerConfig::Dict)
-    schedulerType = schedulerConfig["type"]
-    scheduler = if schedulerType == "mock"
-        MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
-    elseif schedulerType == "schedulerOptimization"
-        endSocInput = get(schedulerConfig, "endSocPct", nothing)
-        endSoc = if isnothing(endSocInput)
-            nothing
-        elseif endSocInput isa Real
-            endSocInput / 100
+    try
+        schedulerType = schedulerConfig["type"]
+        scheduler = if schedulerType == "mock"
+            MockScheduler(Hour(1), Hour(6), get(schedulerConfig, "sleepSeconds", 0))
+        elseif schedulerType == "schedulerOptimization"
+            endSocInput = get(schedulerConfig, "endSocPct", nothing)
+            endSoc = if isnothing(endSocInput)
+                nothing
+            elseif endSocInput isa Real
+                endSocInput / 100
+            else
+                (endSocInput[1], endSocInput[2]) ./ 100
+            end
+            res = Minute(
+                round(
+                    Int,
+                    convert(Minute, Hour(1)).value *
+                    schedulerConfig["scheduleResolutionHrs"],
+                ),
+            )
+            interval = Minute(
+                round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
+            )
+            powerLimitPct = get(schedulerConfig, "powerLimitPct", 100)
+            if isnothing(powerLimitPct)
+                powerLimitPct = 100
+            end
+            OptScheduler(
+                res,
+                interval,
+                ceil(
+                    Int64,
+                    schedulerConfig["optWindowLenHrs"] /
+                    schedulerConfig["scheduleResolutionHrs"],
+                ),
+                endSoc;
+                minNetLoadKw = get(schedulerConfig, "minNetLoadKw", nothing),
+                powerLimitPu = powerLimitPct / 100,
+            )
+        elseif schedulerType == "schedulerML"
+            res = Minute(
+                round(
+                    Int,
+                    convert(Minute, Hour(1)).value *
+                    get(schedulerConfig, "scheduleResolutionHrs", 1),
+                ),
+            )
+            RLScheduler(
+                res,
+                schedulerConfig["approach"],
+                round(Int, get(schedulerConfig, "iteration", 4000)),
+            )
+        elseif schedulerType == "idle"
+            IdleScheduler(Hour(24))
+        elseif schedulerType == "schedulerRule"
+            res = Minute(
+                round(
+                    Int,
+                    convert(Minute, Hour(1)).value *
+                    schedulerConfig["scheduleResolutionHrs"],
+                ),
+            )
+            interval = Minute(
+                round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
+            )
+            RuleBasedScheduler(res, interval)
+        elseif schedulerType == "TOU"
+            res = Minute(
+                round(
+                    Int,
+                    convert(Minute, Hour(1)).value *
+                    schedulerConfig["scheduleResolutionHrs"],
+                ),
+            )
+            interval = Minute(
+                round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
+            )
+            TimeOfUseScheduler(res, interval, schedulerConfig["ruleSet"])
         else
-            (endSocInput[1], endSocInput[2]) ./ 100
+            throw(InvalidInput("Invalid scheduler type: $schedulerType"))
         end
-        res = Minute(
-            round(
-                Int,
-                convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"],
-            ),
-        )
-        interval = Minute(
-            round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
-        )
-        powerLimitPct = get(schedulerConfig, "powerLimitPct", 100)
-        if isnothing(powerLimitPct)
-            powerLimitPct = 100
+        return scheduler
+    catch e
+        if e isa KeyError
+            throw(InvalidInput("Missing key in scheduler config - \"$(e.key)\""))
+        else
+            rethrow()
         end
-        OptScheduler(
-            res,
-            interval,
-            ceil(
-                Int64,
-                schedulerConfig["optWindowLenHrs"] /
-                schedulerConfig["scheduleResolutionHrs"],
-            ),
-            endSoc;
-            minNetLoadKw = get(schedulerConfig, "minNetLoadKw", nothing),
-            powerLimitPu = powerLimitPct / 100,
-        )
-    elseif schedulerType == "schedulerML"
-        res = Minute(
-            round(
-                Int,
-                convert(Minute, Hour(1)).value *
-                get(schedulerConfig, "scheduleResolutionHrs", 1),
-            ),
-        )
-        RLScheduler(
-            res,
-            schedulerConfig["approach"],
-            round(Int, get(schedulerConfig, "iteration", 4000)),
-        )
-    elseif schedulerType == "idle"
-        IdleScheduler(Hour(24))
-    elseif schedulerType == "schedulerRule"
-        res = Minute(
-            round(
-                Int,
-                convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"],
-            ),
-        )
-        interval = Minute(
-            round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
-        )
-        RuleBasedScheduler(res, interval)
-    elseif schedulerType == "TOU"
-        res = Minute(
-            round(
-                Int,
-                convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"],
-            ),
-        )
-        interval = Minute(
-            round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
-        )
-        TimeOfUseScheduler(res, interval, schedulerConfig["ruleSet"])
-    else
-        throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end
-    return scheduler
 end
 
 function __init__()
