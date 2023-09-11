@@ -88,6 +88,7 @@ include("mock-python-scheduler.jl")
 include("manual-scheduler.jl")
 include("RL-scheduler.jl")
 include("rule-based.jl")
+include("time-of-use.jl")
 
 struct IdleScheduler <: Scheduler
     interval::Dates.Period
@@ -165,6 +166,17 @@ function get_scheduler(schedulerConfig::Dict)
             round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
         )
         RuleBasedScheduler(res, interval)
+    elseif schedulerType == "TOU"
+        res = Minute(
+            round(
+                Int,
+                convert(Minute, Hour(1)).value * schedulerConfig["scheduleResolutionHrs"],
+            ),
+        )
+        interval = Minute(
+            round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
+        )
+        TimeOfUseScheduler(res, interval, schedulerConfig["ruleSet"])
     else
         throw(InvalidInput("Invalid scheduler type: $schedulerType"))
     end
