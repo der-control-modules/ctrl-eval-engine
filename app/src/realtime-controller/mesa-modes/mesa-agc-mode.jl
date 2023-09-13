@@ -24,7 +24,6 @@ function modecontrol(
         regulationUC = useCases[idxRegulation]
         # Get Current Active Power Target (in per unit, to comply with use Case -- NOTE: MESA gives a power):
         (AGCSignalPu, _, _) = get_period(regulationUC.AGCSignalPu, t)
-
         # Convert per unit to the actual AGC signal (in kW, not MW) based on the regulation capacity from the sceheuler.
         activePowerTarget = regulation_capacity(schedulePeriod) * AGCSignalPu
         # Move towards the target power as approprate to time constant or ramp rate limits:
