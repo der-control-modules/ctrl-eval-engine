@@ -134,7 +134,6 @@ tStart = floor(now(), Hour(1))
         Dates.Second(4),
     )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    print(controller.wip.value)
     @test all(
         controller.wip.value .== [
             50.0,
