@@ -377,6 +377,8 @@ mutable struct InvalidInput <: Exception
     msg::String
 end
 
+Base.print(io::IO, e::InvalidInput) = print(io, "Invalid input: ", e.msg)
+
 abstract type BatteryInput end
 
 struct LiIonBatteryInput <: BatteryInput

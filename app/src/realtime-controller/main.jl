@@ -58,25 +58,33 @@ function get_rt_controller(
     ess::EnergyStorageSystem,
     useCases::AbstractArray{<:UseCase},
 )
-    controllerType = config["type"]
-    res = Millisecond(
-        round(
-            Int,
-            convert(Millisecond, Second(1)).value * get(config, "resolutionSec", 60),
-        ),
-    )
-    controller = if controllerType == "passthrough"
-        PassThroughController()
-    elseif controllerType == "pid"
-        PIDController(res, float(config["Kp"]), float(config["Ti"]), float(config["Td"]))
-    elseif controllerType == "ama"
-        AMAController(config, ess, useCases)
-    elseif controllerType == "realTimeRule"
-        RuleBasedController(config)
-    else
-        throw(InvalidInput("Invalid real-time controller type: $controllerType"))
+    try
+        controllerType = config["type"]
+        res = Millisecond(
+            round(
+                Int,
+                convert(Millisecond, Second(1)).value * get(config, "resolutionSec", 60),
+            ),
+        )
+        controller = if controllerType == "passthrough"
+            PassThroughController()
+        elseif controllerType == "pid"
+            PIDController(res, float(config["Kp"]), float(config["Ti"]), float(config["Td"]))
+        elseif controllerType == "ama"
+            AMAController(config, ess, useCases)
+        elseif controllerType == "realTimeRule"
+            RuleBasedController(config)
+        else
+            throw(InvalidInput("Invalid real-time controller type: $controllerType"))
+        end
+        return controller
+    catch e
+        if e isa KeyError
+            throw(InvalidInput("Missing key in real-time controller config - \"$(e.key)\""))
+        else
+            rethrow()
+        end
     end
-    return controller
 end
 
 function __init__()
