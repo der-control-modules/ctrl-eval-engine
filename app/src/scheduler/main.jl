@@ -152,8 +152,7 @@ function get_scheduler(schedulerConfig::Dict)
             )
             RLScheduler(
                 res,
-                schedulerConfig["approach"],
-                round(Int, get(schedulerConfig, "iteration", 4000)),
+                schedulerConfig,
             )
         elseif schedulerType == "idle"
             IdleScheduler(Hour(24))
