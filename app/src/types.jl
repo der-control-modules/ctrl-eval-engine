@@ -31,6 +31,8 @@ end
 
 Integrate `ts` from `tStart` to `tEnd` and return the result.
 """
+integrate(ts::TimeSeries) = sum(v * ((tEnd - tStart) / Hour(1)) for (v, tStart, tEnd) in ts)
+
 integrate(ts::TimeSeries, tStart::DateTime, tEnd::DateTime) =
     integrate(extract(ts, tStart, tEnd))
 
@@ -40,9 +42,8 @@ integrate(ts::TimeSeries, tStart::DateTime, tEnd::DateTime) =
 Cummulatively integrate `ts` from `tStart` to `tEnd` and return the resultant `VariableIntervalTimeSeries`.
 """
 cum_integrate(ts::TimeSeries, tStart::DateTime, tEnd::DateTime) = begin
-    seg_integral = map(extract(ts, tStart, tEnd)) do (v, t1, t2)
-        v * /(promote(t2 - t1, Hour(1))...)
-    end
+    seg_integral = [v * ((t2 - t1) / Hour(1)) for (v, t1, t2) in extract(ts, tStart, tEnd)]
+
     VariableIntervalTimeSeries(timestamps(ts), cumsum(seg_integral))
 end
 
@@ -117,6 +118,7 @@ Base.:*(ts::TimeSeries, x::Number) = binary_operation(ts, x, *)
 Base.:*(x::Number, ts::TimeSeries) = binary_operation(x, ts, *)
 Base.:/(ts1::TimeSeries, ts2::TimeSeries) = binary_operation(ts1, ts2, /)
 Base.:/(ts::TimeSeries, x::Number) = binary_operation(ts, x, /)
+Base.:^(ts::TimeSeries, x::Number) = binary_operation(ts, x, ^)
 
 Base.:maximum(ts::TimeSeries) = maximum(ts.value)
 Base.:minimum(ts::TimeSeries) = minimum(ts.value)
@@ -128,6 +130,8 @@ LinearAlgebra.dot(ts1::TimeSeries, ts2::TimeSeries) = dot_multiply_time_series(t
 
 Calculate the average value of `ts` during the time period from `t1` to `t2`.
 """
+mean(ts::TimeSeries) = integrate(ts) / ((end_time(ts) - start_time(ts)) / Hour(1))
+
 mean(ts::TimeSeries, t1::DateTime, t2::DateTime) =
     integrate(ts, t1, t2) / ((t2 - t1) / Hour(1))
 
@@ -164,16 +168,16 @@ where `1 ≤ i ≤ length(value)` and `length(t) == length(value) + 1`.
 struct VariableIntervalTimeSeries{V} <: TimeSeries{V}
     t::Vector{Dates.DateTime}
     value::Vector{V}
-    VariableIntervalTimeSeries(t, v) =
-        length(t) == length(v) + 1 ? new{eltype(v)}(t, v) : error("Incompatible lengths")
+    VariableIntervalTimeSeries(t, v::AbstractVector{V}) where {V} =
+        length(t) == length(v) + 1 ? new{V}(t, v) : error("Incompatible lengths")
 end
 
 Base.iterate(ts::VariableIntervalTimeSeries, index = 1) =
-    index > length(ts.value) || index + 1 > length(ts.t) ? nothing :
+    index > length(ts) ? nothing :
     ((ts.value[index], ts.t[index], ts.t[index+1]), index + 1)
 
-Base.eltype(::Type{VariableIntervalTimeSeries}) = Tuple{Float64,DateTime,DateTime}
-Base.length(ts::VariableIntervalTimeSeries) = min(length(ts.value), length(ts.t) - 1)
+Base.eltype(::Type{VariableIntervalTimeSeries{V}}) where {V} = Tuple{V,DateTime,DateTime}
+Base.length(ts::VariableIntervalTimeSeries) = length(ts.value)
 
 start_time(ts::VariableIntervalTimeSeries) = ts.t[1]
 
@@ -214,7 +218,7 @@ end
 Return the value of `ts` at `t` and the `index`th defined time period.
 """
 get_period(ts::VariableIntervalTimeSeries, index::Integer) = begin
-    if index ≥ 1 && index ≤ length(ts.value)
+    if index ≥ 1 && index ≤ length(ts)
         (ts.value[index], ts.t[index], ts.t[index+1])
     elseif index < 1
         (zero(eltype(ts.value)), nothing, ts.t[1])
@@ -268,7 +272,7 @@ struct FixedIntervalTimeSeries{R<:Dates.Period,V} <: TimeSeries{V}
 end
 
 Base.iterate(ts::FixedIntervalTimeSeries, index = 1) =
-    index > length(ts.value) ? nothing :
+    index > length(ts) ? nothing :
     (
         (
             ts.value[index],
@@ -278,15 +282,16 @@ Base.iterate(ts::FixedIntervalTimeSeries, index = 1) =
         index + 1,
     )
 
-Base.eltype(::Type{FixedIntervalTimeSeries}) = Tuple{Float64,DateTime,DateTime}
+Base.eltype(::Type{FixedIntervalTimeSeries{<:Dates.Period,V}}) where {V} =
+    Tuple{V,DateTime,DateTime}
 Base.length(ts::FixedIntervalTimeSeries) = length(ts.value)
 
 start_time(ts::FixedIntervalTimeSeries) = ts.tStart
 
-end_time(ts::FixedIntervalTimeSeries) = ts.tStart + ts.resolution * length(ts.value)
+end_time(ts::FixedIntervalTimeSeries) = ts.tStart + ts.resolution * length(ts)
 
 timestamps(ts::FixedIntervalTimeSeries) =
-    range(ts.tStart; step = ts.resolution, length = length(ts.value) + 1)
+    range(ts.tStart; step = ts.resolution, length = length(ts) + 1)
 
 function get_values(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
     t1 = max(tStart, start_time(ts))
@@ -319,7 +324,7 @@ function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
 end
 
 get_period(ts::FixedIntervalTimeSeries, index::Integer) = begin
-    if index ≥ 1 && index ≤ length(ts.value)
+    if index ≥ 1 && index ≤ length(ts)
         (
             ts.value[index],
             ts.tStart + ts.resolution * (index - 1),
@@ -338,8 +343,8 @@ get_period(ts::FixedIntervalTimeSeries, t::DateTime) = begin
 end
 
 get_index(ts::FixedIntervalTimeSeries, t::DateTime) = begin
-    index = floor(Int64, /(promote(t - ts.tStart, ts.resolution)...)) + 1
-    if index ≥ 1 && index ≤ length(ts.value)
+    index = fld(t - ts.tStart, ts.resolution) + 1
+    if index ≥ 1 && index ≤ length(ts)
         index
     else
         nothing
@@ -356,37 +361,78 @@ binary_operation(x::Number, ts::FixedIntervalTimeSeries, op) =
 Base.:^(ts::FixedIntervalTimeSeries, x::Number) =
     FixedIntervalTimeSeries(ts.tStart, ts.resolution, ts.value .^ x)
 
-mean(ts::FixedIntervalTimeSeries) = sum(ts.value) / length(ts.value)
+mean(ts::FixedIntervalTimeSeries) = sum(ts.value) / length(ts)
 
-struct RepeatedTimeSeries{T} <: TimeSeries
-    core::Union{FixedIntervalTimeSeries{<:Dates.Period,T},VariableIntervalTimeSeries{T}}
+############## RepeatedTimeSeries ########################
+struct RepeatedTimeSeries{V} <: TimeSeries{V}
+    core::Union{FixedIntervalTimeSeries{<:Dates.Period,V},VariableIntervalTimeSeries{V}}
     iStart::Int
+    startOffset::Dates.Period
     iEnd::Int
+    endOffset::Dates.Period
+    RepeatedTimeSeries(
+        core::Union{
+            FixedIntervalTimeSeries{<:Dates.Period,V},
+            VariableIntervalTimeSeries{V},
+        },
+        iStart::Integer,
+        startOffset::Dates.Period,
+        iEnd::Integer,
+        endOffset::Dates.Period,
+    ) where {V} =
+        if startOffset ≥ Dates.Second(0) && endOffset ≤ Dates.Second(0)
+            _, firstCorePeriodStart, firstCorePeriodEnd =
+                get_period(core, mod1(iStart, length(core)))
+            _, lastCorePeriodStart, lastCorePeriodEnd =
+                get_period(core, mod1(iEnd, length(core)))
+            if firstCorePeriodStart + startOffset < firstCorePeriodEnd &&
+               lastCorePeriodEnd + endOffset ≥ lastCorePeriodStart
+                new{V}(core, iStart, startOffset, iEnd, endOffset)
+            else
+                error("Start and end offsets must fall within the corresponding period")
+            end
+        else
+            error("`startOffset` must be non-negative and `endOffset` must be non-positive")
+        end
 end
 
+RepeatedTimeSeries(
+    core::Union{FixedIntervalTimeSeries,VariableIntervalTimeSeries},
+    iStart::Integer,
+    iEnd::Integer,
+) = RepeatedTimeSeries(core, iStart, Second(0), iEnd, Second(0))
+
+start_time(ts::RepeatedTimeSeries) = get_period(ts, ts.iStart)[2]
+end_time(ts::RepeatedTimeSeries) = get_period(ts, ts.iEnd)[3]
+
 get_period(ts::RepeatedTimeSeries, index::Integer) = begin
-    if index ≥ ts.iStart && index ≤ ts.iEnd
-        get_period(ts.core, mod1(index, length(ts.core.value)))
-    elseif index < ts.iStart
-        (zero(eltype(ts.value)), nothing, start_time(ts))
-    else
-        (zero(eltype(ts.value)), end_time(ts), nothing)
+    if index < ts.iStart
+        return (zero(eltype(ts.value)), nothing, start_time(ts))
+    elseif index > ts.iEnd
+        return (zero(eltype(ts.value)), end_time(ts), nothing)
+    end
+
+    nRep = cld(index, length(ts.core)) - 1
+    coreDuration = end_time(ts.core) - start_time(ts.core)
+    v, t1, t2 = get_period(ts.core, mod1(index, length(ts.core)))
+    if index > ts.iStart && index < ts.iEnd
+        (v, t1 + nRep * coreDuration, t2 + nRep * coreDuration)
+    elseif index == ts.iStart
+        (v, t1 + nRep * coreDuration + ts.startOffset, t2 + nRep * coreDuration)
+    else # index == ts.iEnd
+        (v, t1 + nRep * coreDuration, t2 + nRep * coreDuration + ts.endOffset)
     end
 end
 
 get_period(ts::RepeatedTimeSeries, t::DateTime) = begin
     if t ≥ start_time(ts) && t < end_time(ts)
-        # Calculate the offset from the start of ts.core
-        offset = mod(t - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
-        # Calculate the offset to be added to ts.core
-        startOffset =
-            start_time(ts.core) +
-            floor(t - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
+        # Calculate the offset within ts.core
+        nRep, offset =
+            fldmod(t - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
 
         # Get the corresponding period in ts.core
-        (coreValue, coreStart, coreEnd) = get_period(ts.core, offset)
-
-        (coreValue, coreStart + startOffset, coreEnd + startOffset)
+        idx = nRep * length(ts.core) + get_index(ts.core, offset)
+        get_period(ts, idx)
     elseif t < start_time(ts)
         (zero(eltype(ts.core.value)), nothing, start_time(ts))
     else
@@ -397,74 +443,58 @@ end
 Base.iterate(ts::RepeatedTimeSeries, index::Integer = ts.iStart) =
     index > ts.iEnd ? nothing : (get_period(ts, index), index + 1)
 
-Base.eltype(::Type{RepeatedTimeSeries{T}}) = Tuple{T,DateTime,DateTime}
+Base.eltype(::Type{RepeatedTimeSeries{V}}) where {V} = Tuple{V,DateTime,DateTime}
 Base.length(ts::RepeatedTimeSeries) = ts.iEnd - ts.iStart + 1
 
-start_time(ts::RepeatedTimeSeries) = get_period(ts, ts.iStart)[2]
-end_time(ts::RepeatedTimeSeries) = get_period(ts, ts.iEnd)[3]
-
 function timestamps(ts::RepeatedTimeSeries)
-    coreTimestamps = timestamps(ts.core)
-    coreLength = length(ts.core.value)
     push!(
-        [coreTimestamps[mod1(index, coreLength) for index = ts.iStart:ts.iEnd]],
-        coreTimestamps[mod1(ts.iEnd, coreLength)+1],
+        [get_period(ts, index)[2] for index = ts.iStart:ts.iEnd],
+        get_period(ts, ts.iEnd)[3],
     )
 end
 
-function get_values(ts::RepeatedTimeSeries, tStart::DateTime, tEnd::DateTime)
-    t1 = max(tStart, start_time(ts))
-    t2 = min(tEnd, end_time(ts))
-    if t1 < end_time(ts) && t2 ≥ start_time(ts)
-        # some overlap time period
-
-        # Calculate the corresponding indices of t1 and t2
-        iSegment1, offsetTime1 =
-            fldmod(t1 - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
-        offsetIndex1 = get_index(ts.core, offsetTime1)
-        idx1 = iSegment1 * length(ts.core.value) + offsetIndex1
-
-        iSegment2, offsetTime2 =
-            fldmod(t2 - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
-        offsetIndex2 = get_index(ts.core, offsetTime2)
-        idx2 = iSegment2 * length(ts.core.value) + offsetIndex2
-
-        [ts.core.value[mod1(index, length(ts.core.value))] for index = idx1:idx2]
-    else
-        []
-    end
-end
+get_values(ts::RepeatedTimeSeries) =
+    [ts.core.value[mod1(index, length(ts.core))] for index = ts.iStart:ts.iEnd]
 
 function extract(ts::RepeatedTimeSeries, tStart::DateTime, tEnd::DateTime)
     t1 = max(tStart, start_time(ts))
     t2 = min(tEnd, end_time(ts))
 
-    iSegment1, offsetTime1 =
+    iRep1, offsetTime1 =
         fldmod(t1 - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
-    offsetIndex1 = get_index(ts.core, offsetTime1)
-    idx1 = iSegment1 * length(ts.core.value) + offsetIndex1
+    offsetIndex1 = get_index(ts.core, start_time(ts.core) + offsetTime1)
+    idx1 = iRep1 * length(ts.core) + offsetIndex1
 
-    iSegment2, offsetTime2 =
-        fldmod(t2 - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
-    offsetIndex2 = get_index(ts.core, offsetTime2)
-    idx2 = iSegment2 * length(ts.core.value) + offsetIndex2
+    iRep2 = cld(t2 - start_time(ts.core), end_time(ts.core) - start_time(ts.core)) - 1
+    offsetTime2 = t2 - (start_time(ts.core) + iRep2 * (end_time(ts.core) - start_time(ts.core)))
+    offsetIndex2 = get_index(ts.core, start_time(ts.core) + offsetTime2)
+    if offsetIndex2 === nothing
+        offsetIndex2 = length(ts.core)
+    elseif start_time(ts.core) + offsetTime2 == get_period(ts.core, offsetIndex2)[2]
+        offsetIndex2 -= 1
+    end
+    idx2 = iRep2 * length(ts.core) + offsetIndex2
 
-    RepeatedTimeSeries(ts.core, idx1, idx2)
+    RepeatedTimeSeries(
+        ts.core,
+        idx1,
+        start_time(ts.core) + offsetTime1 - get_period(ts.core, offsetIndex1)[2],
+        idx2,
+        start_time(ts.core) + offsetTime2 - get_period(ts.core, offsetIndex2)[3],
+    )
 end
 
-# TODO: implement the follow function for RepeatedTimeSeries
-integrate(ts::RepeatedTimeSeries) = sum(ts.value) * (ts.resolution / Hour(1))
+get_values(ts::RepeatedTimeSeries, tStart::DateTime, tEnd::DateTime) =
+    get_values(extract(ts, tStart, tEnd))
 
-binary_operation(ts::FixedIntervalTimeSeries, x::Number, op) =
-    FixedIntervalTimeSeries(ts.tStart, ts.resolution, op.(ts.value, x))
-binary_operation(x::Number, ts::FixedIntervalTimeSeries, op) =
-    FixedIntervalTimeSeries(ts.tStart, ts.resolution, op.(x, ts.value))
+binary_operation(ts::RepeatedTimeSeries, x::Number, op) =
+    RepeatedTimeSeries(op(ts.core, x), ts.iStart, ts.startOffset, ts.iEnd, ts.endOffset)
 
-Base.:^(ts::FixedIntervalTimeSeries, x::Number) =
-    FixedIntervalTimeSeries(ts.tStart, ts.resolution, ts.value .^ x)
+binary_operation(x::Number, ts::RepeatedTimeSeries, op) =
+    RepeatedTimeSeries(op(x, ts.core), ts.iStart, ts.startOffset, ts.iEnd, ts.endOffset)
 
-mean(ts::FixedIntervalTimeSeries) = sum(ts.value) / length(ts.value)
-# TODO end
+Base.:minimum(ts::RepeatedTimeSeries) = minimum(get_values(ts))
+Base.:maximum(ts::RepeatedTimeSeries) = maximum(get_values(ts))
 
 struct ScheduleHistory
     t::AbstractVector{Dates.DateTime}
