@@ -1,4 +1,5 @@
 
+import Base: *, zero
 struct RegulationPricePoint
     capacityPrice::Float64
     servicePrice::Float64
@@ -8,50 +9,60 @@ Base.:zero(::RegulationPricePoint) = RegulationPricePoint(0, 0)
 Base.:zero(::Type{RegulationPricePoint}) = RegulationPricePoint(0, 0)
 
 struct RegulationOperationPoint{
-    TC<:Union{Real,JuMP.VariableRef},
-    TM<:Union{Real,JuMP.VariableRef},
+    TC<:Union{Real,JuMP.AbstractJuMPScalar},
+    TM<:Union{Real,JuMP.AbstractJuMPScalar},
 }
     capacity::TC
     mileage::TM
 end
 
-Base.:zero(::RegulationOperationPoint) = RegulationOperationPoint(0, 0)
-Base.:zero(::Type{RegulationOperationPoint}) = RegulationOperationPoint(0, 0)
+Base.:zero(
+    ::RegulationOperationPoint{TC,TM},
+) where {TC<:Union{Real,JuMP.AbstractJuMPScalar},TM<:Union{Real,JuMP.AbstractJuMPScalar}} =
+    RegulationOperationPoint(zero(TC), zero(TM))
+
+Base.:zero(
+    ::Type{RegulationOperationPoint{TC,TM}},
+) where {TC<:Union{Real,JuMP.AbstractJuMPScalar},TM<:Union{Real,JuMP.AbstractJuMPScalar}} =
+    RegulationOperationPoint(zero(TC), zero(TM))
 
 struct Regulation <: UseCase
-    AGCSignalPu::FixedIntervalTimeSeries{<:Dates.TimePeriod,Float64}
+    AGCSignalPu::TimeSeries{Float64}
     price::FixedIntervalTimeSeries{<:Dates.TimePeriod,RegulationPricePoint}
     performanceScore::Float64
 end
 
-Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = Regulation(
-    extract(
-        FixedIntervalTimeSeries(
-            DateTime(input["agcSignal"]["DateTime"][1]),
-            DateTime(input["agcSignal"]["DateTime"][2]) -
-            DateTime(input["agcSignal"]["DateTime"][1]),
-            float.(input["agcSignal"]["Dispatch_pu"]),
+Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = begin
+    agcCore = FixedIntervalTimeSeries(
+        DateTime(input["agcSignal"]["DateTime"][1]),
+        DateTime(input["agcSignal"]["DateTime"][2]) -
+        DateTime(input["agcSignal"]["DateTime"][1]),
+        float.(input["agcSignal"]["Dispatch_pu"]),
+    )
+    Regulation(
+        if get(input["agcSignal"], "repeated", false)
+            RepeatedTimeSeries(agcCore, tStart, tEnd)
+        else
+            extract(agcCore, tStart, tEnd)
+        end,
+        extract(
+            FixedIntervalTimeSeries(
+                DateTime(input["regulationPrices"]["Time"][1]),
+                DateTime(input["regulationPrices"]["Time"][2]) -
+                DateTime(input["regulationPrices"]["Time"][1]),
+                [
+                    RegulationPricePoint(cap / 1000, mil / 1000) for (cap, mil) in zip(
+                        input["regulationPrices"]["CapacityPrice_per_MW"],
+                        input["regulationPrices"]["MileagePrice_per_MW"],
+                    )
+                ],
+            ),
+            tStart,
+            tEnd,
         ),
-        tStart,
-        tEnd,
-    ),
-    extract(
-        FixedIntervalTimeSeries(
-            DateTime(input["regulationPrices"]["Time"][1]),
-            DateTime(input["regulationPrices"]["Time"][2]) -
-            DateTime(input["regulationPrices"]["Time"][1]),
-            [
-                RegulationPricePoint(cap / 1000, mil / 1000) for (cap, mil) in zip(
-                    input["regulationPrices"]["CapacityPrice_per_MW"],
-                    input["regulationPrices"]["MileagePrice_per_MW"],
-                )
-            ],
-        ),
-        tStart,
-        tEnd,
-    ),
-    input["performanceFactor"],
-)
+        input["performanceFactor"],
+    )
+end
 
 function regulation_income(
     regOperation::TimeSeries{<:RegulationOperationPoint},
@@ -60,10 +71,9 @@ function regulation_income(
     (ucReg.price ⋅ regOperation) * ucReg.performanceScore
 end
 
-import Base: *
-*(pp::RegulationPricePoint, op::RegulationOperationPoint) =
+Base.:*(pp::RegulationPricePoint, op::RegulationOperationPoint) =
     pp.capacityPrice * op.capacity + pp.servicePrice * op.capacity * op.mileage
-*(op::RegulationOperationPoint, pp::RegulationPricePoint) =
+Base.:*(op::RegulationOperationPoint, pp::RegulationPricePoint) =
     pp.capacityPrice * op.capacity + pp.servicePrice * op.capacity * op.mileage
 
 function regulation_history(sh::ScheduleHistory, ucReg::Regulation)

@@ -398,30 +398,68 @@ end
 
 RepeatedTimeSeries(
     core::Union{FixedIntervalTimeSeries,VariableIntervalTimeSeries},
-    iStart::Integer,
-    iEnd::Integer,
+    iStart::Integer = 1,
+    iEnd::Integer = length(core),
 ) = RepeatedTimeSeries(core, iStart, Second(0), iEnd, Second(0))
+
+function RepeatedTimeSeries(
+    core::Union{FixedIntervalTimeSeries,VariableIntervalTimeSeries},
+    tStart::Dates.DateTime,
+    tEnd::Dates.DateTime,
+)
+    coreDuration = end_time(core) - start_time(core)
+    nRepStart, coreOffsetStart = fldmod(tStart - start_time(core), coreDuration)
+    nRepEnd = cld(tEnd - start_time(core), coreDuration) - 1
+    coreOffsetEnd = tEnd - start_time(core) - nRepEnd * coreDuration
+
+    # Get the corresponding period in ts.core and offset
+    coreIdxStart = get_index(core, start_time(core) + coreOffsetStart)
+    iStart = nRepStart * length(core) + coreIdxStart
+    offsetStart = tStart - (get_period(core, coreIdxStart)[2] + nRepStart * coreDuration)
+
+    (coreIdxEnd, offsetEnd) = if coreOffsetEnd == coreDuration
+        (length(core), Second(0))
+    else
+        idx = get_index(core, start_time(core) + coreOffsetEnd)
+        corePeriodEnd = get_period(core, idx)[3]
+        if corePeriodEnd == start_time(core) + coreOffsetEnd
+            (idx - 1, Second(0))
+        else
+            (idx, tEnd - (corePeriodEnd + nRepEnd * coreDuration))
+        end
+    end
+    iEnd = nRepEnd * length(core) + coreIdxEnd
+
+    RepeatedTimeSeries(core, iStart, offsetStart, iEnd, offsetEnd)
+end
 
 start_time(ts::RepeatedTimeSeries) = get_period(ts, ts.iStart)[2]
 end_time(ts::RepeatedTimeSeries) = get_period(ts, ts.iEnd)[3]
 
 get_period(ts::RepeatedTimeSeries, index::Integer) = begin
+    if ts.iStart > ts.iEnd
+        return (zero(eltype(ts.core.value)), nothing, nothing)
+    end
+
     if index < ts.iStart
-        return (zero(eltype(ts.value)), nothing, start_time(ts))
+        return (zero(eltype(ts.core.value)), nothing, start_time(ts))
     elseif index > ts.iEnd
-        return (zero(eltype(ts.value)), end_time(ts), nothing)
+        return (zero(eltype(ts.core.value)), end_time(ts), nothing)
     end
 
     nRep = cld(index, length(ts.core)) - 1
     coreDuration = end_time(ts.core) - start_time(ts.core)
     v, t1, t2 = get_period(ts.core, mod1(index, length(ts.core)))
-    if index > ts.iStart && index < ts.iEnd
-        (v, t1 + nRep * coreDuration, t2 + nRep * coreDuration)
-    elseif index == ts.iStart
-        (v, t1 + nRep * coreDuration + ts.startOffset, t2 + nRep * coreDuration)
-    else # index == ts.iEnd
-        (v, t1 + nRep * coreDuration, t2 + nRep * coreDuration + ts.endOffset)
+
+    if index == ts.iStart
+        return (v, t1 + nRep * coreDuration + ts.startOffset, t2 + nRep * coreDuration)
     end
+
+    if index == ts.iEnd
+        return (v, t1 + nRep * coreDuration, t2 + nRep * coreDuration + ts.endOffset)
+    end
+
+    return (v, t1 + nRep * coreDuration, t2 + nRep * coreDuration)
 end
 
 get_period(ts::RepeatedTimeSeries, t::DateTime) = begin
@@ -431,7 +469,7 @@ get_period(ts::RepeatedTimeSeries, t::DateTime) = begin
             fldmod(t - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
 
         # Get the corresponding period in ts.core
-        idx = nRep * length(ts.core) + get_index(ts.core, offset)
+        idx = nRep * length(ts.core) + get_index(ts.core, start_time(ts.core) + offset)
         get_period(ts, idx)
     elseif t < start_time(ts)
         (zero(eltype(ts.core.value)), nothing, start_time(ts))
@@ -466,7 +504,8 @@ function extract(ts::RepeatedTimeSeries, tStart::DateTime, tEnd::DateTime)
     idx1 = iRep1 * length(ts.core) + offsetIndex1
 
     iRep2 = cld(t2 - start_time(ts.core), end_time(ts.core) - start_time(ts.core)) - 1
-    offsetTime2 = t2 - (start_time(ts.core) + iRep2 * (end_time(ts.core) - start_time(ts.core)))
+    offsetTime2 =
+        t2 - (start_time(ts.core) + iRep2 * (end_time(ts.core) - start_time(ts.core)))
     offsetIndex2 = get_index(ts.core, start_time(ts.core) + offsetTime2)
     if offsetIndex2 === nothing
         offsetIndex2 = length(ts.core)

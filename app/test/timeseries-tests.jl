@@ -160,8 +160,31 @@ end
 end
 
 @testset "RepeatedTimeSeries" begin
+    @testset "Construction" begin
+        ts = RepeatedTimeSeries(
+            FixedIntervalTimeSeries(DateTime(2022), Hour(1), collect(1:5)),
+            DateTime(2022, 1, 1, 2),
+            DateTime(2022, 1, 1, 7),
+        )
+        @test ts.iStart == 3
+        @test ts.iEnd == 8
+        @test start_time(ts) == DateTime(2022, 1, 1, 2)
+        @test end_time(ts) == DateTime(2022, 1, 1, 7)
+
+        ts = RepeatedTimeSeries(
+            FixedIntervalTimeSeries(DateTime(2022), Hour(1), collect(1:5)),
+            DateTime(2021, 12, 31, 2, 50),
+            DateTime(2022, 1, 1, 7, 30),
+        )
+        @test start_time(ts) == DateTime(2021, 12, 31, 2, 50)
+        @test end_time(ts) == DateTime(2022, 1, 1, 7, 30)
+    end
     @testset "Extraction" begin
-        ts1 = RepeatedTimeSeries(FixedIntervalTimeSeries(DateTime(2022), Hour(1), collect(1:5)), 1, 12)
+        ts1 = RepeatedTimeSeries(
+            FixedIntervalTimeSeries(DateTime(2022), Hour(1), collect(1:5)),
+            1,
+            12,
+        )
         @test start_time(ts1) == DateTime(2022)
         @test end_time(ts1) == DateTime(2022, 1, 1, 12)
         ts2 = extract(ts1, DateTime(2022, 1, 1, 2), DateTime(2022, 1, 1, 4))
@@ -174,7 +197,13 @@ end
         @test end_time(ts3) == DateTime(2022, 1, 1, 4, 30)
         @test all(get_values(ts3) .== 2:5)
 
-        ts4 = RepeatedTimeSeries(FixedIntervalTimeSeries(DateTime(2022), Hour(1), collect(1:5)), -3, Minute(20), 4, -Minute(40))
+        ts4 = RepeatedTimeSeries(
+            FixedIntervalTimeSeries(DateTime(2022), Hour(1), collect(1:5)),
+            -3,
+            Minute(20),
+            4,
+            -Minute(40),
+        )
         @test start_time(ts4) == DateTime(2021, 12, 31, 20, 20)
         @test end_time(ts4) == DateTime(2022, 1, 1, 3, 20)
         ts5 = extract(ts4, DateTime(2022, 1, 1, 1, 30), DateTime(2022, 1, 1, 4, 30))
@@ -183,16 +212,26 @@ end
     end
 
     @testset "Integral Operations" begin
-        ts1 = RepeatedTimeSeries(FixedIntervalTimeSeries(DateTime(2023), Hour(1), collect(1:5)), 1, 12)
+        ts1 = RepeatedTimeSeries(
+            FixedIntervalTimeSeries(DateTime(2023), Hour(1), collect(1:5)),
+            1,
+            12,
+        )
         @test integrate(ts1) == sum(1:5) * 2 + sum(1:2)
         @test integrate(ts1, DateTime(2023, 1, 1, 2), DateTime(2023, 1, 1, 5)) == sum(3:5)
         @test mean(ts1) == (sum(1:5) * 2 + sum(1:2)) / 12
         @test mean(ts1, DateTime(2023, 1, 1, 1), DateTime(2023, 1, 1, 3)) == 2.5
 
-        ts2 = RepeatedTimeSeries(FixedIntervalTimeSeries(DateTime(2023), Minute(15), collect(1:5)), 1, 12)
+        ts2 = RepeatedTimeSeries(
+            FixedIntervalTimeSeries(DateTime(2023), Minute(15), collect(1:5)),
+            1,
+            12,
+        )
         @test integrate(ts2) == (sum(1:5) * 2 + sum(1:2)) / 4
-        @test integrate(ts2, DateTime(2023, 1, 1, 1), DateTime(2023, 1, 1, 5)) == (5 + 1 + 2 + 3 + 4 + 5 + 1 + 2) / 4
+        @test integrate(ts2, DateTime(2023, 1, 1, 1), DateTime(2023, 1, 1, 5)) ==
+              (5 + 1 + 2 + 3 + 4 + 5 + 1 + 2) / 4
         @test mean(ts2) == (sum(1:5) * 2 + sum(1:2)) / 12
-        @test mean(ts2, DateTime(2023, 1, 1, 1), DateTime(2023, 1, 1, 3)) == (5 + 1 + 2 + 3 + 4 + 5 + 1 + 2) / 4 / 2
+        @test mean(ts2, DateTime(2023, 1, 1, 1), DateTime(2023, 1, 1, 3)) ==
+              (5 + 1 + 2 + 3 + 4 + 5 + 1 + 2) / 4 / 2
     end
 end
