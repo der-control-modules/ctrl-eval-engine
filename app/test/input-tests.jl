@@ -31,24 +31,20 @@ end
         {
             "Power Smoothing": {
                 "data": {
-                    "pvGenProfile": [
-                        {
-                            "DateTime": "2018-01-21T00:00",
-                            "Power": 351.54
-                        },
-                        {
-                            "DateTime": "2018-01-21T00:01",
-                            "Power": 351.5
-                        },
-                        {
-                            "DateTime": "2018-01-21T00:02",
-                            "Power": 35.54
-                        },
-                        {
-                            "DateTime": "2018-01-21T00:03",
-                            "Power": 51.54
-                        }
-                    ],
+                    "pvGenProfile": {
+                        "DateTime": [
+                            "2018-01-21T00:00",
+                            "2018-01-21T00:01",
+                            "2018-01-21T00:02",
+                            "2018-01-21T00:03"
+                        ],
+                        "Power": [
+                            351.54,
+                            351.5,
+                            35.54,
+                            51.54
+                        ]
+                    },
                     "ratedPowerKw": 500
                 }
             }
@@ -87,7 +83,7 @@ end
     @testset "OptScheduler" begin
         inputDict = JSON.parse("""
             {
-                "type": "optimization",
+                "type": "schedulerOptimization",
                 "scheduleResolutionHrs": 1,
                 "optWindowLenHrs":24,
                 "intervalHrs": 24,
@@ -104,7 +100,7 @@ end
 
         inputDict = JSON.parse("""
             {
-                "type": "optimization",
+                "type": "schedulerOptimization",
                 "scheduleResolutionHrs": 0.5,
                 "optWindowLenHrs": 24.1,
                 "intervalHrs": 2.6,

@@ -85,16 +85,17 @@ function apply_ramps(
     currentPower::Float64,
     targetPower::Float64, 
     )
+    # TODO: Ramp rates being in kW/s, they should be multiplied by the resolution, but how does this work with longer resolutions, as it will just jump?
     # TODO: Assuming ramp rate is percentage per second of p_max or p_min. The actual units in DNP3 spec are just percent per second. 
     #        Should this be percent of requested jump in power per second instead?
     if targetPower > currentPower && targetPower >= 0  # TODO: This assumes percent per second refers to percent of max/min power.
-        allowedPowerChange = min(targetPower - currentPower, rampParams.dischargeRampUpRate * p_max(ess))
+        allowedPowerChange = min(targetPower - currentPower, rampParams.dischargeRampUpRate / 1000  * p_max(ess))
     elseif targetPower < currentPower && targetPower >= 0
-        allowedPowerChange = min(targetPower - currentPower, rampParams.dischargeRampDownRate * p_max(ess))
+        allowedPowerChange = min(targetPower - currentPower, rampParams.dischargeRampDownRate / 1000 * p_max(ess))
     elseif targetPower > currentPower && targetPower < 0
-        allowedPowerChange = max(targetPower - currentPower, rampParams.chargeRampUpRate * p_min(ess))
+        allowedPowerChange = max(targetPower - currentPower, rampParams.chargeRampUpRate / 1000 * p_min(ess))
     elseif targetPower < currentPower && targetPower < 0
-        allowedPowerChange = max(targetPower - currentPower, rampParams.chargeRampDownRate * p_min(ess))
+        allowedPowerChange = max(targetPower - currentPower, rampParams.chargeRampDownRate / 1000 * p_min(ess))
     else
         allowedPowerChange = 0.0
     end
@@ -110,7 +111,7 @@ function apply_energy_limits(
     )
     minEnergy = minReserve ≠ nothing ? minReserve / 100 * e_max(ess) : e_min(ess)
     maxEnergy = maxReserve ≠ nothing ? maxReserve / 100 * e_max(ess) : e_max(ess)
-    proposedNewEnergy = energy_state(ess) + (power * duration / Hour(1))
+    proposedNewEnergy = energy_state(ess) + (power * (duration / Hour(1)))
     if proposedNewEnergy > maxEnergy
         return (maxEnergy - energy_state(ess)) / (duration / Hour(1))
     elseif proposedNewEnergy < minEnergy
@@ -118,6 +119,12 @@ function apply_energy_limits(
     else
         return power
     end
+end
+
+function previous_WIP(mode::MesaMode)
+    wipLength = length(mode.params.modeWIP.value)
+    previousIdx = wipLength > 1 ? wipLength - 1 : 1
+    return mode.params.modeWIP.value[previousIdx]
 end
 
 function control(
@@ -153,7 +160,7 @@ function control(
     essLimitedPower = min(max(p, p_min(ess)), p_max(ess))
     energyLimitedPower = apply_energy_limits(ess, essLimitedPower, Dates.Second(controller.resolution))
     controller.wip.value[end] = energyLimitedPower
-    return ControlSequence([energyLimitedPower], controller.resolution)
+    return FixedIntervalTimeSeries(t, controller.resolution, [energyLimitedPower])
 end
 
 include("mesa-modes/mesa-active-power-limit-mode.jl")

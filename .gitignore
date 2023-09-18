@@ -1,2 +1,5 @@
 .aws/credentials
 *.pyc
+.vscode/*
+.idea/*
+.DS_Store

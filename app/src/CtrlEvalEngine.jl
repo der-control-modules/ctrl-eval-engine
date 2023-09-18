@@ -7,6 +7,7 @@ export evaluate_controller,
     TimeSeries,
     FixedIntervalTimeSeries,
     VariableIntervalTimeSeries,
+    RepeatedTimeSeries,
     timestamps,
     get_values,
     start_time,
@@ -18,6 +19,7 @@ export evaluate_controller,
     std,
     get_period,
     extract,
+    power,
     InvalidInput
 
 include("types.jl")
@@ -67,17 +69,17 @@ function generate_output_dict(
     annualCycles = round(Int, annualDischargedEnergyKwh / e_max(ess))
     annualDischargedEnergyMwh = round(annualDischargedEnergyKwh / 1000; sigdigits = 3)
     annualUsageString =
-        (
-            annualDischargedEnergyKwh ≥ 1000 ? "$annualDischargedEnergyMwh MWh" :
-            "$(round(annualDischargedEnergyKwh, sigdigits=3)) kWh"
-        ) * " ($annualCycles cycles)"
+        annualDischargedEnergyKwh ≥ 1000 ? "$annualDischargedEnergyMwh MWh" :
+        "$(round(annualDischargedEnergyKwh, sigdigits=3)) kWh"
+
+    annualCyclesString = "$annualCycles"
     energyLossKwh = charged_energy(progress.operation) - dischargedEnergyKwh
 
     endingSohPct = round(SOH(ess) * 100)
 
     @debug "Calculating use-case-specific metrics"
     metrics = mapreduce(
-        uc -> calculate_metrics(progress.operation, uc),
+        uc -> calculate_metrics(progress.schedule, progress.operation, uc),
         vcat,
         useCases;
         init = [
@@ -87,7 +89,8 @@ function generate_output_dict(
                 :value => pvBenefit,
                 :type => "currency",
             ),
-            Dict(:label => "Annual Usage (Discharged Energy)", :value => annualUsageString),
+            Dict(:label => "Annual Discharged Energy", :value => annualUsageString),
+            Dict(:label => "Annual Cycles", :value => annualCyclesString),
             Dict(:label => "SOH Change", :value => "100% → $endingSohPct%"),
             Dict(
                 :label => "Energy Loss",
@@ -127,10 +130,15 @@ function update_schedule_history!(
     currentSchedule::EnergyStorageScheduling.Schedule,
 )
     for schedulePeriod in currentSchedule
-        push!(scheduleHistory.t, EnergyStorageScheduling.end_time(schedulePeriod))
+        push!(scheduleHistory.t, end_time(schedulePeriod))
         push!(
             scheduleHistory.powerKw,
             EnergyStorageScheduling.average_power(schedulePeriod),
+        )
+        push!(scheduleHistory.SOC, EnergyStorageScheduling.ending_soc(schedulePeriod))
+        push!(
+            scheduleHistory.regCapKw,
+            EnergyStorageScheduling.regulation_capacity(schedulePeriod),
         )
     end
 end
@@ -150,7 +158,7 @@ end
 
 function generate_chart_data(progress::Progress, useCases)
     mapreduce(
-        uc -> use_case_charts(progress.operation, uc),
+        uc -> use_case_charts(progress.schedule, progress.operation, uc),
         vcat,
         useCases;
         init = [
@@ -172,6 +180,13 @@ function generate_chart_data(progress::Progress, useCases)
                         :y => progress.operation.powerKw,
                         :type => "interval",
                         :name => "Actual Power",
+                    ),
+                    Dict(
+                        :x => progress.schedule.t,
+                        :y => progress.schedule.SOC,
+                        :type => "instance",
+                        :name => "Scheduled SOC",
+                        :yAxis => "right",
                     ),
                     Dict(
                         :x => progress.operation.t,
@@ -222,7 +237,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
     t = setting.simStart
     progress = Progress(
         5.0,
-        ScheduleHistory([t], Float64[]),
+        ScheduleHistory([t], Float64[], Float64[SOC(ess)], Float64[]),
         OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)]),
     )
     if debug
@@ -234,7 +249,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
 
     outputProgress = Progress(
         5.0,
-        ScheduleHistory([t], Float64[]),
+        ScheduleHistory([t], Float64[], Float64[SOC(ess)], Float64[]),
         OperationHistory([t], Float64[], Float64[SOC(ess)], Float64[SOH(ess)]),
     )
 
@@ -242,13 +257,13 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
         currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t)
         update_schedule_history!(outputProgress.schedule, currentSchedule)
         for schedulePeriod in currentSchedule
-            schedulePeriodEnd =
-                min(EnergyStorageScheduling.end_time(schedulePeriod), setting.simEnd)
+            schedulePeriodEnd = min(end_time(schedulePeriod), setting.simEnd)
             spProgress = VariableIntervalTimeSeries([t], Float64[])
             while t < schedulePeriodEnd
                 controlSequence =
                     control(ess, rtController, schedulePeriod, useCases, t, spProgress)
-                for (powerSetpointKw, controlDuration) in controlSequence
+                for (powerSetpointKw, _, controlPeriodEnd) in controlSequence
+                    controlDuration = controlPeriodEnd - t
                     actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
                     update_schedule_period_progress!(
                         spProgress,

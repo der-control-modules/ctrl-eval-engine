@@ -1,4 +1,4 @@
-using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams
+using CtrlEvalEngine.EnergyStorageRTControl: MesaController, VertexCurve, RampParams, previous_WIP
 
 struct ChargeDischargeStorageMode <: MesaMode
     params::MesaModeParams
@@ -25,7 +25,7 @@ function modecontrol(
     targetPower = activePowerTarget >= 0 ? activePowerTarget * p_max(ess) / 100 : -activePowerTarget * p_min(ess) / 100
     # Move towards the target power as approprate to time constant or ramp rate limits:
     ramping_func = mode.rampOrTimeConstant ? apply_ramps : apply_time_constants
-    lastModePower = last(mode.params.modeWIP.value)
+    lastModePower = previous_WIP(mode)
     rampLimitedPower = ramping_func(ess, mode.rampParams, lastModePower, targetPower)
     
     # Apply mode-specific energy limits.

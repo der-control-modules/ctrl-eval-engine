@@ -1,3 +1,5 @@
+using Combinatorics
+
 struct RuleBasedScheduler <: Scheduler
     resolution::Dates.Period
     interval::Dates.Period
@@ -11,7 +13,8 @@ function schedule(
     useCases::AbstractArray{<:UseCase},
     tStart::DateTime,
 )
-    scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
+    scheduleLength =
+        Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
 
     eaIdx = findfirst(uc -> uc isa EnergyArbitrage, useCases)
     if isnothing(eaIdx)
@@ -23,112 +26,55 @@ function schedule(
         ucEA.price,
         range(
             tStart;
-            step=scheduler.resolution,
-            length = scheduleLength
-            #stop=tStart + Hour(24) - Millisecond(1)
-        )
+            step = scheduler.resolution,
+            length = scheduleLength,
+        ),
     )
 
-    price_comb = combinations(price,2)
-    feasible_theta = []
+    feasible_theta = [comb for comb in combinations(price, 2) if comb[1] < comb[2]]
+    all_state_trans = zeros(scheduleLength, length(feasible_theta)) #size(price_forecast, 2)
+    all_power = zeros(scheduleLength, length(feasible_theta))
+    all_total_cost = zeros(length(feasible_theta))
 
-    for p in 1:size(price_comb, 1)
-
-        if price_comb[p,1] < price_comb[p,2]
-            append!(feasible_theta, [[price_comb[p,1], price_comb[p,1]]]) 
-        end
-    end
-
-    all_state_trans = zeros(scheduleLength,size(feasible_theta, 1)) #size(price_forecast, 2)
-    all_power = zeros(scheduleLength,size(feasible_theta, 1))
-    all_total_cost = []
-
-    for i in 1:size(feasible_theta, 1)
+    for i in eachindex(feasible_theta)
         theta_low = feasible_theta[i][1]
         theta_high = feasible_theta[i][2]
-
         stateK0 = SOC(ess)
+        cost = zeros(scheduleLength)
 
-        cost = [];
-        output = [];
-        #day_hours = len(price)
-
-        for h in 1:scheduleLength:
-
-            if price[1,h] <= theta_low
-                batt = min(p_max(ess), e_max(ess) * (1 - stateK0) / η) 
-                stateK0 = stateK0 + (batt*η)/e_max(ess)
-                cost_cal = -batt*price[h]
-                append!(cost,cost_cal)
+        for h = 1:scheduleLength
+            if price[h] <= theta_low
+                batt = min(p_max(ess), e_max(ess) * (1 - stateK0) / ηRT(ess))
+                stateK0 = stateK0 + (batt * ηRT(ess)) / e_max(ess)
+                cost_cal = -batt * price[h]
                 output = -batt
-            elseif price[1,h] >= theta_high
-                batt = min(p_max(ess),max(0,(energy_state(ess) - e_min(ess))*η)) 
-                stateK0 = stateK0 - batt/(e_max(ess)*η)
-                cost_cal = batt*price[h]
-                append!(cost,cost_cal)
+            elseif price[h] >= theta_high
+                batt = min(p_max(ess), max(0, (energy_state(ess) - e_min(ess)) * ηRT(ess)))
+                stateK0 = stateK0 - batt / (e_max(ess) * ηRT(ess))
+                cost_cal = batt * price[h]
                 output = batt
-            else:
+            else
                 batt = 0
                 stateK0 = stateK0
-                cost_cal = batt*price[h]
-                append!(cost,cost_cal)
+                cost_cal = batt * price[h]
                 output = batt
             end
-            all_state_trans[h,i] = stateK0
-            all_power[h,i] = output 
+            cost[h] = cost_cal
+            all_state_trans[h, i] = stateK0
+            all_power[h, i] = output
         end
-   
-        append!(all_total_cost,sum(cost))
+
+        all_total_cost[i] = sum(cost)
     end
 
-    optimal_index  = getindex.(findall(all_total_cost .== maximum(all_total_cost)), [2])
-    optimal_power = all_power[:,optimal_index]
-    optimal_states = all_state_trans[:,optimal_index]
-    
-    return Schedule(optimal_power, tStart, rlScheduler.resolution, [SOC(ess),optimal_states...])
-    # scheduledPower = average_power(schedulePeriod)
+    _, optimal_index = findmax(all_total_cost)
+    optimal_power = all_power[:, optimal_index]
+    optimal_states = all_state_trans[:, optimal_index]
 
-    # idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
-    # if idxloadFollowing !== nothing
-    #     ucLF::LoadFollowing = useCases[idxloadFollowing]
-    #     forecastLoad, _, _ = CtrlEvalEngine.get_period(ucLF.forecastLoadPower, t)
-    #     actualLoad, _, tEndActualLoad = CtrlEvalEngine.get_period(ucFL.realtimeLoadPower, t)
-    #     theta_low = forecastLoad - controller.bound
-    #     theta_high = forecastLoad + controller.bound
-    #     η = sqrt(ηRT(ess))
-    #     if actualLoad > theta_high
-    #         batt = min(p_max(ess), max(0, (energy_state(ess) - e_min(ess)) * η))
-    #         batt_power =
-    #                 min(actualLoad - theta_high, batt)
-
-    #     elseif actualLoad < theta_low
-    #         batt = min(p_max(ess), e_max(ess) * (1 - SOC(ess)) / η)
-    #         batt_power =
-    #                 max(actualLoad - theta_low, -batt)
-
-    #     else
-    #         batt_power = 0
-    #     end
-
-    #     if batt_power < 0
-    #         batt_soc = SOC(ess) - (batt_power * η) / e_max(ess)
-    #     else
-    #         batt_soc = SOC(ess) - batt_power / (e_max(ess) * η)
-    #     end
-
-    #     @debug "Rule-based RT controller exiting" batt_power
-    #     return ControlSequence([batt_power], tEndActualLoad - t)
-    # else
-    #     # Load Following isn't selected, follow schedule
-    #     remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
-    #     return ControlSequence(
-    #         [
-    #             min(
-    #                 max(p_min(ess, remainingTime), scheduledPower),
-    #                 p_max(ess, remainingTime),
-    #             ),
-    #         ],
-    #         remainingTime,
-    #     )
-    # end
+    return Schedule(
+        optimal_power,
+        tStart;
+        resolution = scheduler.resolution,
+        SOC = [SOC(ess), optimal_states...],
+    )
 end

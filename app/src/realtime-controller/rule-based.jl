@@ -2,7 +2,7 @@ struct RuleBasedController <: RTController
     bound::Float64
 end
 
-RuleBasedController(config::Dict) = RuleBasedController(max(0, config["bound"]))
+RuleBasedController(config::Dict) = RuleBasedController(max(0, config["loadBound"]))
 
 function control(
     ess::EnergyStorageSystem,
@@ -17,9 +17,13 @@ function control(
     idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
     if idxloadFollowing !== nothing
         ucLF::LoadFollowing = useCases[idxloadFollowing]
-        forecastLoad, _, _ = CtrlEvalEngine.get_period(ucLF.forecastLoadPower, t)
+        forecastLoad, _, tEndForecstLoad =
+            CtrlEvalEngine.get_period(ucLF.forecastLoadPower, t)
         actualLoad, _, tEndActualLoad = CtrlEvalEngine.get_period(ucLF.realtimeLoadPower, t)
         forecastLoad = forecastLoad - scheduledPower
+        tCtrlPeriodEnd =
+            isnothing(tEndActualLoad) || isnothing(tEndForecstLoad) ?
+            end_time(schedulePeriod) : min(tEndForecstLoad, tEndActualLoad)
         theta_low = forecastLoad - controller.bound
         theta_high = forecastLoad + controller.bound
         η = sqrt(ηRT(ess))
@@ -38,18 +42,28 @@ function control(
         end
 
         @debug "Rule-based RT controller exiting" batt_power
-        return ControlSequence([batt_power], tEndActualLoad - t)
+        return FixedIntervalTimeSeries(t, tCtrlPeriodEnd - t, [batt_power])
     else
         # Load Following isn't selected, follow schedule
-        remainingTime = EnergyStorageScheduling.end_time(schedulePeriod) - t
-        return ControlSequence(
-            [
-                min(
-                    max(p_min(ess, remainingTime), scheduledPower),
-                    p_max(ess, remainingTime),
-                ),
-            ],
-            remainingTime,
-        )
+        remainingTime = end_time(schedulePeriod) - t
+        idxReg = findfirst(uc -> uc isa Regulation, useCases)
+        if idxReg !== nothing
+            # Regulation is selected
+            ucReg::Regulation = useCases[idxReg]
+            regCap = regulation_capacity(schedulePeriod)
+            return FixedIntervalTimeSeries(t, remainingTime, [scheduledPower]) +
+                   extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
+        else
+            return FixedIntervalTimeSeries(
+                t,
+                remainingTime,
+                [
+                    min(
+                        max(p_min(ess, remainingTime), scheduledPower),
+                        p_max(ess, remainingTime),
+                    ),
+                ],
+            )
+        end
     end
 end

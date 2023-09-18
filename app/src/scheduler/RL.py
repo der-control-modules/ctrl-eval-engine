@@ -11,9 +11,9 @@ import itertools
 import random
 
 
-def RL(price, use_case, approach, resolution_hrs, Battery_parameters, iteration):
+def RL(price, use_case, approach, resolution_hrs, Battery_parameters, iteration, epsilon_update=1.07):
     K = len(price)
-    RL_parameters = {"iteration": iteration, "epsilon_initial": 0.7, "epsilon_interval": 50*K/24, "epsilon_update": 1.07, "alpha": 1, "gamma": 1, "discrete": 20}
+    RL_parameters = {"iteration": iteration, "epsilon_initial": 0.7, "epsilon_interval": 50*K/24, "epsilon_update": epsilon_update, "alpha": 1, "gamma": 1, "discrete": 20}
     delta = (
         Battery_parameters["soc_high"] - Battery_parameters["soc_low"]
     ) / RL_parameters["discrete"]
@@ -34,7 +34,7 @@ def RL(price, use_case, approach, resolution_hrs, Battery_parameters, iteration)
         total_cost = 0
 
         if i == ep_update:
-            epsilon = epsilon / RL_parameters["epsilon_update"]
+            epsilon = epsilon / epsilon_update
             ep_update = ep_update + RL_parameters["epsilon_interval"]
 
         Batt_action = []
