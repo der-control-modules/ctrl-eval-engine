@@ -23,7 +23,7 @@ function schedule(
     ucEA = useCases[eaIdx]
 
     price = sample(
-        ucEA.price,
+        forecast_price(ucEA),
         range(
             tStart;
             step = scheduler.resolution,

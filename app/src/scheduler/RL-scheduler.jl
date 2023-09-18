@@ -36,7 +36,7 @@ function schedule(
     )
 
     price = sample(
-        ucEA.price,
+        forecast_price(ucEA),
         range(
             tStart;
             step = rlScheduler.resolution,
