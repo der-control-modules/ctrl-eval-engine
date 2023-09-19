@@ -195,7 +195,7 @@ function get_values(ts::VariableIntervalTimeSeries, tStart::DateTime, tEnd::Date
         idx2 = findfirst(ts.t .≥ t2) - 1
         ts.value[idx1:idx2]
     else
-        []
+        eltype(ts.value)[]
     end
 end
 
@@ -302,7 +302,7 @@ function get_values(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTim
         idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
         ts.value[idx1:idx2]
     else
-        []
+        eltype(ts.value)[]
     end
 end
 
