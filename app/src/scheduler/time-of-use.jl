@@ -60,14 +60,14 @@ function schedule(ess, scheduler::TimeOfUseScheduler, useCases::AbstractVector{<
     if isnothing(eaIdx)
         error("No supported use case is found by TimeOfUseScheduler")
     end
-    useCase = useCases[eaIdx]
+    ucEA = useCases[eaIdx]
     scheduleLength = Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
     current_soc = SOC(ess)
     schedule_vector = Vector{Float64}(undef, scheduleLength)
     soc_vector = Vector{Float64}(undef, scheduleLength)
     for i = 1:scheduleLength
         step_start = tStart + (scheduler.resolution * (i - 1))
-        price, _, tou_end = get_period(useCase.price, step_start)
+        price, _, tou_end = get_period(forecast_price(ucEA), step_start)
         target, _, _ = get_target(scheduler.rule_set, price)
         target = isnothing(target) ? current_soc : target / 100.0
         # TODO: This should really get the target for all periods of the use case so that it can determine when the next __change__ in the mode is, rather than assuming each period to be atomic.

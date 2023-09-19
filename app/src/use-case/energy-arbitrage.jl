@@ -1,51 +1,83 @@
 
 struct EnergyArbitrage <: UseCase
-    price::TimeSeries
+    actualPrice::TimeSeries
+    forecastPrice::Union{TimeSeries,Nothing}
 end
+
+EnergyArbitrage(actualPrice::TimeSeries) = EnergyArbitrage(actualPrice, nothing)
 
 """
     EnergyArbitrage(input)
 
 Construct an `EnergyArbitrage` object from `input` dictionary or array
 """
-EnergyArbitrage(input::Dict) =
-    EnergyArbitrage(
+EnergyArbitrage(input::Dict) = EnergyArbitrage(
+    FixedIntervalTimeSeries(
+        DateTime(input["actualEnergyPrice"]["Time"][1]),
+        DateTime(input["actualEnergyPrice"]["Time"][2]) -
+        DateTime(input["actualEnergyPrice"]["Time"][1]),
+        float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
+    ),
+    if get(input, "forecastPrice", nothing) === nothing
+        nothing
+    else
+        FixedIntervalTimeSeries(
+            DateTime(input["forecastEnergyPrice"]["Time"][1]),
+            DateTime(input["forecastEnergyPrice"]["Time"][2]) -
+            DateTime(input["forecastEnergyPrice"]["Time"][1]),
+            float.(input["forecastEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
+        )
+    end,
+)
+
+EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage(
+    extract(
         FixedIntervalTimeSeries(
             DateTime(input["actualEnergyPrice"]["Time"][1]),
             DateTime(input["actualEnergyPrice"]["Time"][2]) -
             DateTime(input["actualEnergyPrice"]["Time"][1]),
             float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
         ),
-    )
-
-EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) =
-    EnergyArbitrage(
+        tStart,
+        tEnd,
+    ),
+    if get(input, "forecastPrice", nothing) === nothing
+        nothing
+    else
         extract(
             FixedIntervalTimeSeries(
-                DateTime(input["actualEnergyPrice"]["Time"][1]),
-                DateTime(input["actualEnergyPrice"]["Time"][2]) -
-                DateTime(input["actualEnergyPrice"]["Time"][1]),
-                float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
+                DateTime(input["forecastEnergyPrice"]["Time"][1]),
+                DateTime(input["forecastEnergyPrice"]["Time"][2]) -
+                DateTime(input["forecastEnergyPrice"]["Time"][1]),
+                float.(input["forecastEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
             ),
             tStart,
             tEnd,
-        ),
-    )
+        )
+    end,
+)
+
+forecast_price(ucEA::EnergyArbitrage) =
+    isnothing(ucEA.forecastPrice) ? ucEA.actualPrice : ucEA.forecastPrice
 
 calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) =
-    power(progress.operation) ⋅ ucEA.price
+    power(progress.operation) ⋅ ucEA.actualPrice
 
 """
     calculate_metrics(operation, useCase)
 
 Summarize the benefit and cost associated with `useCase` given `operation`
 """
-function calculate_metrics(::ScheduleHistory, operation::OperationHistory, ucEA::EnergyArbitrage)
+function calculate_metrics(
+    ::ScheduleHistory,
+    operation::OperationHistory,
+    ucEA::EnergyArbitrage,
+)
     return [
         Dict(:sectionTitle => "Energy Arbitrage"),
         Dict(
             :label => "Net Income",
-            :value => power(operation) ⋅ ucEA.price,
+            :value => power(operation) ⋅ ucEA.actualPrice,
             :type => "currency",
         ),
     ]
@@ -54,7 +86,36 @@ end
 use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) = begin
     @debug "Generating time series charts for Energy Arbitrage"
 
-    cumIncome = cum_integrate(power(op) * ucEA.price)
+    cumIncome = cum_integrate(power(op) * ucEA.actualPrice)
+
+    priceTraces = if isnothing(ucEA.forecastPrice)
+        [
+            Dict(
+                :x => timestamps(ucEA.actualPrice),
+                :y => get_values(ucEA.actualPrice),
+                :type => "interval",
+                :name => "Energy Price",
+                :yAxis => "right",
+            ),
+        ]
+    else
+        [
+            Dict(
+                :x => timestamps(ucEA.forecastPrice),
+                :y => get_values(ucEA.forecastPrice),
+                :type => "interval",
+                :name => "Forecast Energy Price",
+                :yAxis => "right",
+            ),
+            Dict(
+                :x => timestamps(ucEA.actualPrice),
+                :y => get_values(ucEA.actualPrice),
+                :type => "interval",
+                :name => "Actual Energy Price",
+                :yAxis => "right",
+            ),
+        ]
+    end
 
     [
         Dict(
@@ -69,13 +130,7 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) 
                     :type => "interval",
                     :name => "Actual Power",
                 ),
-                Dict(
-                    :x => timestamps(ucEA.price),
-                    :y => get_values(ucEA.price),
-                    :type => "interval",
-                    :name => "Energy Price",
-                    :yAxis => "right",
-                ),
+                priceTraces...,
             ],
         ),
         Dict(
