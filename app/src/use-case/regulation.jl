@@ -39,6 +39,7 @@ Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = begin
         DateTime(input["agcSignal"]["DateTime"][1]),
         float.(input["agcSignal"]["Dispatch_pu"]),
     )
+    @debug "Constructing Regulation object" inputAgc=input["agcSignal"]
     Regulation(
         if get(input["agcSignal"], "repeated", false)
             RepeatedTimeSeries(agcCore, tStart, tEnd)
@@ -98,8 +99,10 @@ function regulation_history(sh::ScheduleHistory, ucReg::Regulation)
     )
 end
 
-calculate_net_benefit(progress::Progress, ucReg::Regulation) =
+calculate_net_benefit(progress::Progress, ucReg::Regulation) = begin
+    @debug "Calculating Regulation benefit" schedule=progress.schedule regHistory=regulation_history(progress.schedule, ucReg) regPriceLen=length(ucReg.price)
     regulation_income(regulation_history(progress.schedule, ucReg), ucReg)
+end
 
 function calculate_metrics(sh::ScheduleHistory, ::OperationHistory, ucReg::Regulation)
     regIncome = regulation_income(regulation_history(sh, ucReg), ucReg)

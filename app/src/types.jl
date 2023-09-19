@@ -56,22 +56,30 @@ function binary_operation(ts1::TimeSeries, ts2::TimeSeries, op)
 end
 
 function binary_operation(
-    ts1::TimeSeries,
-    ts2::TimeSeries,
+    ts1::TimeSeries{V1},
+    ts2::TimeSeries{V2},
     op,
     tStart::DateTime,
     tEnd::DateTime,
-)
+) where {V1, V2}
     t = [tStart]
 
-    v1, _, tPeriodEnd1 = get_period(ts1, tStart)
-    if isnothing(tPeriodEnd1)
-        tPeriodEnd1 = tEnd
+    ts1Idx = get_index(ts1, tStart)
+    v1, tPeriodEnd1 = if tStart < start_time(ts1)
+        zero(V1), start_time(ts1)
+    elseif tStart ≥ end_time(ts1)
+        zero(V1), tEnd
+    else
+        get_period(ts1, ts1Idx)[[1, 3]]
     end
 
-    v2, _, tPeriodEnd2 = get_period(ts2, tStart)
-    if isnothing(tPeriodEnd2)
-        tPeriodEnd2 = tEnd
+    ts2Idx = get_index(ts2, tStart)
+    v2, tPeriodEnd2 = if tStart < start_time(ts2)
+        zero(V2), start_time(ts2)
+    elseif tStart ≥ end_time(ts2)
+        zero(V2), tEnd
+    else
+        get_period(ts2, ts2Idx)[[1, 3]]
     end
 
     tPeriodEnd = min(tPeriodEnd1, tPeriodEnd2)
@@ -81,17 +89,20 @@ function binary_operation(
     value = [v]
 
     while tPeriodEnd < tEnd
-        tPeriodStart = tPeriodEnd
         if tPeriodEnd1 == tPeriodEnd2
             # move both ts1 and ts2 forward by one time period
-            v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
-            v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
+            ts1Idx += 1
+            ts2Idx += 1
+            v1, _, tPeriodEnd1 = get_period(ts1, ts1Idx)
+            v2, _, tPeriodEnd2 = get_period(ts2, ts2Idx)
         elseif tPeriodEnd1 < tPeriodEnd2
             # this means tPeriodEnd == tPeriodEnd1, move ts1 forward by one time period
-            v1, _, tPeriodEnd1 = get_period(ts1, tPeriodStart)
+            ts1Idx += 1
+            v1, _, tPeriodEnd1 = get_period(ts1, ts1Idx)
         else
             # this means tPeriodEnd == tPeriodEnd2, move ts2 forward by one time period
-            v2, _, tPeriodEnd2 = get_period(ts2, tPeriodStart)
+            ts2Idx += 1
+            v2, _, tPeriodEnd2 = get_period(ts2, ts2Idx)
         end
         if isnothing(tPeriodEnd1)
             tPeriodEnd1 = tEnd
@@ -101,8 +112,12 @@ function binary_operation(
         end
         tPeriodEnd = min(tPeriodEnd1, tPeriodEnd2, tEnd)
         v = op(v1, v2)
-        push!(t, tPeriodEnd)
-        push!(value, v)
+        if value[end] == v
+            t[end] = tPeriodEnd
+        else
+            push!(t, tPeriodEnd)
+            push!(value, v)
+        end
     end
     VariableIntervalTimeSeries(t, value)
 end
@@ -246,8 +261,10 @@ end
 get_index(ts::VariableIntervalTimeSeries, t::DateTime) = begin
     if t ≥ ts.t[1] && t < ts.t[end]
         findfirst(x -> x > t, ts.t) - 1
+    elseif t < ts.t[1]
+        0
     else
-        nothing
+        length(ts.value) + 1
     end
 end
 
@@ -346,8 +363,10 @@ get_index(ts::FixedIntervalTimeSeries, t::DateTime) = begin
     index = fld(t - ts.tStart, ts.resolution) + 1
     if index ≥ 1 && index ≤ length(ts)
         index
+    elseif index < 1
+        0
     else
-        nothing
+        length(ts) + 1
     end
 end
 
@@ -462,21 +481,22 @@ get_period(ts::RepeatedTimeSeries, index::Integer) = begin
     return (v, t1 + nRep * coreDuration, t2 + nRep * coreDuration)
 end
 
-get_period(ts::RepeatedTimeSeries, t::DateTime) = begin
+get_index(ts::RepeatedTimeSeries, t::DateTime) = begin
     if t ≥ start_time(ts) && t < end_time(ts)
         # Calculate the offset within ts.core
         nRep, offset =
             fldmod(t - start_time(ts.core), end_time(ts.core) - start_time(ts.core))
 
         # Get the corresponding period in ts.core
-        idx = nRep * length(ts.core) + get_index(ts.core, start_time(ts.core) + offset)
-        get_period(ts, idx)
+        nRep * length(ts.core) + get_index(ts.core, start_time(ts.core) + offset)
     elseif t < start_time(ts)
-        (zero(eltype(ts.core.value)), nothing, start_time(ts))
+        ts.iStart - 1
     else
-        (zero(eltype(ts.core.value)), end_time(ts), nothing)
+        ts.iEnd + 1
     end
 end
+
+get_period(ts::RepeatedTimeSeries, t::DateTime) = get_period(ts, get_index(ts, t))
 
 Base.iterate(ts::RepeatedTimeSeries, index::Integer = ts.iStart) =
     index > ts.iEnd ? nothing : (get_period(ts, index), index + 1)

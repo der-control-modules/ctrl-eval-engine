@@ -60,8 +60,10 @@ EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage
 forecast_price(ucEA::EnergyArbitrage) =
     isnothing(ucEA.forecastPrice) ? ucEA.actualPrice : ucEA.forecastPrice
 
-calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) =
+calculate_net_benefit(progress::Progress, ucEA::EnergyArbitrage) = begin
+    @debug "Calculation Energy Arbitrage benefit" powerLen=length(power(progress.operation)) priceLen=length(ucEA.actualPrice)
     power(progress.operation) ⋅ ucEA.actualPrice
+end
 
 """
     calculate_metrics(operation, useCase)
@@ -73,6 +75,7 @@ function calculate_metrics(
     operation::OperationHistory,
     ucEA::EnergyArbitrage,
 )
+    @debug "Calculating metrics for Energy Arbitrage"
     return [
         Dict(:sectionTitle => "Energy Arbitrage"),
         Dict(
