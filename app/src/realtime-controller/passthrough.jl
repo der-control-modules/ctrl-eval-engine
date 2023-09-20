@@ -21,7 +21,6 @@ function control(
         ) + extract(ucReg.AGCSignalPu, t, end_time(schedulePeriod)) * regCap
     end
 
-    @debug "Control sequence updated" controlOps
     return FixedIntervalTimeSeries(
         t,
         end_time(schedulePeriod) - t,
