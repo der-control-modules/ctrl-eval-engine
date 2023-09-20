@@ -20,6 +20,7 @@ function control(
         forecastLoad, _, tEndForecstLoad =
             CtrlEvalEngine.get_period(ucLF.forecastLoadPower, t)
         actualLoad, _, tEndActualLoad = CtrlEvalEngine.get_period(ucLF.realtimeLoadPower, t)
+        forecastLoad = forecastLoad - scheduledPower
         tCtrlPeriodEnd =
             isnothing(tEndActualLoad) || isnothing(tEndForecstLoad) ?
             end_time(schedulePeriod) : min(tEndForecstLoad, tEndActualLoad)
