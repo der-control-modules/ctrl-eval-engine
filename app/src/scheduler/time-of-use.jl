@@ -82,12 +82,15 @@ function schedule(
         target, _, _ = get_target(scheduler.rule_set, price)
         target = isnothing(target) ? current_soc : target / 100.0
         # TODO: This should really get the target for all periods of the use case so that it can determine when the next __change__ in the mode is, rather than assuming each period to be atomic.
-        efficiency = current_soc >= target ? ess.specs.C_p : ess.specs.C_n
-        energy_change = ((current_soc - target) * ess.specs.energyCapacityKwh) / -efficiency # * 100)
-        schedule_vector[i] = energy_change / ((tou_end - step_start) / Dates.Second(1))
+        efficiency = sqrt(ηRT(ess))
+        energy_change = ((current_soc - target) * e_max(ess)) / -efficiency
+        schedule_vector[i] =
+            energy_change / (
+                (isnothing(tou_end) ? scheduler.resolution : tou_end - step_start) /
+                Dates.Hour(1)
+            )
         soc_vector[i+1] =
-            current_soc =
-                current_soc + (energy_change * efficiency / ess.specs.energyCapacityKwh)
+            current_soc = current_soc + (energy_change * efficiency / e_max(ess))
     end
     return Schedule(
         schedule_vector,
