@@ -24,7 +24,6 @@ using Test
 function run_controller(ess, controller, schedulePeriod, useCases, tStart)
     t = tStart
     opHist = CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
-    setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
     schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
     spProgress = VariableIntervalTimeSeries([tStart], Float64[])
     while t < schedulePeriodEnd

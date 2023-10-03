@@ -50,7 +50,7 @@ end
             }
         }"""
     )
-    useCases = get_use_cases(inputDict, CtrlEvalEngine.SimSetting(DateTime(2018), DateTime(2019)))
+    useCases = get_use_cases(inputDict, CtrlEvalEngine.SimSetting(DateTime(2018), DateTime(2019), 10))
     @test useCases isa AbstractVector{<:UseCase}
     @test useCases[1] isa VariabilityMitigation
     @test useCases[1].pvGenProfile.resolution == Minute(1)
