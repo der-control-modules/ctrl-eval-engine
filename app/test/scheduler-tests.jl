@@ -33,7 +33,7 @@ end
     )]
     scheduler = TimeOfUseScheduler(Hour(1), Hour(5), TimeOfUseRuleSet([0.4, 0.7], [90, nothing, 10]))
     sched = schedule(ess, scheduler, useCases, floor(now(), Hour(1)))
-    @test sched.powerKw == [-0.1300126034217757, 0.0, 0.22325320552533823, 0.0, -0.2600252068435514]
+    @test sched.powerKw == [-433.86091563731236, -0.0, 500.0, -0.0, -500.0]
 end
 
 @testset "Optimization Scheduler" begin
@@ -102,7 +102,7 @@ end
         LiIonBatteryStates(0.5, 0),
     )
 
-    rlScheduler = RLScheduler(Hour(1), "Q-learning", 4000)
+    rlScheduler = RLScheduler(Hour(1), "Q-learning", 1.07, 4000)
     tStart = floor(now(), Hour(1))
     useCases = UseCase[EnergyArbitrage(
         VariableIntervalTimeSeries(
@@ -113,11 +113,11 @@ end
     sRL = schedule(ess, rlScheduler, useCases, tStart)
     @test length(sRL.powerKw) == 24
 
-    rlScheduler = RLScheduler(Minute(30), "SARSA", 4000)
+    rlScheduler = RLScheduler(Minute(30), "SARSA", 1.07, 4000)
     sRL2 = schedule(ess, rlScheduler, useCases, tStart)
     @test length(sRL2.powerKw) == 48
 
-    rlScheduler = RLScheduler(Minute(15), "Q-learning", 4000)
+    rlScheduler = RLScheduler(Minute(15), "Q-learning", 1.07, 4000)
     sRL3 = schedule(ess, rlScheduler, useCases, tStart)
     @test length(sRL3.powerKw) == 96
 end

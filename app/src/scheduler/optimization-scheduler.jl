@@ -168,7 +168,7 @@ objective_term(
     ucEA::EnergyArbitrage,
     scheduler::OptScheduler,
     tStart::Dates.DateTime,
-) = FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pBatt]) ⋅ ucEA.price
+) = FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pBatt]) ⋅ forecast_price(ucEA)
 
 function objective_term(
     m::JuMP.Model,

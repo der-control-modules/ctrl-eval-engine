@@ -2,11 +2,17 @@
 struct RLScheduler <: Scheduler
     resolution::Dates.Period
     approach::String
+    epsilonUpdate::Float64
     numIter::UInt
 end
 
-function RLScheduler(config::Dict)
-    RLScheduler(Hour(1), config["approach"], config["interation"])
+function RLScheduler(res::Dates.Period, config::Dict)
+    RLScheduler(
+        res,
+        config["approach"],
+        get(config, "epsilonUpdate", 1.07),
+        round(UInt, get(config, "iteration", 4000)),
+    )
 end
 
 function schedule(
@@ -30,7 +36,7 @@ function schedule(
     )
 
     price = sample(
-        ucEA.price,
+        forecast_price(ucEA),
         range(
             tStart;
             step = rlScheduler.resolution,
@@ -45,6 +51,7 @@ function schedule(
         /(promote(rlScheduler.resolution, Hour(1))...),
         batteryParameters,
         rlScheduler.numIter,
+        rlScheduler.epsilonUpdate
     )
     return Schedule(
         -battery_power,

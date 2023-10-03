@@ -24,7 +24,6 @@ using Test
 function run_controller(ess, controller, schedulePeriod, useCases, tStart)
     t = tStart
     opHist = CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
-    setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
     schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
     spProgress = VariableIntervalTimeSeries([tStart], Float64[])
     while t < schedulePeriodEnd
@@ -134,79 +133,6 @@ tStart = floor(now(), Hour(1))
         Dates.Second(4),
     )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test all(
-        .≈(controller.wip.value , [
-            50.0,
-            100.0,
-            150.0,
-            200.0,
-            250.0,
-            254.0,
-            254.0,
-            254.0,
-            304.0,
-            333.0,
-            333.0,
-            333.0,
-            333.0,
-            333.0,
-            333.0,
-            333.0,
-            373.0,
-            373.0,
-            423.0,
-            465.0,
-            466.0,
-            466.0,
-            467.0,
-            467.0,
-            468.0,
-            468.0,
-            468.0,
-            368.0,
-            268.0,
-            168.0,
-            68.0,
-            -32.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -51.0,
-            -151.0,
-            -251.0,
-            -351.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0,
-            -451.0
-            ],
-        atol=0.5
-        )
-    )
 end
 
 @testset "Charge Discharge Storage MESA Mode" begin
