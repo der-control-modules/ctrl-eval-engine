@@ -27,7 +27,15 @@ include("types.jl")
 function get_setting(inputDict::Dict)
     simStart = Dates.DateTime(inputDict["simStart"])
     simEnd = Dates.DateTime(inputDict["simEnd"])
-    SimSetting(simStart, simEnd)
+    temperature = if inputDict["ambientTemperatureCharacteristics"]["temperatureVariationOverTime"] === "constant"
+        inputDict["ambientTemperatureCharacteristics"]["temperature"]
+    else
+        temperatureSequence = inputDict["ambientTemperatureCharacteristics"]["temperatureSequence"]
+        timestamps = DateTime.(temperatureSequence["DateTime"])
+        push!(timestamps, timestamps[end] + (timestamps[end] - timestamps[end-1]))
+        VariableIntervalTimeSeries(timestamps, temperatureSequence["temperature_C"])
+    end
+    SimSetting(simStart, simEnd, temperature)
 end
 
 include("simulator/main.jl")
@@ -264,7 +272,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
                     control(ess, rtController, schedulePeriod, useCases, t, spProgress)
                 for (powerSetpointKw, _, controlPeriodEnd) in controlSequence
                     controlDuration = controlPeriodEnd - t
-                    actualPowerKw = operate!(ess, powerSetpointKw, controlDuration)
+                    actualPowerKw = operate!(ess, powerSetpointKw, controlDuration, get_temperature(setting, t))
                     update_schedule_period_progress!(
                         spProgress,
                         actualPowerKw,
