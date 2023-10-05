@@ -43,6 +43,7 @@ function run_controller(ess, controller, schedulePeriod, useCases, tStart)
             end
         end
     end
+    return spProgress
 end
 
 ess =
@@ -352,14 +353,35 @@ end
 end
 
 @testset "PID Controller" begin
-    useCases = UseCase[LoadFollowing(
-        FixedIntervalTimeSeries(tStart, Minute(5), [10, 20, 1, 10]),
-        FixedIntervalTimeSeries(tStart, Minute(5), [15, 20, 1, 10]),
-    )]
     controller = PIDController(Second(1), 0.5, 0.5, 0.9)
-    schedulePeriod = SchedulePeriod(65.2, tStart, duration=Minute(15))
-    run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test true
+    schedulePeriod = SchedulePeriod(65.2, tStart; duration = Hour(1))
+    lf = LoadFollowing(
+        FixedIntervalTimeSeries(tStart, Minute(5), [10, 15, 1, 10]),
+        FixedIntervalTimeSeries(tStart, Minute(5), [15, 10, 1, 10]),
+    )
+    gf = GenerationFollowing(
+        FixedIntervalTimeSeries(tStart, Minute(5), [10, 15, 1, 10]),
+        FixedIntervalTimeSeries(tStart, Minute(5), [15, 10, 1, 10]),
+    )
+    useCases = UseCase[lf]
+    spProgress = run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test get_period(spProgress, tStart + Minute(4))[1] ≈ 70.2
+    @test get_period(spProgress, tStart + Minute(9))[1] ≈ 60.2
+    @test get_period(spProgress, tStart + Minute(14))[1] ≈ 65.2
+    useCases = UseCase[gf]
+    spProgress = run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test get_period(spProgress, tStart + Minute(4))[1] ≈ 70.2
+    @test get_period(spProgress, tStart + Minute(9))[1] ≈ 60.2
+    @test get_period(spProgress, tStart + Minute(14))[1] ≈ 65.2
+    useCases = UseCase[lf, gf]
+    let err = nothing
+        try
+            run_controller(ess, controller, schedulePeriod, useCases, tStart)
+        catch err
+        end
+        @test err isa Exception
+        @test sprint(showerror, err) == "Disallowed set of UseCases: Only one of \"LoadFollowing\" and \"GenerationFollowing\" may be used"
+    end
 end
 
 @testset "AMAC" begin
@@ -371,7 +393,7 @@ end
                 [60.0, 110.6, 200.0, 90.0, 20.0, 92.4, 150.7],
             ),
             300,
-        ),
+        )
     ]
     controller = AMAController(
         Dict(
