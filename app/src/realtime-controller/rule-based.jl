@@ -28,15 +28,9 @@ function control(
         theta_high = forecastLoad + controller.bound
         η = sqrt(ηRT(ess))
         batt_power = if actualLoad > theta_high
-            min(
-                p_max(ess),
-                max(0, min(actualLoad - theta_high, (energy_state(ess) - e_min(ess)) * η)),
-            )
+            min(p_max(ess, tCtrlPeriodEnd - t), actualLoad - theta_high)
         elseif actualLoad < theta_low
-            max(
-                p_min(ess),
-                min(0, max(actualLoad - theta_low, -e_max(ess) * (1 - SOC(ess)) / η)),
-            )
+            max(p_min(ess, tCtrlPeriodEnd - t), actualLoad - theta_low)
         else
             0
         end
