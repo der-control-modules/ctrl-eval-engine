@@ -43,6 +43,8 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
         VariabilityMitigation(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Load Following"
         LoadFollowing(config["data"], setting.simStart, setting.simEnd)
+    elseif name === "Generation Following"
+        GenerationFollowing(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Frequency Regulation"
         Regulation(config["data"], setting.simStart, setting.simEnd)
     else

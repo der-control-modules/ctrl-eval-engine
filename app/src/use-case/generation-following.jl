@@ -12,16 +12,39 @@ Construct a `GenerationFollowing` object from `input` dictionary or array
 """
 GenerationFollowing(input::Dict) = GenerationFollowing(
     FixedIntervalTimeSeries(
-        DateTime(input["forecastPower"][1]["DateTime"]),
-        DateTime(input["forecastPower"][2]["DateTime"]) -
-        DateTime(input["forecastPower"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["forecastPower"]],
+        DateTime(input["forecastGenProfile"][1]["DateTime"]),
+        DateTime(input["forecastGenProfile"][2]["DateTime"]) -
+        DateTime(input["forecastGenProfile"][1]["DateTime"]),
+        [float(row["Power"]) for row in input["forecastGenProfile"]],
     ),
     FixedIntervalTimeSeries(
-        DateTime(input["realtimePower"][1]["DateTime"]),
-        DateTime(input["realtimePower"][2]["DateTime"]) -
-        DateTime(input["realtimePower"][1]["DateTime"]),
-        [float(row["value"]) for row in input["realtimePower"]],
+        DateTime(input["realTimeGenProfile"][1]["DateTime"]),
+        DateTime(input["realTimeGenProfile"][2]["DateTime"]) -
+        DateTime(input["realTimeGenProfile"][1]["DateTime"]),
+        [float(row["value"]) for row in input["realTimeGenProfile"]],
+    ),
+)
+
+GenerationFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = GenerationFollowing(
+    extract(
+        FixedIntervalTimeSeries(
+            DateTime(input["forecastGenProfile"][1]["DateTime"]),
+            DateTime(input["forecastGenProfile"][2]["DateTime"]) -
+            DateTime(input["forecastGenProfile"][1]["DateTime"]),
+            [float(row["Power"]) for row in input["forecastGenProfile"]],
+        ),
+        tStart,
+        tEnd,
+    ),
+    extract(
+        FixedIntervalTimeSeries(
+            DateTime(input["realTimeGenProfile"][1]["DateTime"]),
+            DateTime(input["realTimeGenProfile"][2]["DateTime"]) -
+            DateTime(input["realTimeGenProfile"][1]["DateTime"]),
+            [float(row["value"]) for row in input["realTimeGenProfile"]],
+        ),
+        tStart,
+        tEnd,
     ),
 )
 
@@ -37,7 +60,11 @@ function calculate_metrics(
     ]
 end
 
-function use_case_charts(::ScheduleHistory, operation::OperationHistory, ucLF::GenerationFollowing)
+function use_case_charts(
+    ::ScheduleHistory,
+    operation::OperationHistory,
+    ucLF::GenerationFollowing,
+)
     [
         # TODO: this is an example to be replaced
         Dict(
