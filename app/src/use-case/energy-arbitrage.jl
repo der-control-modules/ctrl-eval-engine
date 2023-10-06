@@ -86,7 +86,7 @@ function calculate_metrics(
     ]
 end
 
-use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) = begin
+use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) = begin
     @debug "Generating time series charts for Energy Arbitrage"
 
     cumIncome = cum_integrate(power(op) * ucEA.actualPrice)
@@ -114,6 +114,7 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) 
                 :x => timestamps(ucEA.actualPrice),
                 :y => get_values(ucEA.actualPrice),
                 :type => "interval",
+                :line => Dict(:dash => :dot),
                 :name => "Actual Energy Price",
                 :yAxis => "right",
             ),
@@ -123,10 +124,17 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) 
     [
         Dict(
             :title => "Energy Arbitrage",
-            :xAxis => Dict(:title => "Time"),
+            :height => "300px",
             :yAxisLeft => Dict(:title => "Power (kW)"),
             :yAxisRight => Dict(:title => raw"Price ($/kWh)"),
             :data => [
+                Dict(
+                    :x => sh.t,
+                    :y => sh.powerKw,
+                    :type => "interval",
+                    :name => "Scheduled Power",
+                    :line => Dict(:dash => :dash),
+                ),
                 Dict(
                     :x => op.t,
                     :y => op.powerKw,
@@ -137,6 +145,7 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage) 
             ],
         ),
         Dict(
+            :height => "200px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => raw"Cumulative Net Income ($)"),
             :data => [

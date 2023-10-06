@@ -571,6 +571,8 @@ end
 ScheduleHistory(t::AbstractVector{Dates.DateTime}, p::AbstractVector{Float64}) =
     ScheduleHistory(t, p, zeros(length(p) + 1), zeros(length(p)))
 
+power(sh::ScheduleHistory) = VariableIntervalTimeSeries(sh.t, sh.powerKw)
+
 """
     OperationHistory
 
