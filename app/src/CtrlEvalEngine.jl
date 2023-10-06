@@ -27,14 +27,17 @@ include("types.jl")
 function get_setting(inputDict::Dict)
     simStart = Dates.DateTime(inputDict["simStart"])
     simEnd = Dates.DateTime(inputDict["simEnd"])
-    temperature = if inputDict["ambientTemperatureCharacteristics"]["temperatureVariationOverTime"] === "constant"
-        inputDict["ambientTemperatureCharacteristics"]["temperature"]
-    else
-        temperatureSequence = inputDict["ambientTemperatureCharacteristics"]["temperatureSequence"]
-        timestamps = DateTime.(temperatureSequence["DateTime"])
-        push!(timestamps, timestamps[end] + (timestamps[end] - timestamps[end-1]))
-        VariableIntervalTimeSeries(timestamps, temperatureSequence["temperature_C"])
-    end
+    temperature =
+        if inputDict["ambientTemperatureCharacteristics"]["temperatureVariationOverTime"] ===
+           "constant"
+            inputDict["ambientTemperatureCharacteristics"]["temperature"]
+        else
+            temperatureSequence =
+                inputDict["ambientTemperatureCharacteristics"]["temperatureSequence"]
+            timestamps = DateTime.(temperatureSequence["DateTime"])
+            push!(timestamps, timestamps[end] + (timestamps[end] - timestamps[end-1]))
+            VariableIntervalTimeSeries(timestamps, temperatureSequence["temperature_C"])
+        end
     SimSetting(simStart, simEnd, temperature)
 end
 
@@ -165,49 +168,51 @@ function update_schedule_period_progress!(
 end
 
 function generate_chart_data(progress::Progress, useCases)
-    mapreduce(
-        uc -> use_case_charts(progress.schedule, progress.operation, uc),
-        vcat,
-        useCases;
-        init = [
-            Dict(
-                :title => "ESS Operation",
-                :height => "400px",
-                :xAxis => Dict(:title => "Time"),
-                :yAxisLeft => Dict(:title => "Power (kW)"),
-                :yAxisRight => Dict(:title => "SOC (%)", :tickformat => ",.0%"),
-                :data => [
-                    Dict(
-                        :x => progress.schedule.t,
-                        :y => progress.schedule.powerKw,
-                        :type => "interval",
-                        :name => "Scheduled Power",
-                    ),
-                    Dict(
-                        :x => progress.operation.t,
-                        :y => progress.operation.powerKw,
-                        :type => "interval",
-                        :name => "Actual Power",
-                    ),
-                    Dict(
-                        :x => progress.schedule.t,
-                        :y => progress.schedule.SOC,
-                        :type => "instance",
-                        :name => "Scheduled SOC",
-                        :yAxis => "right",
-                    ),
-                    Dict(
-                        :x => progress.operation.t,
-                        :y => progress.operation.SOC,
-                        :type => "instance",
-                        :name => "Actual SOC",
-                        :yAxis => "right",
-                    ),
-                ],
-            ),
+    defaultCharts = [
+        Dict(
+            :title => "ESS Operation",
+            :height => "400px",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Power (kW)"),
+            :yAxisRight => Dict(:title => "SOC (%)", :tickformat => ",.0%"),
+            :data => [
+                Dict(
+                    :x => progress.schedule.t,
+                    :y => progress.schedule.powerKw,
+                    :type => "interval",
+                    :name => "Scheduled Power",
+                ),
+                Dict(
+                    :x => progress.operation.t,
+                    :y => progress.operation.powerKw,
+                    :type => "interval",
+                    :line => Dict(:dash => :dot),
+                    :name => "Actual Power",
+                ),
+                Dict(
+                    :x => progress.schedule.t,
+                    :y => progress.schedule.SOC,
+                    :type => "instance",
+                    :name => "Scheduled SOC",
+                    :yAxis => "right",
+                ),
+                Dict(
+                    :x => progress.operation.t,
+                    :y => progress.operation.SOC,
+                    :type => "instance",
+                    :line => Dict(:dash => :dot),
+                    :name => "Actual SOC",
+                    :yAxis => "right",
+                ),
+            ],
+        ),
+    ]
+    if progress.operation.SOH[1] - progress.operation.SOH[end] > 0.01
+        push!(
+            defaultCharts,
             Dict(
                 :title => "Cumulative Degradation",
-                :height => "300px",
+                :height => "200px",
                 :xAxis => Dict(:title => "Time"),
                 :yAxisLeft => Dict(:title => "SOH (%)", :tickformat => ",.0%"),
                 :data => [
@@ -219,7 +224,13 @@ function generate_chart_data(progress::Progress, useCases)
                     ),
                 ],
             ),
-        ],
+        )
+    end
+    mapreduce(
+        uc -> use_case_charts(progress.schedule, progress.operation, uc),
+        vcat,
+        useCases;
+        init = defaultCharts,
     )
 end
 
@@ -272,7 +283,12 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
                     control(ess, rtController, schedulePeriod, useCases, t, spProgress)
                 for (powerSetpointKw, _, controlPeriodEnd) in controlSequence
                     controlDuration = controlPeriodEnd - t
-                    actualPowerKw = operate!(ess, powerSetpointKw, controlDuration, get_temperature(setting, t))
+                    actualPowerKw = operate!(
+                        ess,
+                        powerSetpointKw,
+                        controlDuration,
+                        get_temperature(setting, t),
+                    )
                     update_schedule_period_progress!(
                         spProgress,
                         actualPowerKw,

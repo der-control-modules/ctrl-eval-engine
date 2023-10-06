@@ -61,37 +61,57 @@ function calculate_metrics(
 end
 
 function use_case_charts(
-    ::ScheduleHistory,
+    sh::ScheduleHistory,
     operation::OperationHistory,
-    ucLF::GenerationFollowing,
+    ucGF::GenerationFollowing,
 )
+    tsScheduledNetGen = ucGF.forecastPower + power(sh)
+    tsRtNetGen = ucGF.realtimePower + power(operation)
+    tsRelError = (tsRtNetGen - ucGF.forecastPower) / ucGF.forecastPower
     [
-        # TODO: this is an example to be replaced
         Dict(
             :title => "Generation Following Performance",
-            :height => "400px",
-            :xAxis => Dict(:title => "Time"),
+            :height => "300px",
             :yAxisLeft => Dict(:title => "Power (kW)"),
-            :yAxisRight => Dict(:title => "Error (%)", :tickformat => ",.0%"),
             :data => [
                 Dict(
-                    :x => timestamps(ucLF.forecastPower),
-                    :y => get_values(ucLF.forecastPower),
+                    :x => timestamps(ucGF.forecastPower),
+                    :y => get_values(ucGF.forecastPower),
                     :type => "interval",
-                    :name => "Forecast Generation Power",
+                    :name => "Forecast/Scheduled Generation",
+                    :line => Dict(:dash => :dash),
                 ),
                 Dict(
-                    :x => timestamps(ucLF.realtimePower),
-                    :y => get_values(ucLF.realtimePower),
+                    :x => timestamps(tsScheduledNetGen),
+                    :y => get_values(tsScheduledNetGen),
                     :type => "interval",
-                    :name => "Real-time Generation Power",
+                    :name => "Forecast/Scheduled Net Generation",
+                    :line => Dict(:dash => :dash),
                 ),
                 Dict(
-                    :x => timestamps(ucLF.realtimePower),
-                    :y => zeros(length(get_values(ucLF.realtimePower))), # TODO: to be replaced with actual errors
+                    :x => timestamps(ucGF.realtimePower),
+                    :y => get_values(ucGF.realtimePower),
+                    :type => "interval",
+                    :name => "Real-time Generation",
+                ),
+                Dict(
+                    :x => timestamps(tsRtNetGen),
+                    :y => get_values(tsRtNetGen),
+                    :type => "interval",
+                    :name => "Real-time Net Generation",
+                ),
+            ],
+        ),
+        Dict(
+            :height => "200px",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Error (%)", :tickformat => ",.0%"),
+            :data => [
+                Dict(
+                    :x => timestamps(tsRelError),
+                    :y => get_values(tsRelError),
                     :type => "interval",
                     :name => "Relative Error",
-                    :yAxis => "right",
                 ),
             ],
         ),

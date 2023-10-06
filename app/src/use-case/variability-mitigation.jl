@@ -74,39 +74,44 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitiga
     return [
         Dict(
             :title => "Power Smoothing",
+            :height => "300px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => "Power (kW)"),
-            :yAxisRight => Dict(:title => "Variability (kW)"),
             :data => [
                 Dict(
                     :x => timestamps(ucVM.pvGenProfile),
                     :y => get_values(ucVM.pvGenProfile),
                     :type => "interval",
                     :name => "Original Power",
-                    :yAxis => "left",
+                    :line => Dict(:dash => :dash),
                 ),
                 Dict(
                     :x => timestamps(netPowerSmooth),
                     :y => get_values(netPowerSmooth),
                     :type => "interval",
                     :name => "Smoothed Power",
-                    :yAxis => "left",
                 ),
+            ],
+        ),
+        Dict(
+            :height => "200px",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Variability (kW)"),
+            :data => [
                 Dict(
                     :x => timestamps(originalVariability),
                     :y => get_values(originalVariability),
                     :type => "interval",
                     :name => "Original Variability",
-                    :yAxis => "right",
+                    :line => Dict(:dash => :dash),
                 ),
                 Dict(
                     :x => timestamps(smoothedVariability),
                     :y => get_values(smoothedVariability),
                     :type => "interval",
                     :name => "Smoothed Variability",
-                    :yAxis => "right",
                 ),
-            ],
-        ),
+            ]
+        )
     ]
 end
