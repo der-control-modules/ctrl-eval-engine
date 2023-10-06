@@ -124,7 +124,7 @@ use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage
     [
         Dict(
             :title => "Energy Arbitrage",
-            :height => "300px",
+            :height => "350px",
             :yAxisLeft => Dict(:title => "Power (kW)"),
             :yAxisRight => Dict(:title => raw"Price ($/kWh)"),
             :data => [
@@ -145,7 +145,7 @@ use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucEA::EnergyArbitrage
             ],
         ),
         Dict(
-            :height => "200px",
+            :height => "300px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => raw"Cumulative Net Income ($)"),
             :data => [

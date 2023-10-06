@@ -71,7 +71,7 @@ function use_case_charts(
     [
         Dict(
             :title => "Generation Following Performance",
-            :height => "300px",
+            :height => "350px",
             :yAxisLeft => Dict(:title => "Power (kW)"),
             :data => [
                 Dict(
@@ -103,7 +103,7 @@ function use_case_charts(
             ],
         ),
         Dict(
-            :height => "200px",
+            :height => "300px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => "Error (%)", :tickformat => ",.0%"),
             :data => [

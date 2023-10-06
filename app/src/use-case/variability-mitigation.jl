@@ -59,7 +59,7 @@ calculate_metrics(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMiti
     [
         Dict(:sectionTitle => "Variability Mitigation"),
         Dict(:label => "Mitigated Variability", :value => "$(mitigatedVariabilityPct)%"),
-        Dict(:label => "SOC Deviation", :value => "0%"), # TODO: calculate SOC deviation
+        # Dict(:label => "SOC Deviation", :value => "0%"), # TODO: calculate SOC deviation
     ]
 end
 
@@ -74,7 +74,7 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitiga
     return [
         Dict(
             :title => "Power Smoothing",
-            :height => "300px",
+            :height => "350px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => "Power (kW)"),
             :data => [
@@ -94,7 +94,7 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitiga
             ],
         ),
         Dict(
-            :height => "200px",
+            :height => "300px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => "Variability (kW)"),
             :data => [
