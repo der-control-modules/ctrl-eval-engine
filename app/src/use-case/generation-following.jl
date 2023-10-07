@@ -49,14 +49,19 @@ GenerationFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = GenerationF
 )
 
 function calculate_metrics(
-    ::ScheduleHistory,
+    sh::ScheduleHistory,
     operation::OperationHistory,
-    ucLF::GenerationFollowing,
+    ucGF::GenerationFollowing,
 )
+    tsNetGen = ucGF.realtimePower + power(operation)
+    tsError = tsNetGen - (ucGF.forecastPower + power(sh))
     [
         Dict(:sectionTitle => "Generation Following"),
-        Dict(:label => "RMSE", :value => 0),
-        Dict(:label => "Maximum Deviation", :value => 0),
+        Dict(:label => "RMSE", :value => "$(round(sqrt(mean(tsError^2)), sigdigits=2)) kW"),
+        Dict(
+            :label => "Maximum Deviation",
+            :value => "$(round(maximum(abs.(get_values(tsError))), sigdigits=2)) kW",
+        ),
     ]
 end
 

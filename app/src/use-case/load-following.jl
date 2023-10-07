@@ -65,12 +65,12 @@ LoadFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
 )
 
 function calculate_metrics(
-    ::ScheduleHistory,
+    sh::ScheduleHistory,
     operation::OperationHistory,
     ucLF::LoadFollowing,
 )
     tsNetLoad = ucLF.realtimeLoadPower - power(operation)
-    tsError = tsNetLoad - ucLF.forecastLoadPower
+    tsError = tsNetLoad - (ucLF.forecastLoadPower - power(sh))
     [
         Dict(:sectionTitle => "Load Following"),
         Dict(:label => "RMSE", :value => "$(round(sqrt(mean(tsError^2)), sigdigits=2)) kW"),
