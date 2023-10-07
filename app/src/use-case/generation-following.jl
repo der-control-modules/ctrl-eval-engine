@@ -12,36 +12,36 @@ Construct a `GenerationFollowing` object from `input` dictionary or array
 """
 GenerationFollowing(input::Dict) = GenerationFollowing(
     FixedIntervalTimeSeries(
-        DateTime(input["forecastGenProfile"][1]["DateTime"]),
-        DateTime(input["forecastGenProfile"][2]["DateTime"]) -
-        DateTime(input["forecastGenProfile"][1]["DateTime"]),
-        [float(row["Power"]) for row in input["forecastGenProfile"]],
+        DateTime(input["forecastGenProfile"]["DateTime"][1]),
+        DateTime(input["forecastGenProfile"]["DateTime"][2]) -
+        DateTime(input["forecastGenProfile"]["DateTime"][1]),
+        float.(input["forecastGenProfile"]["Power"]),
     ),
     FixedIntervalTimeSeries(
-        DateTime(input["realTimeGenProfile"][1]["DateTime"]),
-        DateTime(input["realTimeGenProfile"][2]["DateTime"]) -
-        DateTime(input["realTimeGenProfile"][1]["DateTime"]),
-        [float(row["value"]) for row in input["realTimeGenProfile"]],
+        DateTime(input["realTimeGenProfile"]["DateTime"][1]),
+        DateTime(input["realTimeGenProfile"]["DateTime"][2]) -
+        DateTime(input["realTimeGenProfile"]["DateTime"][1]),
+        float.(input["realTimeGenProfile"]["Power"]),
     ),
 )
 
 GenerationFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = GenerationFollowing(
     extract(
         FixedIntervalTimeSeries(
-            DateTime(input["forecastGenProfile"][1]["DateTime"]),
-            DateTime(input["forecastGenProfile"][2]["DateTime"]) -
-            DateTime(input["forecastGenProfile"][1]["DateTime"]),
-            [float(row["Power"]) for row in input["forecastGenProfile"]],
+            DateTime(input["forecastGenProfile"]["DateTime"][1]),
+            DateTime(input["forecastGenProfile"]["DateTime"][2]) -
+            DateTime(input["forecastGenProfile"]["DateTime"][1]),
+            float.(input["forecastGenProfile"]["Power"]),
         ),
         tStart,
         tEnd,
     ),
     extract(
         FixedIntervalTimeSeries(
-            DateTime(input["realTimeGenProfile"][1]["DateTime"]),
-            DateTime(input["realTimeGenProfile"][2]["DateTime"]) -
-            DateTime(input["realTimeGenProfile"][1]["DateTime"]),
-            [float(row["value"]) for row in input["realTimeGenProfile"]],
+            DateTime(input["realTimeGenProfile"]["DateTime"][1]),
+            DateTime(input["realTimeGenProfile"]["DateTime"][2]) -
+            DateTime(input["realTimeGenProfile"]["DateTime"][1]),
+            float.(input["realTimeGenProfile"]["Power"]),
         ),
         tStart,
         tEnd,
