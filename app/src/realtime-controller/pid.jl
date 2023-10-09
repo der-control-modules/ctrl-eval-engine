@@ -28,10 +28,19 @@ function control(
     scheduled_bess_power = average_power(schedulePeriod)
     actual_bess_power = isempty(spProgress.value) ? 0.0 : last(spProgress.value)
     idxloadFollowing = findfirst(uc -> uc isa LoadFollowing, useCases)
-    if idxloadFollowing !== nothing
-        lf = useCases[idxloadFollowing]
-        expected_load, _, _ = CtrlEvalEngine.get_period(lf.forecastLoadPower, t)
-        actual_load, _, _ = CtrlEvalEngine.get_period(lf.realtimeLoadPower, t)
+    idxgenFollowing = findfirst(uc -> uc isa GenerationFollowing, useCases)
+    if idxloadFollowing !== nothing && idxgenFollowing !== nothing
+        error("Disallowed set of UseCases: Only one of \"LoadFollowing\" and \"GenerationFollowing\" may be used")
+    elseif idxloadFollowing !== nothing || idxgenFollowing !== nothing
+        if idxloadFollowing !== nothing
+            lf = useCases[idxloadFollowing]
+            expected_load, _, _ = CtrlEvalEngine.get_period(lf.forecastLoadPower, t)
+            actual_load, _, _ = CtrlEvalEngine.get_period(lf.realtimeLoadPower, t)
+        else
+            gf = useCases[idxgenFollowing]
+            expected_load, _, _ = CtrlEvalEngine.get_period(gf.forecastPower, t)
+            actual_load, _, _ = CtrlEvalEngine.get_period(gf.realtimePower, t)
+        end
         set_point = scheduled_bess_power - expected_load
         process_variable = actual_bess_power - actual_load
         control_signal = controller.pid(set_point, process_variable)

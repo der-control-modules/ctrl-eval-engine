@@ -72,11 +72,7 @@ function get_ess(input::Dict)
         elseif input["batteryType"] ∈ ("mock", "vanadium-flow")
             MockSimulator(MockES_Specs(powerCapKw, energyCapKwh, ηRT), MockES_States(0.5))
         else
-            throw(
-                InvalidInput(
-                    string("Unsupported ESS type - ", input["batteryType"]),
-                ),
-            )
+            throw(InvalidInput(string("Unsupported ESS type - ", input["batteryType"])))
         end
         return ess
     catch e
@@ -89,25 +85,32 @@ function get_ess(input::Dict)
 end
 
 """
-    operate!(ess, powerKw, duration) -> actualPowerKw
+    operate!(ess, powerKw, duration, ambientTemperatureDegreeC) -> actualPowerKw
 
-Operate `ess` with `powerKw` for `duration`
+Operate `ess` with `powerKw` for `duration` while ambient temperature is `ambientTemperatureDegreeC`
 and returns the actual charging/discharging power considering operational constraints.
 """
-function operate!(ess::EnergyStorageSystem, powerKw::Real, duration::Dates.Period = Hour(1))
+function operate!(
+    ess::EnergyStorageSystem,
+    powerKw::Real,
+    duration::Dates.Period = Hour(1),
+    ambientTemperatureDegreeC::Real = 20,
+)
     durationHour = /(promote(duration, Hour(1))...)
 
-    if powerKw > p_max(ess, durationHour)
+    if powerKw > p_max(ess, durationHour, ambientTemperatureDegreeC)
         @warn "Operation attempt exceeds power upper bound. Falling back to bound." maxlog =
-            10 powerKw upper_bound = p_max(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
-        powerKw = p_max(ess, durationHour)
-    elseif powerKw < p_min(ess, durationHour)
+            10 powerKw upper_bound = p_max(ess, durationHour, ambientTemperatureDegreeC) SOC =
+            SOC(ess) SOH = SOH(ess) ambientTemperatureDegreeC
+        powerKw = p_max(ess, durationHour, ambientTemperatureDegreeC)
+    elseif powerKw < p_min(ess, durationHour, ambientTemperatureDegreeC)
         @warn "Operation attempt exceeds power lower bound. Falling back to bound." maxlog =
-            10 powerKw lower_bound = p_min(ess, durationHour) SOC = SOC(ess) SOH = SOH(ess)
-        powerKw = p_min(ess, durationHour)
+            10 powerKw lower_bound = p_min(ess, durationHour, ambientTemperatureDegreeC) SOC =
+            SOC(ess) SOH = SOH(ess) ambientTemperatureDegreeC
+        powerKw = p_min(ess, durationHour, ambientTemperatureDegreeC)
     end
 
-    _operate!(ess, powerKw, durationHour)
+    _operate!(ess, powerKw, durationHour, ambientTemperatureDegreeC)
     return powerKw
 end
 
@@ -119,25 +122,33 @@ Calculate the state of health (SOH) of an ESS.
 SOH(ess::EnergyStorageSystem) = 1
 
 """
-    p_max(ess::EnergyStorageSystem, duration::Dates.Period)
+    p_max(ess::EnergyStorageSystem, duration::Dates.Period, ambientTemperatureDegreeC::Real)
 
 Calculate the maximum power output (positive means discharging, negative means charging)
 of `ess` lasting for a time period of `duration`.
 """
-function p_max(ess::EnergyStorageSystem, duration::Dates.Period)
+function p_max(
+    ess::EnergyStorageSystem,
+    duration::Dates.Period,
+    ambientTemperatureDegreeC::Real = 20,
+)
     durationHour = /(promote(duration, Hour(1))...)
-    p_max(ess, durationHour)
+    p_max(ess, durationHour, ambientTemperatureDegreeC)
 end
 
 """
-    p_min(ess::EnergyStorageSystem, duration::Dates.Period)
+    p_min(ess::EnergyStorageSystem, duration::Dates.Period, ambientTemperatureDegreeC::Real)
 
 Calculate the minimum power output (negative means charging, positive means discharging)
 of `ess` lasting for a time period of `duration`.
 """
-function p_min(ess::EnergyStorageSystem, duration::Dates.Period)
+function p_min(
+    ess::EnergyStorageSystem,
+    duration::Dates.Period,
+    ambientTemperatureDegreeC::Real = 20,
+)
     durationHour = /(promote(duration, Hour(1))...)
-    p_min(ess, durationHour)
+    p_min(ess, durationHour, ambientTemperatureDegreeC)
 end
 
 end

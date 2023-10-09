@@ -39,7 +39,7 @@ Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = begin
         DateTime(input["agcSignal"]["DateTime"][1]),
         float.(input["agcSignal"]["Dispatch_pu"]),
     )
-    @debug "Constructing Regulation object" inputAgc=input["agcSignal"]
+    @debug "Constructing Regulation object" inputAgc = input["agcSignal"]
     Regulation(
         if get(input["agcSignal"], "repeated", false)
             RepeatedTimeSeries(agcCore, tStart, tEnd)
@@ -100,25 +100,31 @@ function regulation_history(sh::ScheduleHistory, ucReg::Regulation)
 end
 
 calculate_net_benefit(progress::Progress, ucReg::Regulation) = begin
-    @debug "Calculating Regulation benefit" schedule=progress.schedule regHistory=regulation_history(progress.schedule, ucReg) regPriceLen=length(ucReg.price)
+    @debug "Calculating Regulation benefit" schedule = progress.schedule regHistory =
+        regulation_history(progress.schedule, ucReg) regPriceLen = length(ucReg.price)
     regulation_income(regulation_history(progress.schedule, ucReg), ucReg)
 end
 
-function calculate_metrics(sh::ScheduleHistory, ::OperationHistory, ucReg::Regulation)
+function calculate_metrics(sh::ScheduleHistory, op::OperationHistory, ucReg::Regulation)
     regIncome = regulation_income(regulation_history(sh, ucReg), ucReg)
+    tsError =
+        ucReg.AGCSignalPu * VariableIntervalTimeSeries(sh.t, sh.regCapKw) -
+        (power(op) - power(sh))
+    rmse = round(sqrt(mean(tsError^2)); sigdigits = 2)
     return [
         Dict(:sectionTitle => "Frequency Regulation"),
         Dict(:label => "Revenue", :value => regIncome, :type => "currency"),
-        Dict(:label => "AGC Signal Following RMSE (ex.)", :value => 1.34e-3),
+        Dict(:label => "AGC Signal Following RMSE", :value => "$rmse kW"),
     ]
 end
 
 function use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucReg::Regulation)
     scaledAgcSignal = ucReg.AGCSignalPu * VariableIntervalTimeSeries(sh.t, sh.regCapKw)
+    actualRegPower = power(op) - power(sh)
     [
         Dict(
             :title => "Frequency Regulation",
-            :xAxis => Dict(:title => "Time"),
+            :height => "300px",
             :yAxisLeft => Dict(:title => "Power (kW)"),
             :yAxisRight => Dict(:title => raw"Price ($/kWh)"),
             :data => [
@@ -129,18 +135,6 @@ function use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucReg::Regul
                     :name => "Scheduled Capacity",
                 ),
                 Dict(
-                    :x => timestamps(scaledAgcSignal),
-                    :y => get_values(scaledAgcSignal),
-                    :type => "interval",
-                    :name => "AGC Signal",
-                ),
-                Dict(
-                    :x => op.t,
-                    :y => op.powerKw,
-                    :type => "interval",
-                    :name => "Actual Power",
-                ),
-                Dict(
                     :x => timestamps(ucReg.price),
                     :y => map(
                         (pricePoint::RegulationPricePoint) -> pricePoint.capacityPrice,
@@ -149,6 +143,36 @@ function use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucReg::Regul
                     :type => "interval",
                     :name => "Regulation Capacity Price",
                     :yAxis => "right",
+                ),
+                Dict(
+                    :x => timestamps(ucReg.price),
+                    :y => map(
+                        (pricePoint::RegulationPricePoint) -> pricePoint.servicePrice,
+                        get_values(ucReg.price),
+                    ),
+                    :type => "interval",
+                    :name => "Mileage Price",
+                    :yAxis => "right",
+                ),
+            ],
+        ),
+        Dict(
+            :height => "300px",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Power (kW)"),
+            :data => [
+                Dict(
+                    :x => timestamps(scaledAgcSignal),
+                    :y => get_values(scaledAgcSignal),
+                    :type => "interval",
+                    :line => Dict(:dash => :dot),
+                    :name => "AGC Signal",
+                ),
+                Dict(
+                    :x => timestamps(actualRegPower),
+                    :y => get_values(actualRegPower),
+                    :type => "interval",
+                    :name => "Actual Power",
                 ),
             ],
         ),

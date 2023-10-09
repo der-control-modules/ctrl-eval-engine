@@ -45,10 +45,9 @@ moving_std(ts::TimeSeries, windowLength::Dates.TimePeriod, samplingRate::Dates.T
         return FixedIntervalTimeSeries(tStart, samplingRate, v)
     end
 
-calculate_metrics(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
+calculate_metrics(sh::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Calculating metrics for Power Smoothing"
-    essPower = power(op)
-    netPowerSmooth = essPower + ucVM.pvGenProfile
+    netPowerSmooth = power(op) - power(sh) + ucVM.pvGenProfile
     originalMaxVariability =
         maximum(moving_std(ucVM.pvGenProfile, Minute(10), ucVM.pvGenProfile.resolution))
     smoothedMaxVariability =
@@ -57,15 +56,15 @@ calculate_metrics(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMiti
         (originalMaxVariability - smoothedMaxVariability) / originalMaxVariability * 100
 
     [
-        Dict(:sectionTitle => "Variability Mitigation"),
-        Dict(:label => "Mitigated Variability", :value => "$(mitigatedVariabilityPct)%"),
-        Dict(:label => "SOC Deviation", :value => "0%"), # TODO: calculate SOC deviation
+        Dict(:sectionTitle => "Power Smoothing"),
+        Dict(:label => "Variability Reduction", :value => "$(mitigatedVariabilityPct)%"),
+        # Dict(:label => "SOC Deviation", :value => "0%"), # TODO: calculate SOC deviation
     ]
 end
 
-use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
+use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Generating time series charts for Power Smoothing"
-    netPowerSmooth = power(op) + ucVM.pvGenProfile
+    netPowerSmooth = power(op) - power(sh) + ucVM.pvGenProfile
     originalVariability =
         moving_std(ucVM.pvGenProfile, Minute(10), ucVM.pvGenProfile.resolution)
     smoothedVariability =
@@ -74,39 +73,44 @@ use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitiga
     return [
         Dict(
             :title => "Power Smoothing",
+            :height => "350px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => "Power (kW)"),
-            :yAxisRight => Dict(:title => "Variability (kW)"),
             :data => [
                 Dict(
                     :x => timestamps(ucVM.pvGenProfile),
                     :y => get_values(ucVM.pvGenProfile),
                     :type => "interval",
                     :name => "Original Power",
-                    :yAxis => "left",
+                    :line => Dict(:dash => :dash),
                 ),
                 Dict(
                     :x => timestamps(netPowerSmooth),
                     :y => get_values(netPowerSmooth),
                     :type => "interval",
                     :name => "Smoothed Power",
-                    :yAxis => "left",
                 ),
+            ],
+        ),
+        Dict(
+            :height => "300px",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Variability (kW)"),
+            :data => [
                 Dict(
                     :x => timestamps(originalVariability),
                     :y => get_values(originalVariability),
                     :type => "interval",
                     :name => "Original Variability",
-                    :yAxis => "right",
+                    :line => Dict(:dash => :dash),
                 ),
                 Dict(
                     :x => timestamps(smoothedVariability),
                     :y => get_values(smoothedVariability),
                     :type => "interval",
                     :name => "Smoothed Variability",
-                    :yAxis => "right",
                 ),
-            ],
-        ),
+            ]
+        )
     ]
 end

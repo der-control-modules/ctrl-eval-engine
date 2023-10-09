@@ -24,7 +24,6 @@ using Test
 function run_controller(ess, controller, schedulePeriod, useCases, tStart)
     t = tStart
     opHist = CtrlEvalEngine.OperationHistory([t], Float64[], Float64[SOC(ess)], [SOH(ess)])
-    setting = CtrlEvalEngine.SimSetting(tStart, tStart + Hour(1))
     schedulePeriodEnd = min(end_time(schedulePeriod), tStart + Hour(1))
     spProgress = VariableIntervalTimeSeries([tStart], Float64[])
     while t < schedulePeriodEnd
@@ -44,6 +43,7 @@ function run_controller(ess, controller, schedulePeriod, useCases, tStart)
             end
         end
     end
+    return spProgress
 end
 
 ess =
@@ -56,156 +56,84 @@ tStart = floor(now(), Hour(1))
             tStart,
             Dates.Second(4),
             [
-                50.80047394,
-                50.80047394,
-                50.80047394,
-                50.80047394,
-                50.80047394,
-                50.80047394,
-                50.80047394,
-                50.80047394,
-                66.67162504,
-                66.67162504,
-                66.67162504,
-                66.67162504,
-                66.67162504,
-                66.67162504,
-                66.67162504,
-                66.67162504,
-                74.66479844,
-                74.66479844,
-                93.04748861,
-                93.04548861,
-                93.1176534,
-                93.1176534,
-                93.37098728,
-                93.37098728,
-                93.53773848,
-                93.53773848,
-                93.53773848,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -10.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
-                -90.19101319,
+                0.5080047394,
+                0.5080047394,
+                0.5080047394,
+                0.5080047394,
+                0.5080047394,
+                0.5080047394,
+                0.5080047394,
+                0.5080047394,
+                0.6667162504,
+                0.6667162504,
+                0.6667162504,
+                0.6667162504,
+                0.6667162504,
+                0.6667162504,
+                0.6667162504,
+                0.6667162504,
+                0.7466479844,
+                0.7466479844,
+                0.9304748861,
+                0.9304548861,
+                0.931176534,
+                0.931176534,
+                0.9337098728,
+                0.9337098728,
+                0.9353773848,
+                0.9353773848,
+                0.9353773848,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.1019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
+                -0.9019101319,
             ],
         ),
         FixedIntervalTimeSeries(tStart, Dates.Hour(1), [RegulationPricePoint(0.05, 0.42)]),
         50.0,
     )]
-    schedulePeriod = SchedulePeriod(65.2, tStart; duration = Second(268))
+    schedulePeriod = SchedulePeriod(65.2, tStart, Second(268), 0.0, 0.0, 500.0)
     controller = MesaController(
         [AGCMode(MesaModeParams(1), true, RampParams(100, 200, 100, 200), 40.0, 60.0)],
         Dates.Second(4),
     )
     run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    print(controller.wip.value)
-    # @test all(
-    #     controller.wip.value .== [
-    #         50.0,
-    #         100.0,
-    #         150.0,
-    #         200.0,
-    #         250.0,
-    #         254.00236970000003,
-    #         254.00236970000003,
-    #         254.00236970000003,
-    #         304.00236970000003,
-    #         333.3581252,
-    #         333.3581252,
-    #         333.3581252,
-    #         333.3581252,
-    #         333.3581252,
-    #         333.3581252,
-    #         333.3581252,
-    #         373.3239922,
-    #         373.3239922,
-    #         423.3239922,
-    #         465.22744305,
-    #         465.588267,
-    #         465.588267,
-    #         466.8549364,
-    #         466.8549364,
-    #         467.6886924,
-    #         467.6886924,
-    #         467.6886924,
-    #         367.6886924,
-    #         267.6886924,
-    #         167.68869239999998,
-    #         67.68869239999998,
-    #         -32.31130760000002,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -50.95506595,
-    #         -150.95506595,
-    #         -250.95506595,
-    #         -350.95506595,
-    #         -450.95506595,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #         -450.95506595000006,
-    #     ],
-    # )
 end
 
 @testset "Charge Discharge Storage MESA Mode" begin
@@ -425,14 +353,35 @@ end
 end
 
 @testset "PID Controller" begin
-    useCases = UseCase[LoadFollowing(
-        FixedIntervalTimeSeries(tStart, Minute(5), [10, 20, 1, 10]),
-        FixedIntervalTimeSeries(tStart, Minute(5), [15, 20, 1, 10]),
-    )]
     controller = PIDController(Second(1), 0.5, 0.5, 0.9)
-    schedulePeriod = SchedulePeriod(65.2, tStart, duration=Minute(15))
-    run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test true
+    schedulePeriod = SchedulePeriod(65.2, tStart; duration = Hour(1))
+    lf = LoadFollowing(
+        FixedIntervalTimeSeries(tStart, Minute(5), [10, 15, 1, 10]),
+        FixedIntervalTimeSeries(tStart, Minute(5), [15, 10, 1, 10]),
+    )
+    gf = GenerationFollowing(
+        FixedIntervalTimeSeries(tStart, Minute(5), [10, 15, 1, 10]),
+        FixedIntervalTimeSeries(tStart, Minute(5), [15, 10, 1, 10]),
+    )
+    useCases = UseCase[lf]
+    spProgress = run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test get_period(spProgress, tStart + Minute(4))[1] ≈ 70.2
+    @test get_period(spProgress, tStart + Minute(9))[1] ≈ 60.2
+    @test get_period(spProgress, tStart + Minute(14))[1] ≈ 65.2
+    useCases = UseCase[gf]
+    spProgress = run_controller(ess, controller, schedulePeriod, useCases, tStart)
+    @test get_period(spProgress, tStart + Minute(4))[1] ≈ 70.2
+    @test get_period(spProgress, tStart + Minute(9))[1] ≈ 60.2
+    @test get_period(spProgress, tStart + Minute(14))[1] ≈ 65.2
+    useCases = UseCase[lf, gf]
+    let err = nothing
+        try
+            run_controller(ess, controller, schedulePeriod, useCases, tStart)
+        catch err
+        end
+        @test err isa Exception
+        @test sprint(showerror, err) == "Disallowed set of UseCases: Only one of \"LoadFollowing\" and \"GenerationFollowing\" may be used"
+    end
 end
 
 @testset "AMAC" begin
@@ -444,7 +393,7 @@ end
                 [60.0, 110.6, 200.0, 90.0, 20.0, 92.4, 150.7],
             ),
             300,
-        ),
+        )
     ]
     controller = AMAController(
         Dict(

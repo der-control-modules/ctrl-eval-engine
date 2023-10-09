@@ -2,11 +2,6 @@
 using Dates
 using LinearAlgebra
 
-struct SimSetting
-    simStart::Dates.DateTime
-    simEnd::Dates.DateTime
-end
-
 abstract type TimeSeries{V} end
 
 get_values(ts::TimeSeries) = ts.value
@@ -61,7 +56,7 @@ function binary_operation(
     op,
     tStart::DateTime,
     tEnd::DateTime,
-) where {V1, V2}
+) where {V1,V2}
     t = [tStart]
 
     ts1Idx = get_index(ts1, tStart)
@@ -555,6 +550,17 @@ binary_operation(x::Number, ts::RepeatedTimeSeries, op) =
 Base.:minimum(ts::RepeatedTimeSeries) = minimum(get_values(ts))
 Base.:maximum(ts::RepeatedTimeSeries) = maximum(get_values(ts))
 
+
+struct SimSetting
+    simStart::Dates.DateTime
+    simEnd::Dates.DateTime
+    temperature::Union{Real,TimeSeries}
+end
+
+get_temperature(setting::SimSetting, t::Dates.DateTime) =
+    setting.temperature isa Real ? setting.temperature :
+    get_period(setting.temperature, t)[1]
+
 struct ScheduleHistory
     t::AbstractVector{Dates.DateTime}
     powerKw::AbstractVector{Float64}
@@ -564,6 +570,8 @@ end
 
 ScheduleHistory(t::AbstractVector{Dates.DateTime}, p::AbstractVector{Float64}) =
     ScheduleHistory(t, p, zeros(length(p) + 1), zeros(length(p)))
+
+power(sh::ScheduleHistory) = VariableIntervalTimeSeries(sh.t, sh.powerKw)
 
 """
     OperationHistory

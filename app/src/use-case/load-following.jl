@@ -65,12 +65,12 @@ LoadFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
 )
 
 function calculate_metrics(
-    ::ScheduleHistory,
+    sh::ScheduleHistory,
     operation::OperationHistory,
     ucLF::LoadFollowing,
 )
     tsNetLoad = ucLF.realtimeLoadPower - power(operation)
-    tsError = tsNetLoad - ucLF.forecastLoadPower
+    tsError = tsNetLoad - (ucLF.forecastLoadPower - power(sh))
     [
         Dict(:sectionTitle => "Load Following"),
         Dict(:label => "RMSE", :value => "$(round(sqrt(mean(tsError^2)), sigdigits=2)) kW"),
@@ -81,22 +81,29 @@ function calculate_metrics(
     ]
 end
 
-function use_case_charts(::ScheduleHistory, operation::OperationHistory, ucLF::LoadFollowing)
-    tsNetLoad = ucLF.realtimeLoadPower - power(operation)
-    tsRelError = (tsNetLoad - ucLF.forecastLoadPower) / ucLF.forecastLoadPower
+function use_case_charts(sh::ScheduleHistory, operation::OperationHistory, ucLF::LoadFollowing)
+    tsScheduledNetLoad = ucLF.forecastLoadPower - power(sh)
+    tsRtNetLoad = ucLF.realtimeLoadPower - power(operation)
+    tsRelError = (tsRtNetLoad - ucLF.forecastLoadPower) / ucLF.forecastLoadPower
     [
         Dict(
             :title => "Load Following Performance",
-            :height => "400px",
-            :xAxis => Dict(:title => "Time"),
+            :height => "350px",
             :yAxisLeft => Dict(:title => "Power (kW)"),
-            :yAxisRight => Dict(:title => "Error (%)", :tickformat => ",.0%"),
             :data => [
                 Dict(
                     :x => timestamps(ucLF.forecastLoadPower),
                     :y => get_values(ucLF.forecastLoadPower),
                     :type => "interval",
                     :name => "Forecast Load",
+                    :line => Dict(:dash => :dash),
+                ),
+                Dict(
+                    :x => timestamps(tsScheduledNetLoad),
+                    :y => get_values(tsScheduledNetLoad),
+                    :type => "interval",
+                    :name => "Scheduled Net Load",
+                    :line => Dict(:dash => :dash),
                 ),
                 Dict(
                     :x => timestamps(ucLF.realtimeLoadPower),
@@ -105,11 +112,19 @@ function use_case_charts(::ScheduleHistory, operation::OperationHistory, ucLF::L
                     :name => "Real-time Load",
                 ),
                 Dict(
-                    :x => timestamps(tsNetLoad),
-                    :y => get_values(tsNetLoad),
+                    :x => timestamps(tsRtNetLoad),
+                    :y => get_values(tsRtNetLoad),
                     :type => "interval",
                     :name => "Real-time Net Load",
                 ),
+            ],
+        ),
+        Dict(
+            :title => "Load Following Performance",
+            :height => "300px",
+            :xAxis => Dict(:title => "Time"),
+            :yAxisLeft => Dict(:title => "Error (%)", :tickformat => ",.0%"),
+            :data => [
                 Dict(
                     :x => timestamps(tsRelError),
                     :y => get_values(tsRelError),
