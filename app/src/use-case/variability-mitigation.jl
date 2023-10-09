@@ -47,8 +47,7 @@ moving_std(ts::TimeSeries, windowLength::Dates.TimePeriod, samplingRate::Dates.T
 
 calculate_metrics(sh::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Calculating metrics for Power Smoothing"
-    essPower = power(op) - power(sh)
-    netPowerSmooth = essPower + ucVM.pvGenProfile
+    netPowerSmooth = power(op) - power(sh) + ucVM.pvGenProfile
     originalMaxVariability =
         maximum(moving_std(ucVM.pvGenProfile, Minute(10), ucVM.pvGenProfile.resolution))
     smoothedMaxVariability =
@@ -58,14 +57,14 @@ calculate_metrics(sh::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMi
 
     [
         Dict(:sectionTitle => "Power Smoothing"),
-        Dict(:label => "Smoothed Variability", :value => "$(mitigatedVariabilityPct)%"),
+        Dict(:label => "Variability Reduction", :value => "$(mitigatedVariabilityPct)%"),
         # Dict(:label => "SOC Deviation", :value => "0%"), # TODO: calculate SOC deviation
     ]
 end
 
-use_case_charts(::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
+use_case_charts(sh::ScheduleHistory, op::OperationHistory, ucVM::VariabilityMitigation) = begin
     @debug "Generating time series charts for Power Smoothing"
-    netPowerSmooth = power(op) + ucVM.pvGenProfile
+    netPowerSmooth = power(op) - power(sh) + ucVM.pvGenProfile
     originalVariability =
         moving_std(ucVM.pvGenProfile, Minute(10), ucVM.pvGenProfile.resolution)
     smoothedVariability =
