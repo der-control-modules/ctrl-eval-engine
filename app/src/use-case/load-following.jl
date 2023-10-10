@@ -81,7 +81,11 @@ function calculate_metrics(
     ]
 end
 
-function use_case_charts(sh::ScheduleHistory, operation::OperationHistory, ucLF::LoadFollowing)
+function use_case_charts(
+    sh::ScheduleHistory,
+    operation::OperationHistory,
+    ucLF::LoadFollowing,
+)
     tsScheduledNetLoad = ucLF.forecastLoadPower - power(sh)
     tsRtNetLoad = ucLF.realtimeLoadPower - power(operation)
     tsRelError = (tsRtNetLoad - ucLF.forecastLoadPower) / ucLF.forecastLoadPower
@@ -120,7 +124,6 @@ function use_case_charts(sh::ScheduleHistory, operation::OperationHistory, ucLF:
             ],
         ),
         Dict(
-            :title => "Load Following Performance",
             :height => "300px",
             :xAxis => Dict(:title => "Time"),
             :yAxisLeft => Dict(:title => "Error (%)", :tickformat => ",.0%"),
@@ -130,7 +133,6 @@ function use_case_charts(sh::ScheduleHistory, operation::OperationHistory, ucLF:
                     :y => get_values(tsRelError),
                     :type => "interval",
                     :name => "Relative Error",
-                    :yAxis => "right",
                 ),
             ],
         ),
