@@ -38,8 +38,8 @@ function control(
             actual_load, _, _ = CtrlEvalEngine.get_period(lf.realtimeLoadPower, t)
         else
             gf = useCases[idxgenFollowing]
-            expected_load, _, _ = CtrlEvalEngine.get_period(gf.forecastPower, t)
-            actual_load, _, _ = CtrlEvalEngine.get_period(gf.realtimePower, t)
+            expected_load = -CtrlEvalEngine.get_period(gf.forecastPower, t)[1]
+            actual_load = -CtrlEvalEngine.get_period(gf.realtimePower, t)[1]
         end
         set_point = scheduled_bess_power - expected_load
         process_variable = actual_bess_power - actual_load
