@@ -370,8 +370,8 @@ end
     @test get_period(spProgress, tStart + Minute(14))[1] ≈ 65.2
     useCases = UseCase[gf]
     spProgress = run_controller(ess, controller, schedulePeriod, useCases, tStart)
-    @test get_period(spProgress, tStart + Minute(4))[1] ≈ 70.2
-    @test get_period(spProgress, tStart + Minute(9))[1] ≈ 60.2
+    @test get_period(spProgress, tStart + Minute(4))[1] ≈ 60.2
+    @test get_period(spProgress, tStart + Minute(9))[1] ≈ 70.2
     @test get_period(spProgress, tStart + Minute(14))[1] ≈ 65.2
     useCases = UseCase[lf, gf]
     let err = nothing
