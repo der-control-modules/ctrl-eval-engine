@@ -159,7 +159,8 @@ class AMACOperation:
             else:
                 self.acceleration_parameter = 0
 
-            delta_soc = float(soc_pct) - float(ref_soc_pct)
+            ref_soc_pct = max(self.bess_soc_min + 10, min(float(ref_soc_pct), self.bess_soc_max - 10))
+            delta_soc = float(soc_pct) - ref_soc_pct
             sign = 1 if delta_soc <= 0 else -1
             if abs(delta_soc) > 0:
                 self.asc_power = (
