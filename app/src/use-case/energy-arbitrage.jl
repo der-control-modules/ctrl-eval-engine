@@ -18,7 +18,7 @@ EnergyArbitrage(input::Dict) = EnergyArbitrage(
         DateTime(input["actualEnergyPrice"]["Time"][1]),
         float.(input["actualEnergyPrice"]["EnergyPrice_per_MWh"]) ./ 1000,
     ),
-    if get(input, "forecastPrice", nothing) === nothing
+    if get(input, "forecastEnergyPrice", nothing) === nothing
         nothing
     else
         FixedIntervalTimeSeries(
@@ -41,7 +41,7 @@ EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage
         tStart,
         tEnd,
     ),
-    if get(input, "forecastPrice", nothing) === nothing
+    if get(input, "forecastEnergyPrice", nothing) === nothing
         nothing
     else
         extract(
