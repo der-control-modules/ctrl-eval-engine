@@ -15,10 +15,10 @@ function dot_multiply_time_series(ts1::TimeSeries, ts2::TimeSeries)
 
     if tStart ≥ tEnd
         # The time ranges do not overlap
-        return zero(eltype(ts1.value))
+        return zero(eltype(ts1.value)) * zero(eltype(ts2.value))
     end
 
-    integrate(binary_operation(ts1, ts2, *))
+    integrate(binary_operation(ts1, ts2, *, tStart, tEnd))
 end
 
 """

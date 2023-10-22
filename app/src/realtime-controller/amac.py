@@ -142,7 +142,7 @@ class AMACOperation:
     def calculate_soc(self, soc_now, power):
         return (power / (self.bess_rated_kwh * self.data_interval) / 36) + soc_now
 
-    def run_model(self, soc_pct):
+    def run_model(self, soc_pct, ref_soc_pct):
         instantaneous_residual, horizon = 0, 0
         self.publish_calculations(self.load_total_data)
         # A window size derived from std.
@@ -159,13 +159,14 @@ class AMACOperation:
             else:
                 self.acceleration_parameter = 0
 
-            delta_soc = float(soc_pct) - float(self.bess_soc_ref)
+            ref_soc_pct = max(self.bess_soc_min + 10, min(float(ref_soc_pct), self.bess_soc_max - 10))
+            delta_soc = float(soc_pct) - ref_soc_pct
             sign = 1 if delta_soc <= 0 else -1
             if abs(delta_soc) > 0:
                 self.asc_power = (
                     sign
                     * self.bess_rated_kw
-                    * min(1, (abs(delta_soc) / (self.bess_soc_max - self.bess_soc_ref))
+                    * min(1, (abs(delta_soc) / (self.bess_soc_max - ref_soc_pct))
                     * self.acceleration_parameter)
                 )
             else:

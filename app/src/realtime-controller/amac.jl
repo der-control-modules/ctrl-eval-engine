@@ -66,7 +66,7 @@ function control(
     currentPvGen, _, tEndPvGenPeriod = get_period(ucVM.pvGenProfile, t)
     controlDuration = tEndPvGenPeriod - t
     amac.pyAmac.set_load_data(currentPvGen, t)
-    battery_power = amac.pyAmac.run_model(SOC(ess) * 100)
+    battery_power = amac.pyAmac.run_model(SOC(ess) * 100, sp.socEnd * 100)
     battery_power = min(
         max(p_min(ess, controlDuration), battery_power + sp.powerKw),
         p_max(ess, controlDuration),
