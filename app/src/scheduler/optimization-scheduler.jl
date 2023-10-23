@@ -98,8 +98,8 @@ function schedule(
         @constraint(m, engy_final_condition, eng[end] == eng[1])
     else
         @constraints(m, begin
-            eng[end] ≥ scheduler.endSoc[1]
-            eng[end] ≤ scheduler.endSoc[2]
+            eng[end] - e_min(ess) ≥ scheduler.endSoc[1] * (e_max(ess) - e_min(ess))
+            eng[end] - e_min(ess) ≤ scheduler.endSoc[2] * (e_max(ess) - e_min(ess))
         end)
     end
 
