@@ -47,10 +47,11 @@ function schedule(
     useCases::AbstractVector{<:UseCase},
     tStart::Dates.DateTime,
 )
+    @debug "Scheduling with OptScheduler" scheduler maxlog=1
     K = scheduler.optWindow
     scheduleLength =
         Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
-    rte = ηRT(ess)
+    eta = sqrt(ηRT(ess))
     resolutionHrs = /(promote(scheduler.resolution, Hour(1))...)
 
     m = Model(Clp.Optimizer)
@@ -78,14 +79,14 @@ function schedule(
             r_p .<= p_max(ess) .- pBatt
             r_p .+ spn .≤ p_max(ess) .- pBatt
             eng[1:end-1] .-
-            (scheduler.regulationReserve .* r_p .+ spn) ./ rte .* resolutionHrs .≥ 0
+            (scheduler.regulationReserve .* r_p .+ spn) ./ eta .* resolutionHrs .≥ e_min(ess)
             # regulation down
             r_n .<= -p_min(ess) .+ pBatt
-            eng[1:end-1] .+ (scheduler.regulationReserve .* r_n .* rte) .* resolutionHrs .<=
+            eng[1:end-1] .+ (scheduler.regulationReserve .* r_n .* eta) .* resolutionHrs .<=
             e_max(ess)
             # regulation
             # energy state dynamics
-            eng[2:end] .== eng[1:end-1] .- (p_p ./ rte .- p_n .* rte) .* resolutionHrs
+            eng[2:end] .== eng[1:end-1] .- (p_p ./ eta .- p_n .* eta) .* resolutionHrs
             # TODO: PV generation dump
             pvp .== 0
         end
@@ -98,8 +99,8 @@ function schedule(
         @constraint(m, engy_final_condition, eng[end] == eng[1])
     else
         @constraints(m, begin
-            eng[end] ≥ scheduler.endSoc[1]
-            eng[end] ≤ scheduler.endSoc[2]
+            eng[end] - e_min(ess) ≥ scheduler.endSoc[1] * (e_max(ess) - e_min(ess))
+            eng[end] - e_min(ess) ≤ scheduler.endSoc[2] * (e_max(ess) - e_min(ess))
         end)
     end
 
