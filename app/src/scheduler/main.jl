@@ -156,7 +156,7 @@ function get_scheduler(schedulerConfig::Dict)
             )
         elseif schedulerType == "idle"
             IdleScheduler(Hour(24))
-        elseif schedulerType == "schedulerRule"
+        elseif schedulerType == "rule"
             res = Minute(
                 round(
                     Int,
@@ -165,7 +165,7 @@ function get_scheduler(schedulerConfig::Dict)
                 ),
             )
             interval = Minute(
-                round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
+                round(Int, convert(Minute, Hour(1)).value * schedulerConfig["optWindowLenHrs"]),
             )
             RuleBasedScheduler(res, interval)
         elseif schedulerType == "TOU"
