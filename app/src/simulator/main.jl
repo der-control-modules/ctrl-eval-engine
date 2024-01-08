@@ -10,6 +10,7 @@ using Dates
 export EnergyStorageSystem,
     MockSimulator,
     LiIonBattery,
+    VRFBattery,
     operate!,
     get_ess,
     SOC,
@@ -26,6 +27,7 @@ abstract type EnergyStorageSystem end
 
 include("mock-simulator.jl")
 include("li-ion-battery.jl")
+include("vrf-battery.jl")
 
 """
     get_ess(input::Dict)
@@ -57,19 +59,23 @@ function get_ess(input::Dict)
 
         ηRT = float(input["roundtripEfficiency"])
 
-        cycleLife = float(input["cycleLife"])
 
         ess = if input["batteryType"] == "lfp-lithium-ion"
             LiIonBattery(
-                LFP_LiIonBatterySpecs(powerCapKw, energyCapKwh, ηRT, cycleLife),
+                LFP_LiIonBatterySpecs(powerCapKw, energyCapKwh, ηRT, float(input["cycleLife"])),
                 LiIonBatteryStates(0.5, 0),
             )
         elseif input["batteryType"] == "nmc-lithium-ion"
             LiIonBattery(
-                NMC_LiIonBatterySpecs(powerCapKw, energyCapKwh, ηRT, cycleLife),
+                NMC_LiIonBatterySpecs(powerCapKw, energyCapKwh, ηRT, float(input["cycleLife"])),
                 LiIonBatteryStates(0.5, 0),
             )
-        elseif input["batteryType"] ∈ ("mock", "vanadium-flow")
+        elseif input["batteryType"] == "vanadium-flow"
+            VRFBattery(
+                VRFBatterySpecs(powerCapKw, energyCapKwh),
+                VRFBatteryStates(0.5),
+            )
+        elseif input["batteryType"] == "mock"
             MockSimulator(MockES_Specs(powerCapKw, energyCapKwh, ηRT), MockES_States(0.5))
         else
             throw(InvalidInput(string("Unsupported ESS type - ", input["batteryType"])))
