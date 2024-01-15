@@ -17,12 +17,30 @@ struct DemandChargeReduction <: UseCase
     loadForecastKw15min::FixedIntervalTimeSeries
 end
 
-function DemandChargeReduction(config::Dict)
-    loadForecastKw15min = FixedIntervalTimeSeries(config["loadForecast15min"]["timestamp"][1], Minute(15), config["loadForecast15min"]["load_kW"])
+function DemandChargeReduction(
+    config::Dict,
+    simStart::Dates.DateTime,
+    simEnd::Dates.DateTime,
+)
+    loadForecastKw15min = extract(
+        FixedIntervalTimeSeries(
+            config["loadForecast15min"]["timestamp"][1],
+            Minute(15),
+            config["loadForecast15min"]["load_kW"],
+        ),
+        simStart,
+        simEnd,
+    )
     if config["rate"] isa Number
-        DemandChargeReduction(FlatDemandChargeRateStructure(config["rate"]), loadForecastKw15min)
+        DemandChargeReduction(
+            FlatDemandChargeRateStructure(config["rate"]),
+            loadForecastKw15min,
+        )
     elseif config["rate"] isa Vector
-        DemandChargeReduction(MonthlyDemandChargeRateStructure(config["rate"]), loadForecastKw15min)
+        DemandChargeReduction(
+            MonthlyDemandChargeRateStructure(config["rate"]),
+            loadForecastKw15min,
+        )
     end
 end
 
@@ -73,7 +91,10 @@ end
 demand_charge(ucDCR::DemandChargeReduction, extraPower::TimeSeries) =
     demand_charge(ucDCR.rateStructure, ucDCR.loadForecastKw15min - extraPower)
 
-function demand_charge_periods_rates(rateStructure::FlatDemandChargeRateStructure, netLoad::TimeSeries)
+function demand_charge_periods_rates(
+    rateStructure::FlatDemandChargeRateStructure,
+    netLoad::TimeSeries,
+)
     months = []
     rates = []
     monthStart = floor(start_time(netLoad), Minute(15))
@@ -97,7 +118,10 @@ function demand_charge_periods_rates(rateStructure::FlatDemandChargeRateStructur
     return months, rates
 end
 
-function demand_charge_periods_rates(rateStructure::MonthlyDemandChargeRateStructure, netLoad::TimeSeries)
+function demand_charge_periods_rates(
+    rateStructure::MonthlyDemandChargeRateStructure,
+    netLoad::TimeSeries,
+)
     months = []
     rates = []
     monthStart = floor(start_time(netLoad), Minute(15))

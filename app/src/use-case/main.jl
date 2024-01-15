@@ -21,7 +21,8 @@ export UseCase,
     PeakLimiting,
     GenerationFollowing,
     DemandChargeReduction,
-    demand_charge
+    demand_charge,
+    demand_charge_periods_rates
 
 abstract type UseCase end
 
@@ -50,6 +51,8 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
         GenerationFollowing(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Frequency Regulation"
         Regulation(config["data"], setting.simStart, setting.simEnd)
+    elseif name === "Demand Charge Reduction"
+        DemandChargeReduction(config["data"], setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
     end for (name, config) in inputDict
