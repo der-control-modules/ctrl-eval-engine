@@ -53,8 +53,8 @@ Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = begin
                 DateTime(input["regulationPrices"]["Time"][1]),
                 [
                     RegulationPricePoint(cap / 1000, mil / 1000) for (cap, mil) in zip(
-                        input["regulationPrices"]["CapacityPrice_per_MW"],
-                        input["regulationPrices"]["MileagePrice_per_MW"],
+                        input["regulationPrices"]["RegUp"],
+                        input["regulationPrices"]["RegDn"],
                     )
                 ],
             ),
