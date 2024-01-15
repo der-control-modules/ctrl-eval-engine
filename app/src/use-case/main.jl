@@ -19,7 +19,9 @@ export UseCase,
     LoadFollowing,
     VariabilityMitigation,
     PeakLimiting,
-    GenerationFollowing
+    GenerationFollowing,
+    DemandChargeReduction,
+    demand_charge
 
 abstract type UseCase end
 
@@ -35,6 +37,7 @@ include("variability-mitigation.jl")
 include("load-following.jl")
 include("peak-limiting.jl")
 include("generation-following.jl")
+include("demand-charge-reduction.jl")
 
 get_use_cases(inputDict::Dict, setting::SimSetting) = [
     if name === "Energy Arbitrage"
