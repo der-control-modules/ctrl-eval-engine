@@ -46,7 +46,7 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
     elseif name === "Generation Following"
         GenerationFollowing(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Frequency Regulation"
-        Regulation(config["data"], setting.simStart, setting.simEnd)
+        Regulation(config, setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
     end for (name, config) in inputDict
