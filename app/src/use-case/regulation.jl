@@ -74,7 +74,7 @@ Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = begin
             tStart,
             tEnd,
         ),
-        input["performanceFactor"],
+        input["data"]["performanceFactor"],
     )
 end
 
