@@ -62,6 +62,7 @@ function schedule(
         0 ≤ p_p[1:K] ≤ p_max(ess) * scheduler.powerLimitPu  # discharging power
         0 ≤ p_n[1:K] ≤ -p_min(ess) * scheduler.powerLimitPu  # charging power
         pBatt[1:K]   # power output of the battery
+        pOut[1:K]    # net power output to the grid
         r_p[1:K] ≥ 0  # regulation-up power
         r_n[1:K] ≥ 0   # regulation-down power
         r_c[1:K] ≥ 0  # regulation power
@@ -70,11 +71,15 @@ function schedule(
         pvp[1:K] ≥ 0  # PV power output
     end)
 
+    # Build expression of power output to grid
+    pOutExp = mapreduce(uc -> power_output(scheduler, uc, tStart), .+, useCases; init = pBatt .+ pvp)
+
     @constraints(
         m,
         begin
             eng[1] == energy_state(ess)
             pBatt .== p_p .- p_n
+            pOut .== pOutExp
             # regulation up
             r_p .<= p_max(ess) .- pBatt
             r_p .+ spn .≤ p_max(ess) .- pBatt
@@ -92,8 +97,6 @@ function schedule(
         end
     )
 
-    # Build expression of power output to grid
-    pOut = mapreduce(uc -> power_output(scheduler, uc, tStart), .+, useCases; init = pBatt .+ pvp)
 
     if isnothing(scheduler.endSoc)
         @constraint(m, engy_final_condition, eng[end] == eng[1])
@@ -224,9 +227,9 @@ function var_con_obj!(
 )
     p, r = demand_charge_periods_rates(
         ucDCR.rateStructure,
-        FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pOut]),
+        FixedIntervalTimeSeries(tStart, scheduler.resolution, .-m[:pOut]),
     )
     @variable(m, pPeak[1:length(p)] ≥ 0)
     @constraint(m, [iMonth = 1:length(p)], pPeak[iMonth] .≥ p[iMonth][1])
-    sum(pPeak[iMonth] * r[iMonth][1] for iMonth = 1:length(p))
+    -sum(pPeak[iMonth] * r[iMonth][1] for iMonth = 1:length(p))
 end

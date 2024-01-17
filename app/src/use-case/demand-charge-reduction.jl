@@ -24,9 +24,9 @@ function DemandChargeReduction(
 )
     loadForecastKw15min = extract(
         FixedIntervalTimeSeries(
-            config["loadForecast15min"]["timestamp"][1],
+            DateTime(config["loadForecast15min"]["timestamp"][1]),
             Minute(15),
-            config["loadForecast15min"]["load_kW"],
+            float.(config["loadForecast15min"]["load_kW"]),
         ),
         simStart,
         simEnd,
@@ -64,6 +64,7 @@ function demand_charge(rateStructure::FlatDemandChargeRateStructure, load::TimeS
         monthPeak = maximum(loadMonth15min)
         demandCharge += monthPeak * rateStructure.rate
     end
+    return demandCharge
 end
 
 function demand_charge(rateStructure::MonthlyDemandChargeRateStructure, load::TimeSeries)
@@ -86,6 +87,7 @@ function demand_charge(rateStructure::MonthlyDemandChargeRateStructure, load::Ti
         monthPeak = maximum(loadMonth15min)
         demandCharge += monthPeak * rateStructure.monthlyRates[month(monthStart)]
     end
+    return demandCharge
 end
 
 demand_charge(ucDCR::DemandChargeReduction, extraPower::TimeSeries) =
@@ -115,6 +117,7 @@ function demand_charge_periods_rates(
         push!(months, [get_values(loadMonth15min)])
         push!(rates, [rateStructure.rate])
     end
+    @debug "Exiting demand_charge_periods_rates" netLoad months rates
     return months, rates
 end
 
@@ -144,3 +147,54 @@ function demand_charge_periods_rates(
     end
     return months, rates
 end
+
+function calculate_metrics(
+    ::ScheduleHistory,
+    operation::OperationHistory,
+    ucDCR::DemandChargeReduction,
+)
+    @debug "Calculating metrics for Demand Charge Reduction"
+    return [
+        Dict(:sectionTitle => "Demand Charge Reduction"),
+        Dict(
+            :label => "Demand Charge w/o ESS",
+            :value => demand_charge(ucDCR.rateStructure, ucDCR.loadForecastKw15min),
+            :type => "currency",
+        ),
+        Dict(
+            :label => "Demand Charge w/ ESS",
+            :value => demand_charge(ucDCR, power(operation)),
+            :type => "currency",
+        ),
+    ]
+end
+
+use_case_charts(::ScheduleHistory, op::OperationHistory, ucDCR::DemandChargeReduction) =
+    begin
+        @debug "Generating time series charts for Demand Charge Reduction"
+
+        originalLoadTrace = Dict(
+            :x => timestamps(ucDCR.loadForecastKw15min),
+            :y => get_values(ucDCR.loadForecastKw15min),
+            :type => "interval",
+            :name => "Native Load",
+        )
+
+        netLoad = ucDCR.loadForecastKw15min - power(op)
+
+        netLoadTrace = Dict(
+            :x => timestamps(netLoad),
+            :y => get_values(netLoad),
+            :type => "interval",
+            :name => "Net Load",
+        )
+
+        [
+            Dict(
+                :title => "Demand Charge Reduction",
+                :height => "350px",
+                :yAxisLeft => Dict(:title => "Power (kW)"),
+                :data => [originalLoadTrace, netLoadTrace],
+            ),
+        ]
+    end
