@@ -47,7 +47,7 @@ function schedule(
     useCases::AbstractVector{<:UseCase},
     tStart::Dates.DateTime,
 )
-    @debug "Scheduling with OptScheduler" scheduler maxlog=1
+    @debug "Scheduling with OptScheduler" scheduler maxlog = 1
     K = scheduler.optWindow
     scheduleLength =
         Int(ceil(scheduler.interval, scheduler.resolution) / scheduler.resolution)
@@ -62,6 +62,7 @@ function schedule(
         0 ≤ p_p[1:K] ≤ p_max(ess) * scheduler.powerLimitPu  # discharging power
         0 ≤ p_n[1:K] ≤ -p_min(ess) * scheduler.powerLimitPu  # charging power
         pBatt[1:K]   # power output of the battery
+        pOut[1:K]    # net power output to the grid
         r_p[1:K] ≥ 0  # regulation-up power
         r_n[1:K] ≥ 0   # regulation-down power
         r_c[1:K] ≥ 0  # regulation power
@@ -70,11 +71,15 @@ function schedule(
         pvp[1:K] ≥ 0  # PV power output
     end)
 
+    # Build expression of power output to grid
+    pOutExp = mapreduce(uc -> power_output(scheduler, uc, tStart), .+, useCases; init = pBatt .+ pvp)
+
     @constraints(
         m,
         begin
             eng[1] == energy_state(ess)
             pBatt .== p_p .- p_n
+            pOut .== pOutExp
             # regulation up
             r_p .<= p_max(ess) .- pBatt
             r_p .+ spn .≤ p_max(ess) .- pBatt
@@ -90,16 +95,17 @@ function schedule(
         end
     )
 
-    # Build expression of power output to grid
-    pOut = mapreduce(uc -> power_output(uc, tStart), .+, useCases; init = pBatt .+ pvp)
 
     if isnothing(scheduler.endSoc)
         @constraint(m, engy_final_condition, eng[end] == eng[1])
     else
-        @constraints(m, begin
-            eng[end] - e_min(ess) ≥ scheduler.endSoc[1] * (e_max(ess) - e_min(ess))
-            eng[end] - e_min(ess) ≤ scheduler.endSoc[2] * (e_max(ess) - e_min(ess))
-        end)
+        @constraints(
+            m,
+            begin
+                eng[end] - e_min(ess) ≥ scheduler.endSoc[1] * (e_max(ess) - e_min(ess))
+                eng[end] - e_min(ess) ≤ scheduler.endSoc[2] * (e_max(ess) - e_min(ess))
+            end
+        )
     end
 
     # Minimum net load power
@@ -128,12 +134,11 @@ function schedule(
     #     @constraint(m, spn .== 0)
     # end
 
-    # Initialize objective function expression (to be maximized)
-    objective_exp = mapreduce(uc -> objective_term(m, uc, scheduler, tStart), +, useCases)
-
-    foreach(uc -> add_constraints!(m, uc), useCases)
-
+    # Add use-case-specific variables and constraints, and
+    # build objective function expression (to be maximized)
+    objective_exp = mapreduce(uc -> var_con_obj!(m, uc, scheduler, tStart), +, useCases)
     @objective(m, Max, objective_exp)
+
     optimize!(m)
     sol_p_p = JuMP.value.(p_p)
     sol_p_n = JuMP.value.(p_n)
@@ -154,27 +159,37 @@ function schedule(
         tStart,
         scheduler.resolution,
         (sol_eng[1:scheduleLength+1] .- e_min(ess)) ./ (e_max(ess) - e_min(ess)),
-        sol_r_c[1:scheduleLength]
+        sol_r_c[1:scheduleLength],
     )
     @debug "Schedule updated" currentSchedule
     return currentSchedule
 end
 
-objective_term(::JuMP.Model, ::UseCase, ::OptScheduler, ::Dates.DateTime) = 0
+var_con_obj!(::JuMP.Model, ::UseCase, ::OptScheduler, ::Dates.DateTime) = 0
 
-objective_term(
+power_output(::OptScheduler, ::UseCase, ::Dates.DateTime) = 0
+
+# Energy Arbitrage
+
+var_con_obj!(
     m::JuMP.Model,
     ucEA::EnergyArbitrage,
     scheduler::OptScheduler,
     tStart::Dates.DateTime,
 ) = FixedIntervalTimeSeries(tStart, scheduler.resolution, m[:pBatt]) ⋅ forecast_price(ucEA)
 
-function objective_term(
+# Regulation
+function var_con_obj!(
     m::JuMP.Model,
     ucReg::Regulation,
     scheduler::OptScheduler,
     tStart::Dates.DateTime,
 )
+    @constraints(m, begin
+        m[:r_c] .<= m[:r_p]
+        m[:r_c] .<= m[:r_n]
+    end)
+
     # regulation capacity and service performance
     regOp = FixedIntervalTimeSeries(
         tStart,
@@ -192,13 +207,27 @@ function objective_term(
     # )
 end
 
-function add_constraints!(::JuMP.Model, ::UseCase) end
+# Demand Charge Reduction
 
-function add_constraints!(m::JuMP.Model, ::Regulation)
-    @constraints(m, begin
-        m[:r_c] .<= m[:r_p]
-        m[:r_c] .<= m[:r_n]
-    end)
+power_output(sh::OptScheduler, ucDCR::DemandChargeReduction, tStart::Dates.DateTime) =
+    .-get_values(
+        mean(
+            ucDCR.loadForecastKw15min,
+            range(tStart; length = sh.optWindow + 1, step = sh.resolution),
+        ),
+    )
+
+function var_con_obj!(
+    m::JuMP.Model,
+    ucDCR::DemandChargeReduction,
+    scheduler::OptScheduler,
+    tStart::Dates.DateTime,
+)
+    p, r = demand_charge_periods_rates(
+        ucDCR.rateStructure,
+        FixedIntervalTimeSeries(tStart, scheduler.resolution, .-m[:pOut]),
+    )
+    @variable(m, pPeak[1:length(p)] ≥ 0)
+    @constraint(m, [iMonth = 1:length(p)], pPeak[iMonth] .≥ p[iMonth][1])
+    -sum(pPeak[iMonth] * r[iMonth][1] for iMonth = 1:length(p))
 end
-
-power_output(::UseCase, ::Dates.DateTime) = 0

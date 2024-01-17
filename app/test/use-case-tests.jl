@@ -181,4 +181,26 @@ using LinearAlgebra
         @test use_case_charts(outputProgress.schedule, outputProgress.operation, ucReg) isa
               AbstractVector
     end
+
+    @testset "Demand Charge Reduction" begin
+        ucDCR = DemandChargeReduction(
+            EnergyStorageUseCases.FlatDemandChargeRateStructure(10),
+            FixedIntervalTimeSeries(
+                DateTime(2023),
+                Minute(15),
+                collect(1:12)
+            )
+        )
+        @test demand_charge(ucDCR, FixedIntervalTimeSeries(DateTime(2023), Hour(1), zeros(3))) == 120
+
+        ucDCR = DemandChargeReduction(
+            EnergyStorageUseCases.FlatDemandChargeRateStructure(10),
+            FixedIntervalTimeSeries(
+                DateTime(2023),
+                Minute(5),
+                collect(1:24)
+            )
+        )
+        @test demand_charge(ucDCR, FixedIntervalTimeSeries(DateTime(2023), Hour(1), zeros(2))) == 230
+    end
 end
