@@ -33,35 +33,48 @@ struct Regulation <: UseCase
 end
 
 Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = begin
+    agcSignalDict = input["data"]["agcSignal"]
     agcCore = FixedIntervalTimeSeries(
-        DateTime(input["agcSignal"]["DateTime"][1]),
-        DateTime(input["agcSignal"]["DateTime"][2]) -
-        DateTime(input["agcSignal"]["DateTime"][1]),
-        float.(input["agcSignal"]["Dispatch_pu"]),
+        DateTime(agcSignalDict["DateTime"][1]),
+        DateTime(agcSignalDict["DateTime"][2]) -
+        DateTime(agcSignalDict["DateTime"][1]),
+        float.(agcSignalDict["Dispatch_pu"]),
     )
-    @debug "Constructing Regulation object" inputAgc = input["agcSignal"]
+    @debug "Constructing Regulation object" agcSignalDict
+    regPriceDict = input["data"]["regulationPrices"]
+    regPriceCapacity = if input["inputs"]["regulationPrices"]["optionSelected"] == "Wholesale Market"
+        regPriceDict["RegUp"]
+    else
+        regPriceDict["CapacityPrice_per_MW"]
+    end 
+
+    regPriceMileage = if input["inputs"]["regulationPrices"]["optionSelected"] == "Wholesale Market"
+        zeros(length(regPriceCapacity))
+    else
+        regPriceDict["MileagePrice_per_MW"]
+    end
     Regulation(
-        if get(input["agcSignal"], "repeated", false)
+        if get(agcSignalDict, "repeated", false)
             RepeatedTimeSeries(agcCore, tStart, tEnd)
         else
             extract(agcCore, tStart, tEnd)
         end,
         extract(
             FixedIntervalTimeSeries(
-                DateTime(input["regulationPrices"]["Time"][1]),
-                DateTime(input["regulationPrices"]["Time"][2]) -
-                DateTime(input["regulationPrices"]["Time"][1]),
+                DateTime(regPriceDict["Time"][1]),
+                DateTime(regPriceDict["Time"][2]) -
+                DateTime(regPriceDict["Time"][1]),
                 [
                     RegulationPricePoint(cap / 1000, mil / 1000) for (cap, mil) in zip(
-                        input["regulationPrices"]["CapacityPrice_per_MW"],
-                        input["regulationPrices"]["MileagePrice_per_MW"],
+                        regPriceCapacity,
+                        regPriceMileage,
                     )
                 ],
             ),
             tStart,
             tEnd,
         ),
-        input["performanceFactor"],
+        input["data"]["performanceFactor"],
     )
 end
 

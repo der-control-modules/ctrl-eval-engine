@@ -50,7 +50,7 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
     elseif name === "Generation Following"
         GenerationFollowing(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Frequency Regulation"
-        Regulation(config["data"], setting.simStart, setting.simEnd)
+        Regulation(config, setting.simStart, setting.simEnd)
     elseif name === "Demand Charge Reduction"
         DemandChargeReduction(config["data"], setting.simStart, setting.simEnd)
     else
