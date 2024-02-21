@@ -89,7 +89,7 @@ function schedule(
             eng[1:end-1] .+ (scheduler.regulationReserve .* r_n .* eta) .* resolutionHrs .<= e_max(ess)
             # regulation
             # energy state dynamics
-            eng[2:end] .== eng[1:end-1] .- (p_p ./ eta .- p_n .* eta) .* resolutionHrs
+            eng[2:end] .== eng[1:end-1] .- (p_p ./ eta .- p_n .* eta .+ self_discharge_rate(ess) .* e_max(ess)) .* resolutionHrs
             # TODO: PV generation dump
             pvp .== 0
         end
