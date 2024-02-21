@@ -20,7 +20,8 @@ export EnergyStorageSystem,
     e_max,
     e_min,
     energy_state,
-    ηRT
+    ηRT,
+    self_discharge_rate
 using CtrlEvalEngine
 
 abstract type EnergyStorageSystem end
@@ -72,8 +73,8 @@ function get_ess(input::Dict)
             )
         elseif input["batteryType"] == "vanadium-flow"
             VRFBattery(
-                VRFBatterySpecs(powerCapKw, energyCapKwh),
-                VRFBatteryStates(0.5),
+                VRFBatterySpecs(powerCapKw, energyCapKwh, ηRT),
+                VRFBatteryStates(0.5 * energyCapKwh),
             )
         elseif input["batteryType"] == "mock"
             MockSimulator(MockES_Specs(powerCapKw, energyCapKwh, ηRT), MockES_States(0.5))
