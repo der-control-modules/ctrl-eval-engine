@@ -7,7 +7,6 @@ module EnergyStorageRTControl
 
 using CtrlEvalEngine
 using Dates
-using PyCall
 using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
@@ -46,7 +45,7 @@ include("passthrough.jl")
 include("pid.jl")
 include("amac.jl")
 include("rule-based.jl")
-include("mesa.jl")
+# include("mesa.jl")
 
 """
     get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
@@ -85,10 +84,6 @@ function get_rt_controller(
             rethrow()
         end
     end
-end
-
-function __init__()
-    @pyinclude(joinpath(@__DIR__, "amac.py"))
 end
 
 end

@@ -20,9 +20,12 @@ export evaluate_controller,
     get_period,
     extract,
     power,
-    InvalidInput
+    InvalidInput,
+    InitializationFailure
 
 include("types.jl")
+
+cleanup(::Any) = nothing
 
 function get_setting(inputDict::Dict)
     simStart = Dates.DateTime(inputDict["simStart"])
@@ -246,6 +249,8 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
     useCases = get_use_cases(inputDict["selectedUseCasesCharacteristics"], setting)
     scheduler = EnergyStorageScheduling.get_scheduler(
         inputDict["selectedControlTypeCharacteristics"]["scheduler"],
+        ess,
+        useCases,
     )
     rtController = EnergyStorageRTControl.get_rt_controller(
         inputDict["selectedControlTypeCharacteristics"]["rtController"],
@@ -317,6 +322,9 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
             end
         end
     end
+
+    cleanup(scheduler)
+    cleanup(rtController)
 
     @debug "Generating output..."
     return generate_output_dict(outputProgress, useCases, ess)

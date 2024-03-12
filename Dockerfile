@@ -1,6 +1,6 @@
-FROM public.ecr.aws/y1q8u1k0/base:latest
+FROM public.ecr.aws/y1q8u1k0/base:sep
 
 COPY .aws/config /root/.aws/config
 
-ADD app /app
-RUN julia --project=. -e "using Pkg; Pkg.Registry.update(); Pkg.instantiate(); Pkg.precompile();"
+COPY app /app
+RUN julia --project=. -e "using Pkg; Pkg.precompile();"

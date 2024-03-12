@@ -6,7 +6,6 @@ The `EnergyStorageScheduling` provides type and functions related to the schedul
 module EnergyStorageScheduling
 
 using Dates
-using PyCall
 using ..CtrlEvalEngine
 
 export get_scheduler,
@@ -84,7 +83,6 @@ using ..CtrlEvalEngine.EnergyStorageUseCases
 
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
-include("mock-python-scheduler.jl")
 include("manual-scheduler.jl")
 include("RL-scheduler.jl")
 include("rule-based.jl")
@@ -102,7 +100,11 @@ schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.Da
 
 Create a scheduler of appropriate type from the input dictionary
 """
-function get_scheduler(schedulerConfig::Dict)
+function get_scheduler(
+    schedulerConfig::Dict,
+    ess::EnergyStorageSystem,
+    useCases::AbstractArray{<:UseCase},
+)
     try
         schedulerType = schedulerConfig["type"]
         scheduler = if schedulerType == "mock"
@@ -150,10 +152,7 @@ function get_scheduler(schedulerConfig::Dict)
                     get(schedulerConfig, "scheduleResolutionHrs", 1),
                 ),
             )
-            RLScheduler(
-                res,
-                schedulerConfig,
-            )
+            RLScheduler(res, schedulerConfig, ess)
         elseif schedulerType == "idle"
             IdleScheduler(Hour(24))
         elseif schedulerType == "rule"
@@ -165,7 +164,10 @@ function get_scheduler(schedulerConfig::Dict)
                 ),
             )
             interval = Minute(
-                round(Int, convert(Minute, Hour(1)).value * schedulerConfig["optWindowLenHrs"]),
+                round(
+                    Int,
+                    convert(Minute, Hour(1)).value * schedulerConfig["optWindowLenHrs"],
+                ),
             )
             RuleBasedScheduler(res, interval)
         elseif schedulerType == "TOU"
@@ -191,10 +193,6 @@ function get_scheduler(schedulerConfig::Dict)
             rethrow()
         end
     end
-end
-
-function __init__()
-    @pyinclude(joinpath(@__DIR__, "RL.py"))
 end
 
 end

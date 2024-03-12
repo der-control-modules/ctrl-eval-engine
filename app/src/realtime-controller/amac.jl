@@ -1,9 +1,11 @@
 
-using PyCall
-using CtrlEvalEngine: start_time, end_time
+using JSON
+using ..CtrlEvalEngine: start_time, end_time
 
 struct AMAController <: RTController
-    pyAmac::Any
+    chIn::Channel{String}
+    chOut::Channel{String}
+    task::Any
     passive::Bool
 end
 
@@ -12,25 +14,59 @@ function AMAController(
     ess::EnergyStorageSystem,
     useCases::AbstractArray{<:UseCase},
 )
-    pyAmac = py"AMACOperation"(controlConfig)
-    pyAmac.set_bess_data(
-        p_max(ess),
-        e_max(ess) - e_min(ess),
-        ηRT(ess),
-        100,
-        e_min(ess) / e_max(ess) * 100,
-    )
+    chIn = Channel{String}()
+    chOut = Channel{String}()
+    task = nothing
 
     idxVM = findfirst(uc -> uc isa VariabilityMitigation, useCases)
     if !isnothing(idxVM)
         ucVM::VariabilityMitigation = useCases[idxVM]
         # TODO: update data interval based on input profile
         # pyAmac.set_data_interval(ucVM.pvGenProfile.resolution / Second(1))
-        pyAmac.set_PV_rated_power(ucVM.ratedPowerKw)
+
+        # simple websocket client
+        task = @async WebSockets.open("ws://localhost:6000") do ws
+            # we can iterate the websocket
+            # where each iteration yields a received message
+            # iteration finishes when the websocket is closed
+            for msg in chOut
+                # do stuff with msg
+                send(ws, msg)
+                put!(chIn, receive(ws))
+            end
+            close(chIn)
+        end
+
+        essParameters = Dict(
+            :rated_kw => p_max(ess),
+            :rated_kwh => e_max(ess) - e_min(ess),
+            :eta => ηRT(ess),
+            :soc_max => 100,
+            :soc_min => e_min(ess) / e_max(ess) * 100,
+        )
+
+        put!(
+            chOut,
+            JSON.json(
+                Dict(
+                    :type => "initialize",
+                    :payload => Dict(
+                        controlConfig...,
+                        :ess => essParameters,
+                        :maximum_pv_power => ucVM.ratedPowerKw,
+                    ),
+                ),
+            ),
+        )
+        responseDict = JSON.parse(take!(chIn))
+        if haskey(responseDict, "error") ||
+           get(responseDict, "message", nothing) !== "Initialized"
+            throw(CtrlEvalEngine.InitializationFailure("AMAC failed to initialize"))
+        end
     end
 
     # If VariabilityMitigation use case isn't selected, fall back to passive control according to schedule
-    AMAController(pyAmac, isnothing(idxVM))
+    AMAController(chIn, chOut, task, isnothing(idxVM))
 end
 
 function control(
@@ -65,12 +101,30 @@ function control(
     # Active control if PV generation is present
     currentPvGen, _, tEndPvGenPeriod = get_period(ucVM.pvGenProfile, t)
     controlDuration = tEndPvGenPeriod - t
-    amac.pyAmac.set_load_data(currentPvGen, t)
-    battery_power = amac.pyAmac.run_model(SOC(ess) * 100, sp.socEnd * 100)
+
+    put!(
+        amac.chOut,
+        JSON.json(
+            Dict(
+                :pvGen => currentPvGen,
+                :socPct => SOC(ess) * 100,
+                :refSocPct => sp.socEnd * 100,
+                :t => t,
+            ),
+        ),
+    )
+    controlSeqDict = JSON.parse(take!(amac.chIn))
     battery_power = min(
-        max(p_min(ess, controlDuration), battery_power + sp.powerKw),
+        max(p_min(ess, controlDuration), controlSeqDict["battery_power"] + sp.powerKw),
         p_max(ess, controlDuration),
     )
-    @debug "Active AMAC" t controlDuration maxlog=20
+    @debug "Active AMAC" t controlDuration maxlog = 20
     return FixedIntervalTimeSeries(t, controlDuration, [battery_power])
+end
+
+function CtrlEvalEngine.cleanup(amac::AMAController)
+    close(amac.chOut)
+    if amac.task !== nothing
+        wait(amac.task)
+    end
 end
