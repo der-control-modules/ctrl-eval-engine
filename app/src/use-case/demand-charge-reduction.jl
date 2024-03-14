@@ -24,9 +24,9 @@ function DemandChargeReduction(
 )
     loadForecastKw15min = extract(
         FixedIntervalTimeSeries(
-            DateTime(config["loadForecast15min"]["timestamp"][1]),
+            DateTime(config["loadForecast15min"]["Timestamp"][1]),
             Minute(15),
-            float.(config["loadForecast15min"]["load_kW"]),
+            float.(config["loadForecast15min"]["Load_kW"]),
         ),
         simStart,
         simEnd,
@@ -38,7 +38,7 @@ function DemandChargeReduction(
         )
     elseif config["rate"] isa Vector
         DemandChargeReduction(
-            MonthlyDemandChargeRateStructure(config["rate"]),
+            MonthlyDemandChargeRateStructure(float.(config["rate"])),
             loadForecastKw15min,
         )
     end
