@@ -148,6 +148,11 @@ function demand_charge_periods_rates(
     return months, rates
 end
 
+calculate_net_benefit(progress::Progress, ucDCR::DemandChargeReduction) = begin
+    @debug "Calculation DCR benefit"
+    demand_charge(ucDCR.rateStructure, ucDCR.loadForecastKw15min) - demand_charge(ucDCR, power(progress.operation))
+end
+
 function calculate_metrics(
     ::ScheduleHistory,
     operation::OperationHistory,
