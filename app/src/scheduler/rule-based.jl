@@ -49,7 +49,7 @@ function schedule(
                 cost_cal = -batt * price[h]
                 output = -batt
             elseif price[h] >= theta_high
-                batt = min(p_max(ess), max(0, (energy_state(ess) - e_min(ess)) * ηRT(ess)))
+                batt = min(p_max(ess), max(0, (stateK0 * e_max(ess) - e_min(ess)) * ηRT(ess)))
                 stateK0 = stateK0 - batt / (e_max(ess) * ηRT(ess))
                 cost_cal = batt * price[h]
                 output = batt
