@@ -167,7 +167,7 @@ function get_scheduler(schedulerConfig::Dict)
             interval = Minute(
                 round(Int, convert(Minute, Hour(1)).value * schedulerConfig["optWindowLenHrs"]),
             )
-            RuleBasedScheduler(res, interval)
+            RuleBasedScheduler(res, interval, schedulerConfig)
         elseif schedulerType == "TOU"
             res = Minute(
                 round(

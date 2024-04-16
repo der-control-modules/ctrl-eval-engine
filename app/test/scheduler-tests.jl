@@ -128,7 +128,7 @@ end
         LiIonBatteryStates(0.5, 0),
     )
 
-    ruleBasedScheduler = RuleBasedScheduler(Hour(1), Hour(24))
+    ruleBasedScheduler = RuleBasedScheduler(Hour(1), Hour(24), Dict())
     tStart = floor(now(), Hour(1))
     useCases = UseCase[EnergyArbitrage(
         VariableIntervalTimeSeries(
