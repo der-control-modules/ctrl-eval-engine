@@ -672,6 +672,12 @@ end
 
 Base.print(io::IO, e::InvalidInput) = print(io, "Invalid input: ", e.msg)
 
+struct InitializationFailure <: Exception
+    msg::String
+end
+
+Base.print(io::IO, e::InitializationFailure) = print(io, "Failed to initialize a scheduler or real-time controller: ", e.msg)
+
 abstract type BatteryInput end
 
 struct LiIonBatteryInput <: BatteryInput
