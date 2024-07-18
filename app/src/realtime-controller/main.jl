@@ -45,7 +45,7 @@ include("passthrough.jl")
 include("pid.jl")
 include("amac.jl")
 include("rule-based.jl")
-# include("mesa.jl")
+include("mesa.jl")
 
 """
     get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})

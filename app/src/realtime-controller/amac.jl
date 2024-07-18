@@ -25,7 +25,7 @@ function AMAController(
         # pyAmac.set_data_interval(ucVM.pvGenProfile.resolution / Second(1))
 
         # simple websocket client
-        task = @async WebSockets.open("ws://localhost:6000") do ws
+        task = @async WebSockets.open("ws://localhost:6500") do ws
             # we can iterate the websocket
             # where each iteration yields a received message
             # iteration finishes when the websocket is closed

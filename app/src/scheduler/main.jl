@@ -35,7 +35,14 @@ Schedule(
     tStart::Dates.DateTime;
     resolution::Dates.TimePeriod = Hour(1),
     SOC::Vector{Float64} = zeros(length(powerKw) + 1),
-) = Schedule(powerKw, tStart, resolution, SOC, zeros(length(powerKw)))
+    regCapKw::Union{Nothing,Vector{Float64}} = nothing,
+) = Schedule(
+    powerKw,
+    tStart,
+    resolution,
+    SOC,
+    isnothing(regCapKw) ? zeros(length(powerKw)) : regCapKw,
+)
 
 struct SchedulePeriod
     powerKw::Float64
