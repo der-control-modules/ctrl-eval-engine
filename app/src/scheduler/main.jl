@@ -94,6 +94,7 @@ include("manual-scheduler.jl")
 include("RL-scheduler.jl")
 include("rule-based.jl")
 include("time-of-use.jl")
+include("user-defined.jl")
 
 struct IdleScheduler <: Scheduler
     interval::Dates.Period
@@ -189,6 +190,8 @@ function get_scheduler(
                 round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
             )
             TimeOfUseScheduler(res, interval, schedulerConfig["ruleSet"])
+        elseif schedulerType == "userDefinedScheduler"
+            UserDefinedScheduler(schedulerConfig, ess, useCases)
         else
             throw(InvalidInput("Invalid scheduler type: $schedulerType"))
         end

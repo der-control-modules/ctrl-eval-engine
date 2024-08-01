@@ -46,6 +46,7 @@ include("pid.jl")
 include("amac.jl")
 include("rule-based.jl")
 include("mesa.jl")
+include("user-defined.jl")
 
 """
     get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
@@ -73,6 +74,8 @@ function get_rt_controller(
             AMAController(config, ess, useCases)
         elseif controllerType == "realTimeRule"
             RuleBasedController(config)
+        elseif controllerType == ""
+            UserDefinedRTController(config, ess, useCases)
         else
             throw(InvalidInput("Invalid real-time controller type: $controllerType"))
         end
