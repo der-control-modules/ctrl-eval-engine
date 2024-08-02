@@ -70,23 +70,30 @@ function control(
         controller.chOut,
         JSON.json(
             Dict(
-                :current_SOC_pu => SOC(ess),
-                :use_cases => useCases,
-                :t => t,
-                :schedule_period => schedulePeriod,
-                :schedule_period_progress => Dict(
-                    :timestamps => timestamps(spProgress),
-                    :power_kW => values(spProgress),
+                :type => "compute",
+                :payload => Dict(
+                    :current_SOC_pu => SOC(ess),
+                    :use_cases => useCases,
+                    :t => t,
+                    :schedule_period => schedulePeriod,
+                    :schedule_period_progress => Dict(
+                        :timestamps => timestamps(spProgress),
+                        :power_kW => values(spProgress),
+                    ),
                 ),
             ),
         ),
     )
     controlSeqDict = JSON.parse(take!(controller.chIn))
 
+    if haskey(controlSeqDict, "error")
+        error(controlSeqDict["error"])
+    end
+
     return FixedIntervalTimeSeries(
         tStart,
-        Millisecond(floor(Int, 1000 * controlSeqDict["resolutionSec"])),
-        float.(controlSeqDict["power_Kw"]),
+        Millisecond(floor(Int, 1000 * controlSeqDict["resolution_sec"])),
+        float.(controlSeqDict["power_kW"]),
     )
 end
 

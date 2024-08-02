@@ -31,6 +31,12 @@ using CtrlEvalEngine
 using CtrlEvalEngine: SimSetting, Progress, ScheduleHistory, OperationHistory
 using LinearAlgebra
 using JuMP
+using JSON
+
+JSON.lower(uc::UseCase) = Dict(
+    :type => use_case_name(uc),
+    :data => Dict(key => getfield(uc, key) for key ∈ fieldnames(typeof(uc))),
+)
 
 include("energy-arbitrage.jl")
 include("regulation.jl")

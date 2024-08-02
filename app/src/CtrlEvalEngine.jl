@@ -279,7 +279,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
     )
 
     while t < setting.simEnd
-        currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t)
+        currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t, outputProgress)
         update_schedule_history!(outputProgress.schedule, currentSchedule)
         for schedulePeriod in currentSchedule
             schedulePeriodEnd = min(end_time(schedulePeriod), setting.simEnd)

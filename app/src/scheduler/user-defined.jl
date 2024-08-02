@@ -30,16 +30,17 @@ function UserDefinedScheduler(config::Dict, ess, useCases::AbstractVector{<:UseC
         "RTE_pu" => ηRT(ess),
     )
 
-    put!(
-        chOut,
-        JSON.json(
-            Dict(
-                :type => "initialize",
-                :payload => Dict(config..., :ess => essParameters, :use_cases => useCases),
-            ),
+    initString = JSON.json(
+        Dict(
+            :type => "initialize",
+            :payload => Dict(config..., :ess => essParameters, :use_cases => useCases),
         ),
     )
+    @debug "Initializing UserDefinedScheduler" initString
+    put!(chOut, initString)
+
     responseDict = JSON.parse(take!(chIn))
+
     if haskey(responseDict, "error") ||
        get(responseDict, "message", nothing) !== "Initialized"
         throw(
@@ -59,29 +60,36 @@ function schedule(
     tStart::Dates.DateTime,
     progress::Progress,
 )
-    @debug "UserDefinedScheduler" t = tStart
-
     put!(
         sch.chOut,
         JSON.json(
             Dict(
-                :current_SOC_pu => SOC(ess),
-                :use_cases => useCases,
-                :t => tStart,
-                :op_history => Dict(
-                    :timestamps => progress.operation.t,
-                    :SOC_pu => progress.operation.SOC,
-                    :power_kW => progress.operation.powerKw,
+                :type => "compute",
+                :payload => Dict(
+                    :current_SOC_pu => SOC(ess),
+                    :use_cases => useCases,
+                    :t => tStart,
+                    :op_history => Dict(
+                        :timestamps => progress.operation.t,
+                        :SOC_pu => progress.operation.SOC,
+                        :power_kW => progress.operation.powerKw,
+                    ),
                 ),
             ),
         ),
     )
     scheduleDict = JSON.parse(take!(sch.chIn))
 
+    @debug "UserDefinedScheduler" t = tStart scheduleDict
+
+    if haskey(scheduleDict, "error")
+        error(scheduleDict["error"])
+    end
+
     return Schedule(
-        float.(scheduleDict["power_Kw"]),
+        float.(scheduleDict["power_kW"]),
         tStart;
-        resolution = Second(floor(Int, 3600 * scheduleDict["resolutionHrs"])),
+        resolution = Second(floor(Int, 3600 * get(scheduleDict, "resolution_hr", 1))),
         SOC = [SOC(ess), float.(scheduleDict["SOC_pu"])...],
         regCapKw = scheduleDict["regulation_cap_kW"],
     )

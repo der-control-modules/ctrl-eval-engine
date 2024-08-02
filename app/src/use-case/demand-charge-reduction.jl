@@ -44,6 +44,8 @@ function DemandChargeReduction(
     end
 end
 
+use_case_name(ucDCR::DemandChargeReduction) = "Demand Charge Reduction"
+
 function demand_charge(rateStructure::FlatDemandChargeRateStructure, load::TimeSeries)
     monthStart = floor(start_time(load), Minute(15))
     monthEnd = firstdayofmonth(monthStart + Month(1))
