@@ -11,6 +11,7 @@ export EnergyStorageSystem,
     MockSimulator,
     LiIonBattery,
     VRFBattery,
+    HydrogenEnergyStorageSystem,
     operate!,
     get_ess,
     SOC,
@@ -29,6 +30,7 @@ abstract type EnergyStorageSystem end
 include("mock-simulator.jl")
 include("li-ion-battery.jl")
 include("vrf-battery.jl")
+include("hydrogen-energy-storage.jl")
 
 """
     get_ess(input::Dict)
