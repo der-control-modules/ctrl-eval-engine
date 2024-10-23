@@ -29,6 +29,9 @@ end
 mutable struct HydrogenEnergyStorageStates
     lowPressureH2Kg::Float64
     mediumPressureH2Kg::Float64
+    electrolyzerOn::Bool
+    fuelCellOn::Bool
+    compressorOn::Bool
 end
 
 function _operate!(
