@@ -70,7 +70,7 @@ end
 
 self_discharge_rate(ess::VRFBattery) = -ess.specs.C0 / 0.9
 
-SOC(ess::VRFBattery) = (ess.states.energy - e_min(ess)) / e_max(ess)
+SOC(ess::VRFBattery) = (ess.states.energy - e_min(ess)) / (e_max(ess) - e_min(ess))
 energy_state(ess::VRFBattery) = ess.states.energy
 
 e_max(ess::VRFBattery) = 0.9 * ess.specs.energyCapacityKwh
