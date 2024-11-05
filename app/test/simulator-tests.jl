@@ -1,4 +1,3 @@
-
 using CtrlEvalEngine.EnergyStorageSimulators
 using Dates
 
@@ -55,5 +54,36 @@ using Dates
         @test SOC(ess) > soc2
         
         @test SOH(ess) < 1
+    end
+
+    @testset "Hydrogen Energy Storage System" begin
+        ess = HydrogenEnergyStorageSystem(
+            EnergyStorageSimulators.HydrogenEnergyStorageSpecs(
+                EnergyStorageSimulators.ElectrolyzerSpecs(10.0),
+                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0),
+                EnergyStorageSimulators.FuelCellSpecs(5.0, 0.6, 0.3, 40000.0)
+            ),
+            EnergyStorageSimulators.HydrogenEnergyStorageStates(25.0, 250.0, false, false, false)
+        )
+
+        @test SOC(ess) == 0.5
+        @test SOH(ess) == 1
+        @test p_max(ess) == 5
+        @test p_min(ess) == -10
+        @test e_max(ess) ≈ 550 * 39.4 * 0.6
+        @test e_min(ess) == 0
+        @test energy_state(ess) ≈ 275 * 39.4 * 0.6
+        @test ηRT(ess) == 0.6
+
+        operate!(ess, 2)
+        @test SOC(ess) < 0.5
+        soc1 = SOC(ess)
+
+        operate!(ess, -2)
+        @test SOC(ess) > soc1
+        soc2 = SOC(ess)
+
+        operate!(ess, -4, Minute(5))
+        @test SOC(ess) > soc2
     end
 end

@@ -1,14 +1,3 @@
-struct HydrogenEnergyStorageSystem <: EnergyStorageSystem
-    specs::HydrogenEnergyStorageSpecs
-    states::HydrogenEnergyStorageStates
-end
-
-struct HydrogenEnergyStorageSpecs
-    electrolyzerSpecs::ElectrolyzerSpecs
-    hydrogenStorageSpecs::HydrogenStorageSpecs
-    fuelCellSpecs::FuelCellSpecs
-end
-
 struct ElectrolyzerSpecs
     ratePowerKw::Float64
 end
@@ -25,12 +14,23 @@ struct FuelCellSpecs
     operatingLifetimeHour::Float64
 end
 
+struct HydrogenEnergyStorageSpecs
+    electrolyzerSpecs::ElectrolyzerSpecs
+    hydrogenStorageSpecs::HydrogenStorageSpecs
+    fuelCellSpecs::FuelCellSpecs
+end
+
 mutable struct HydrogenEnergyStorageStates
     lowPressureH2Kg::Float64
     mediumPressureH2Kg::Float64
     electrolyzerOn::Bool
     fuelCellOn::Bool
     compressorOn::Bool
+end
+
+struct HydrogenEnergyStorageSystem <: EnergyStorageSystem
+    specs::HydrogenEnergyStorageSpecs
+    states::HydrogenEnergyStorageStates
 end
 
 function _operate!(
