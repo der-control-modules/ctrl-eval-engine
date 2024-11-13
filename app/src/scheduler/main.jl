@@ -100,7 +100,7 @@ struct IdleScheduler <: Scheduler
     interval::Dates.Period
 end
 
-schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
+schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime, ::Progress) =
     Schedule([0.0], tStart; resolution = scheduler.interval, SOC = [SOC(ess), SOC(ess)])
 
 """

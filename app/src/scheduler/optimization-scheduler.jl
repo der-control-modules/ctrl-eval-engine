@@ -46,6 +46,7 @@ function schedule(
     scheduler::OptScheduler,
     useCases::AbstractVector{<:UseCase},
     tStart::Dates.DateTime,
+    ::Progress,
 )
     @debug "Scheduling with OptScheduler" scheduler maxlog = 1
     K = scheduler.optWindow

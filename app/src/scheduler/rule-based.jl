@@ -22,6 +22,7 @@ function schedule(
     scheduler::RuleBasedScheduler,
     useCases::AbstractArray{<:UseCase},
     tStart::DateTime,
+    ::Progress,
 )
     curtailment_ratio = 0.1
     soc_thresholds = Dict("high" => 70, "low" => 30)
