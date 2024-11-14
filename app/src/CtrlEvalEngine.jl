@@ -20,6 +20,7 @@ export evaluate_controller,
     get_period,
     extract,
     power,
+    Progress,
     InvalidInput,
     InitializationFailure
 
