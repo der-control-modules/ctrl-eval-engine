@@ -1,6 +1,8 @@
 using CtrlEvalEngine.EnergyStorageSimulators
 using Dates
 
+
+
 @testset "Simulators" begin
     @testset "Mock Simulator" begin
         ess = MockSimulator(
@@ -59,21 +61,21 @@ using Dates
     @testset "Hydrogen Energy Storage System" begin
         ess = HydrogenEnergyStorageSystem(
             EnergyStorageSimulators.HydrogenEnergyStorageSpecs(
-                EnergyStorageSimulators.ElectrolyzerSpecs(10.0),
-                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0),
-                EnergyStorageSimulators.FuelCellSpecs(5.0, 0.6, 0.3, 40000.0)
+                EnergyStorageSimulators.ElectrolyzerSpecs(500.0, 55.5, 0.1),
+                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0, 0.005, 3.0, 570.0),
+                EnergyStorageSimulators.FuelCellSpecs(500.0, 0.5, 0.2, 40000.0)
             ),
             EnergyStorageSimulators.HydrogenEnergyStorageStates(25.0, 250.0, false, false, false)
         )
 
         @test SOC(ess) == 0.5
         @test SOH(ess) == 1
-        @test p_max(ess) == 5
-        @test p_min(ess) == -10
-        @test e_max(ess) ≈ 550 * 39.4 * 0.6
+        @test p_max(ess) == 500
+        @test p_min(ess) == -500
+        @test e_max(ess) ≈ 550 * EnergyStorageSimulators.H2_KWH_PER_KG * 0.5
         @test e_min(ess) == 0
-        @test energy_state(ess) ≈ 275 * 39.4 * 0.6
-        @test ηRT(ess) == 0.6
+        @test energy_state(ess) ≈ 275 * EnergyStorageSimulators.H2_KWH_PER_KG * 0.5
+        @test ηRT(ess) ≈ 0.35486486486486485
 
         operate!(ess, 2)
         @test SOC(ess) < 0.5
@@ -90,14 +92,14 @@ using Dates
     @testset "HESS Low Pressure to Medium Pressure" begin
         ess = HydrogenEnergyStorageSystem(
             EnergyStorageSimulators.HydrogenEnergyStorageSpecs(
-                EnergyStorageSimulators.ElectrolyzerSpecs(10.0, 50.0, 0.1),
-                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0, 0.1, 0.9, 0.5, 5.0),
-                EnergyStorageSimulators.FuelCellSpecs(5.0, 0.6, 0.3, 40000.0)
+                EnergyStorageSimulators.ElectrolyzerSpecs(500.0, 55.5, 0.1),
+                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0, 0.005, 3.0, 570.0),
+                EnergyStorageSimulators.FuelCellSpecs(500.0, 0.5, 0.2, 40000.0)
             ),
             EnergyStorageSimulators.HydrogenEnergyStorageStates(45.0, 250.0, false, false, false)
         )
         
-        operate!(ess, -8.0, Hour(1))
+        operate!(ess, -800.0, Hour(1))
         
         @test ess.states.lowPressureH2Kg ≈ 50.0
         @test ess.states.mediumPressureH2Kg > 250.0

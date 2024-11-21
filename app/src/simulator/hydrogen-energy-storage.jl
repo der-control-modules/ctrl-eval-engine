@@ -38,7 +38,7 @@ struct HydrogenEnergyStorageSystem <: EnergyStorageSystem
     states::HydrogenEnergyStorageStates
 end
 
-const H2_KWH_PER_KG = 39.4
+const H2_KWH_PER_KG = 39.39
 
 function _operate!(
     hess::HydrogenEnergyStorageSystem,
@@ -103,12 +103,12 @@ end
 
 function energy_state(hess::HydrogenEnergyStorageSystem)
     total_h2 = hess.states.lowPressureH2Kg + hess.states.mediumPressureH2Kg
-    return total_h2 * 39.4 * hess.specs.fuelCellSpecs.efficiencyPu 
+    return total_h2 * H2_KWH_PER_KG * hess.specs.fuelCellSpecs.efficiencyPu 
 end
 
 function p_max(hess::HydrogenEnergyStorageSystem, durationHour::Real, _::Real)
     total_h2 = hess.states.lowPressureH2Kg + hess.states.mediumPressureH2Kg
-    available_energy = total_h2 * 39.4 * hess.specs.fuelCellSpecs.efficiencyPu
+    available_energy = total_h2 * H2_KWH_PER_KG * hess.specs.fuelCellSpecs.efficiencyPu
     max_power = min(
         hess.specs.fuelCellSpecs.ratedPowerKw,
         available_energy / durationHour
@@ -158,7 +158,7 @@ function e_max(hess::HydrogenEnergyStorageSystem)
         hess.specs.hydrogenStorageSpecs.lowPressureTankSizeKg +
         hess.specs.hydrogenStorageSpecs.mediumPressureTankSizeKg
     )
-    return total_capacity * 39.4 * hess.specs.fuelCellSpecs.efficiencyPu
+    return total_capacity * H2_KWH_PER_KG * hess.specs.fuelCellSpecs.efficiencyPu
 end
 
 function e_min(::HydrogenEnergyStorageSystem)
@@ -166,5 +166,5 @@ function e_min(::HydrogenEnergyStorageSystem)
 end
 
 function ηRT(hess::HydrogenEnergyStorageSystem)
-    return hess.specs.fuelCellSpecs.efficiencyPu
+    return hess.specs.fuelCellSpecs.efficiencyPu * H2_KWH_PER_KG / hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg
 end
