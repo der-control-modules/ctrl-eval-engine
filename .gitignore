@@ -5,3 +5,6 @@
 .DS_Store
 *.html
 app/*.json
+
+Manifest.toml
+test/Manifest.toml
