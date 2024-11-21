@@ -86,4 +86,22 @@ using Dates
         operate!(ess, -4, Minute(5))
         @test SOC(ess) > soc2
     end
+
+    @testset "HESS Low Pressure to Medium Pressure" begin
+        ess = HydrogenEnergyStorageSystem(
+            EnergyStorageSimulators.HydrogenEnergyStorageSpecs(
+                EnergyStorageSimulators.ElectrolyzerSpecs(10.0, 50.0, 0.1),
+                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0, 0.1, 0.9, 0.5, 5.0),
+                EnergyStorageSimulators.FuelCellSpecs(5.0, 0.6, 0.3, 40000.0)
+            ),
+            EnergyStorageSimulators.HydrogenEnergyStorageStates(45.0, 250.0, false, false, false)
+        )
+        
+        operate!(ess, -8.0, Hour(1))
+        
+        @test ess.states.lowPressureH2Kg ≈ 50.0
+        @test ess.states.mediumPressureH2Kg > 250.0
+        @test ess.states.electrolyzerOn == true
+        @test ess.states.compressorOn == true
+    end
 end
