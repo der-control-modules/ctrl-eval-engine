@@ -11,6 +11,7 @@ export EnergyStorageSystem,
     MockSimulator,
     LiIonBattery,
     VRFBattery,
+    HydrogenEnergyStorageSystem,
     operate!,
     get_ess,
     SOC,
@@ -21,7 +22,8 @@ export EnergyStorageSystem,
     e_min,
     energy_state,
     ηRT,
-    self_discharge_rate
+    self_discharge_rate,
+    H2_KWH_PER_KG
 using CtrlEvalEngine
 
 abstract type EnergyStorageSystem end
@@ -29,6 +31,7 @@ abstract type EnergyStorageSystem end
 include("mock-simulator.jl")
 include("li-ion-battery.jl")
 include("vrf-battery.jl")
+include("hydrogen-energy-storage.jl")
 
 """
     get_ess(input::Dict)
