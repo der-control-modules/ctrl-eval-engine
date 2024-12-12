@@ -1,13 +1,21 @@
 using PlotlyLight
 using Dates
 using JSON
-using Cobweb: Page, save
+using Cobweb
+
+function SaveHtml(dst; remove_scratch=false) 
+    # Copy the file from the scratch space to the destination
+    cp(joinpath(Cobweb.DIR, "index.html"), dst, force=true)
+    
+    # Remove the scratch file if flag is true
+    remove_scratch ? rm(Cobweb.DIR) : nothing
+end
 
 repeat_last(vec) = vcat(vec, [vec[end]])
 plot_interval(; y, kwargs...) =
     Config(; y = repeat_last(y), line = Config(; shape = :hv), kwargs...)
 
-Preset.PlotContainer.fillwindow!()
+# Preset.PlotContainer.fillwindow!()
 plotOptions = Config(; toImageButtonOptions = Config(; format = :svg), responsive = true)
 
 outputFilename = ARGS[1]
@@ -61,4 +69,5 @@ for iSubPlot = 1:subPlots
 end
 
 timeCharts = Plot(traces, layout, plotOptions)
-save(Page(timeCharts), "$outputFilename-time_charts.html")
+preview(timeCharts)
+SaveHtml("$outputFilename-time_charts.html")
