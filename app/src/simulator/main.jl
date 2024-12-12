@@ -81,6 +81,36 @@ function get_ess(input::Dict)
             )
         elseif input["batteryType"] == "mock"
             MockSimulator(MockES_Specs(powerCapKw, energyCapKwh, ηRT), MockES_States(0.5))
+        elseif input["batteryType"] == "hydrogen"
+            HydrogenEnergyStorageSystem(
+                HydrogenEnergyStorageSpecs(
+                    ElectrolyzerSpecs(
+                        float(input["electrolyzerRatedPower"]),
+                        float(input["electrolyzerElectricityUsage"]),
+                        float(input["electrolyzerMinimumLoad"])
+                    ),
+                    HydrogenStorageSpecs(
+                        float(input["lowPressureStorageCapacity"]),
+                        float(input["mediumPressureStorageCapacity"]),
+                        float(input["compressorLosses"]),
+                        float(input["compressorEnergyConsumptionRate"]),
+                        float(input["compressorRatedPower"])
+                    ),
+                    FuelCellSpecs(
+                        float(input["generationRatedPower"]),
+                        float(input["generationEfficiency"]),
+                        float(input["generationMinLoadingLevel"]),
+                        float(input["generationOperatingLifetime"])
+                    )
+                ),
+                HydrogenEnergyStorageStates(
+                    float(input["lowPressureStorageCapacity"]) * 0.5,
+                    float(input["mediumPressureStorageCapacity"]) * 0.5,
+                    false,
+                    false,
+                    false
+                )
+            )
         else
             throw(InvalidInput(string("Unsupported ESS type - ", input["batteryType"])))
         end

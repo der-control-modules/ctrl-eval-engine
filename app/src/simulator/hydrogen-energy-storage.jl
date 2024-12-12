@@ -168,3 +168,7 @@ end
 function ηRT(hess::HydrogenEnergyStorageSystem)
     return hess.specs.fuelCellSpecs.efficiencyPu * H2_KWH_PER_KG / hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg
 end
+
+function self_discharge_rate(::HydrogenEnergyStorageSystem)
+    return 0.0
+end
