@@ -1,7 +1,7 @@
 
 using JuMP
 using LinearAlgebra
-using Clp
+using HiGHS
 
 struct OptScheduler <: Scheduler
     resolution::Dates.Period
@@ -55,8 +55,9 @@ function schedule(
     eta = sqrt(ηRT(ess))
     resolutionHrs = /(promote(scheduler.resolution, Hour(1))...)
 
-    m = Model(Clp.Optimizer)
-    set_optimizer_attribute(m, "LogLevel", 0)
+    m = Model(HiGHS.Optimizer)
+    set_optimizer_attribute(m, "presolve", "on")
+    set_silent(m)
 
     @variables(m, begin
         e_min(ess) ≤ eng[1:K+1] ≤ e_max(ess) # energy state
