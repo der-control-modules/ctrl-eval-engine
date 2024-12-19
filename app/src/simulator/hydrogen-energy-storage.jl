@@ -19,6 +19,13 @@ struct FuelCellSpecs
     operatingLifetimeHour::Float64
 end
 
+struct WaterCostSpecs
+    waterCostChargeRateDollarsPerKgal::Float64
+    waterCostDrainageChargeRateDollarsPerKgal::Float64
+    waterCostMinimumChargeDollars::Float64
+    waterCostThresholdKgal::Float64
+end
+
 struct HydrogenEnergyStorageSpecs
     electrolyzerSpecs::ElectrolyzerSpecs
     hydrogenStorageSpecs::HydrogenStorageSpecs
