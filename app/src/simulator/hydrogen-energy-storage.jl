@@ -71,33 +71,72 @@ function _operate!(
         hess.states.electrolyzerOn = false
         hess.states.compressorOn = false
     else
-        h2_produced = (-powerKw * durationHour) / hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg
-    
-        space_in_lp = hess.specs.hydrogenStorageSpecs.lowPressureTankSizeKg - 
-                     hess.states.lowPressureH2Kg
-        h2_to_lp = min(h2_produced, space_in_lp)
-        hess.states.lowPressureH2Kg += h2_to_lp
+        powerKw, h2ToLp, hm = compute_charge_power(hess, powerKw, durationHour)
 
-        if h2_to_lp < h2_produced
-            time_to_fill_lp = (hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg * h2_to_lp) / -powerKw
-
-            remaining_duration = durationHour - time_to_fill_lp
-
-            hp = ((-powerKw * durationHour) / hess.specs.hydrogenStorageSpecs.compressorKwhPerKg) / (1 + (hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg / hess.specs.hydrogenStorageSpecs.compressorKwhPerKg))
-
-            hm = hp * (1 - hess.specs.hydrogenStorageSpecs.compressionLossPu)
-
-            hess.states.mediumPressureH2Kg += hm
+        if hm > 0
             hess.states.compressorOn = true
         else
             hess.states.compressorOn = false
         end
         
-        if h2_produced > 0
+        hess.states.lowPressureH2Kg += h2ToLp
+        hess.states.mediumPressureH2Kg += hm
+
+        if h2ToLp > 0 || hm > 0
             hess.states.electrolyzerOn = true
         end
 
         hess.states.fuelCellOn = false
+    end
+
+    @debug "operating hess" powerKw hess.states
+
+    return powerKw
+end
+
+function compute_charge_power(hess::HydrogenEnergyStorageSystem, powerKw, durationHour)
+    h2Produced = (-powerKw * durationHour) / hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg
+    
+    spaceInLp = hess.specs.hydrogenStorageSpecs.lowPressureTankSizeKg - 
+                hess.states.lowPressureH2Kg
+    h2ToLp = min(h2Produced, spaceInLp)
+
+    if h2ToLp < h2Produced
+        time_to_fill_lp = (hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg * h2ToLp) / -powerKw
+
+        remaining_duration = durationHour - time_to_fill_lp
+
+        hp = ((-powerKw * remaining_duration) / hess.specs.hydrogenStorageSpecs.compressorKwhPerKg) / (1 + (hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg / hess.specs.hydrogenStorageSpecs.compressorKwhPerKg))
+
+        pc = ((-powerKw * remaining_duration) - (hp * hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg)) / remaining_duration
+
+        hm = hp * (1 - hess.specs.hydrogenStorageSpecs.compressionLossPu)
+
+        ratioM = min(1, (hess.specs.hydrogenStorageSpecs.mediumPressureTankSizeKg - hess.states.mediumPressureH2Kg) / hm)
+
+        ratioP = min(1, hess.specs.hydrogenStorageSpecs.compressorRatedPowerKw / pc)
+
+        ratio = min(ratioM, ratioP)
+
+        if ratio < 1            
+            hp *= ratio
+            pc *= ratio
+
+            pe = hp * hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg / remaining_duration
+
+            # pe = pe < (hess.specs.electrolyzerSpecs.minLoadPu * hess.specs.electrolyzerSpecs.ratedPowerKw) ?
+            #      0.0 : min_power
+
+            p = pe + pc
+
+            powerKw = (powerKw * time_to_fill_lp - p * remaining_duration) / durationHour
+
+            hm *= ratio
+        end
+
+        return (powerKw, h2ToLp, hm)
+    else
+        return (powerKw, h2ToLp, 0)
     end
 end
 
@@ -131,29 +170,9 @@ end
 
 # TODO: change
 function p_min(hess::HydrogenEnergyStorageSystem, durationHour::Real, _::Real)
-    remaining_capacity = (
-        hess.specs.hydrogenStorageSpecs.lowPressureTankSizeKg - hess.states.lowPressureH2Kg +
-        hess.specs.hydrogenStorageSpecs.mediumPressureTankSizeKg - hess.states.mediumPressureH2Kg
-    )
+    powerKw, _, _ = compute_charge_power(hess, -hess.specs.electrolyzerSpecs.ratedPowerKw, durationHour)
 
-    hlp = hess.specs.hydrogenStorageSpecs.lowPressureTankSizeKg - hess.states.lowPressureH2Kg
-    
-    hm = hess.specs.hydrogenStorageSpecs.mediumPressureTankSizeKg - hess.states.mediumPressureH2Kg
-
-    hc = hm / (1 - hess.specs.hydrogenStorageSpecs.compressionLossPu)
-
-    he = hlp + hc
-
-    pe = (he * hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg) / durationHour
-
-    pc = (hc * hess.specs.hydrogenStorageSpecs.compressorKwhPerKg) / durationHour
-
-    p = pe + pc
-
-    min_power = -min(p, hess.specs.electrolyzerSpecs.ratedPowerKw)
-
-    return abs(min_power) < (hess.specs.electrolyzerSpecs.minLoadPu * hess.specs.electrolyzerSpecs.ratedPowerKw) ?
-        0.0 : min_power
+    return powerKw
 end
 
 function p_min(hess::HydrogenEnergyStorageSystem)
@@ -173,7 +192,7 @@ function e_min(::HydrogenEnergyStorageSystem)
 end
 
 function ηRT(hess::HydrogenEnergyStorageSystem)
-    return hess.specs.fuelCellSpecs.efficiencyPu * H2_KWH_PER_KG / hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg
+    return hess.specs.fuelCellSpecs.efficiencyPu * H2_KWH_PER_KG / (hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg + hess.specs.hydrogenStorageSpecs.compressorKwhPerKg)
 end
 
 function self_discharge_rate(::HydrogenEnergyStorageSystem)
