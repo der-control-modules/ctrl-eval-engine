@@ -74,7 +74,7 @@ function get_rt_controller(
             AMAController(config, ess, useCases)
         elseif controllerType == "realTimeRule"
             RuleBasedController(config)
-        elseif controllerType == ""
+        elseif controllerType == "userDefinedRealTime"
             UserDefinedRTController(config, ess, useCases)
         else
             throw(InvalidInput("Invalid real-time controller type: $controllerType"))

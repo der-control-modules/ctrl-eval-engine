@@ -41,7 +41,7 @@ function UserDefinedRTController(config::Dict, ess, useCases::AbstractVector{<:U
     )
     responseDict = JSON.parse(take!(chIn))
     if haskey(responseDict, "error") ||
-       get(responseDict, "message", nothing) !== "Initialized"
+        get(responseDict, "message", nothing) !== "Initialized"
         throw(
             CtrlEvalEngine.InitializationFailure(
                 get(
