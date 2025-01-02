@@ -81,6 +81,60 @@ function get_ess(input::Dict)
             )
         elseif input["batteryType"] == "mock"
             MockSimulator(MockES_Specs(powerCapKw, energyCapKwh, ηRT), MockES_States(0.5))
+        elseif input["batteryType"] == "hydrogen"
+            electrolyzerPowerKw = if lowercase(get(input, "electrolyzerRatedPowerUnit", "mw")) == "kw"
+                float(input["electrolyzerRatedPower"])
+            elseif lowercase(get(input, "electrolyzerRatedPowerUnit", "mw")) == "mw"
+                float(input["electrolyzerRatedPower"]) * 1000
+            else
+                throw(InvalidInput("Unsupported unit for electrolyzer rated power"))
+            end
+
+            compressorPowerKw = if lowercase(get(input, "compressorRatedPowerUnit", "kw")) == "kw"
+                float(input["compressorRatedPower"])
+            elseif lowercase(get(input, "compressorRatedPowerUnit", "kw")) == "mw"
+                float(input["compressorRatedPower"]) * 1000
+            else
+                throw(InvalidInput("Unsupported unit for compressor rated power"))
+            end
+
+            generationPowerKw = if lowercase(get(input, "generationRatedPowerUnit", "mw")) == "kw"
+                float(input["generationRatedPower"])
+            elseif lowercase(get(input, "generationRatedPowerUnit", "mw")) == "mw"
+                float(input["generationRatedPower"]) * 1000
+            else
+                throw(InvalidInput("Unsupported unit for generation rated power"))
+            end
+
+            HydrogenEnergyStorageSystem(
+                HydrogenEnergyStorageSpecs(
+                    ElectrolyzerSpecs(
+                        electrolyzerPowerKw,
+                        float(input["electrolyzerElectricityUsage"]),
+                        float(input["electrolyzerMinimumLoad"])
+                    ),
+                    HydrogenStorageSpecs(
+                        float(input["lowPressureStorageCapacity"]),
+                        float(input["mediumPressureStorageCapacity"]),
+                        float(input["compressorLosses"]),
+                        float(input["compressorEnergyConsumptionRate"]),
+                        compressorPowerKw
+                    ),
+                    FuelCellSpecs(
+                        generationPowerKw,
+                        float(input["generationEfficiency"]),
+                        float(input["generationMinLoadingLevel"]),
+                        float(input["generationOperatingLifetime"])
+                    )
+                ),
+                HydrogenEnergyStorageStates(
+                    float(input["lowPressureStorageCapacity"]) * 0.5,
+                    float(input["mediumPressureStorageCapacity"]) * 0.5,
+                    false,
+                    false,
+                    false
+                )
+            )
         else
             throw(InvalidInput(string("Unsupported ESS type - ", input["batteryType"])))
         end
