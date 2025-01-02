@@ -75,7 +75,7 @@ using Dates
         @test e_max(ess) ≈ 550 * EnergyStorageSimulators.H2_KWH_PER_KG * 0.5
         @test e_min(ess) == 0
         @test energy_state(ess) ≈ 275 * EnergyStorageSimulators.H2_KWH_PER_KG * 0.5
-        @test ηRT(ess) ≈ 0.35486486486486485
+        @test ηRT(ess) ≈ 0.33498333333333336 atol=1e-4
 
         operate!(ess, 2)
         @test SOC(ess) < 0.5

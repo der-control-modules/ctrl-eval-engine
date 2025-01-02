@@ -192,7 +192,8 @@ function e_min(::HydrogenEnergyStorageSystem)
 end
 
 function ηRT(hess::HydrogenEnergyStorageSystem)
-    return hess.specs.fuelCellSpecs.efficiencyPu * H2_KWH_PER_KG / (hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg + hess.specs.hydrogenStorageSpecs.compressorKwhPerKg)
+    return ((1 - hess.specs.hydrogenStorageSpecs.compressionLossPu) * hess.specs.fuelCellSpecs.efficiencyPu * H2_KWH_PER_KG) /
+        (hess.specs.electrolyzerSpecs.electricityPowerKwhPerKg + hess.specs.hydrogenStorageSpecs.compressorKwhPerKg)
 end
 
 function self_discharge_rate(::HydrogenEnergyStorageSystem)
