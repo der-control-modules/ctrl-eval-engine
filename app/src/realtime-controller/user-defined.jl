@@ -11,7 +11,7 @@ function UserDefinedRTController(config::Dict, ess, useCases::AbstractVector{<:U
     chIn = Channel{String}()
     chOut = Channel{String}()
     # simple websocket client
-    task = @async WebSockets.open("ws://localhost:9500") do ws
+    task = @async WebSockets.open("ws://localhost:7000") do ws
         # we can iterate the websocket
         # where each iteration yields a received message
         # iteration finishes when the websocket is closed
