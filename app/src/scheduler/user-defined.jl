@@ -70,7 +70,7 @@ function schedule(
                     :current_SOC_pu => SOC(ess),
                     :use_cases => useCases,
                     :t => tStart,
-                    :op_history => Dict(
+                    :history => Dict(
                         :timestamps => progress.operation.t,
                         :SOC_pu => progress.operation.SOC,
                         :power_kW => progress.operation.powerKw,

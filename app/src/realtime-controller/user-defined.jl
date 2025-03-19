@@ -42,7 +42,7 @@ function UserDefinedRTController(config::Dict, ess, useCases::AbstractVector{<:U
     )
     responseDict = JSON.parse(take!(chIn))
     if haskey(responseDict, "error") ||
-        get(responseDict, "message", nothing) !== "Initialized"
+       get(responseDict, "message", nothing) !== "Initialized"
         throw(
             CtrlEvalEngine.InitializationFailure(
                 get(
@@ -65,8 +65,6 @@ function control(
     t::Dates.DateTime,
     spProgress::VariableIntervalTimeSeries,
 )
-    @debug "UserDefinedRTController" t
-
     put!(
         controller.chOut,
         JSON.json(
@@ -76,8 +74,8 @@ function control(
                     :current_SOC_pu => SOC(ess),
                     :use_cases => useCases,
                     :t => t,
-                    :schedule_period => schedulePeriod,
-                    :schedule_period_progress => Dict(
+                    :history => Dict(
+                        :schedule_period => schedulePeriod,
                         :timestamps => timestamps(spProgress),
                         :power_kW => values(spProgress),
                     ),
