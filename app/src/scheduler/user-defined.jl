@@ -1,4 +1,5 @@
 
+using HTTP, HTTP.WebSockets, Sockets
 using JSON
 
 struct UserDefinedScheduler <: Scheduler
