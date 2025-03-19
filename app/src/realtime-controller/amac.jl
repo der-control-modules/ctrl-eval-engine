@@ -14,6 +14,7 @@ function AMAController(
     ess::EnergyStorageSystem,
     useCases::AbstractArray{<:UseCase},
 )
+    @info "Initializing AMAC"
     chIn = Channel{String}()
     chOut = Channel{String}()
     task = nothing
@@ -37,6 +38,8 @@ function AMAController(
             close(chIn)
         end
 
+
+        @info "Connection task created"
         essParameters = Dict(
             :rated_kw => p_max(ess),
             :rated_kwh => e_max(ess) - e_min(ess),
@@ -58,7 +61,11 @@ function AMAController(
                 ),
             ),
         )
+        @info "Initialization message sent"
+
         responseDict = JSON.parse(take!(chIn))
+        @info "Initialization response received"
+
         if haskey(responseDict, "error") ||
            get(responseDict, "message", nothing) !== "Initialized"
             throw(CtrlEvalEngine.InitializationFailure("AMAC failed to initialize"))
