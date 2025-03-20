@@ -90,7 +90,7 @@ function control(
     end
 
     return FixedIntervalTimeSeries(
-        tStart,
+        t,
         Millisecond(floor(Int, 1000 * controlSeqDict["resolution_sec"])),
         float.(controlSeqDict["power_kW"]),
     )
