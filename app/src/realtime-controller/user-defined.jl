@@ -84,7 +84,7 @@ function control(
         ),
     )
     controlSeqDict = JSON.parse(take!(controller.chIn))
-
+    @info "controlSeqDict:" controlSeqDict
     if haskey(controlSeqDict, "error")
         error(controlSeqDict["error"])
     end
