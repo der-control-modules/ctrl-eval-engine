@@ -34,8 +34,6 @@ VariabilityMitigation(config::Dict, tStart::DateTime, tEnd::DateTime) =
         config["ratedPowerKw"],
     )
 
-use_case_name(ucVM::VariabilityMitigation) = "Power Smoothing"
-
 moving_std(ts::TimeSeries, windowLength::Dates.TimePeriod, samplingRate::Dates.TimePeriod) =
     begin
         tStart = start_time(ts) + windowLength

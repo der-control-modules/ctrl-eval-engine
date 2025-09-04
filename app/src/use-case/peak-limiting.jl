@@ -20,8 +20,6 @@ PeakLimiting(input::Dict) = PeakLimiting(
     ),
 )
 
-use_case_name(ucPL::PeakLimiting) = "Peak Limiting"
-
 function calculate_metrics(
     ::ScheduleHistory,
     operation::OperationHistory,

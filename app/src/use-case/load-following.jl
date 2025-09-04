@@ -64,8 +64,6 @@ LoadFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = LoadFollowing(
     ),
 )
 
-use_case_name(ucLF::LoadFollowing) = "Load Following"
-
 function calculate_metrics(
     sh::ScheduleHistory,
     operation::OperationHistory,

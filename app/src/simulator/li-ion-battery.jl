@@ -126,8 +126,6 @@ end
 ηRT(ess::LiIonBatterySpecs) = ess.C0 * ess.energyCapacityKwh / ess.powerCapacityKw - ess.C_n
 ηRT(ess::LiIonBattery) = ηRT(ess.specs)
 
-self_discharge_rate(ess::LiIonBattery) = -ess.specs.C0
-
 SOC(ess::LiIonBattery) = ess.states.SOC
 energy_state(ess::LiIonBattery) = ess.states.SOC * ess.specs.energyCapacityKwh
 
@@ -179,7 +177,7 @@ and they shouldn't be non-zero simultaneously.
 
 Note: both `p_p` and `p_n` should be normalized by the energy capacity.
 """
-function _ΔSOC(
+function ΔSOC(
     ess::LiIonBattery,
     p_p,
     p_n,
@@ -207,7 +205,7 @@ function _operate!(
 )
     pNorm = powerKw / ess.specs.energyCapacityKwh
     ess.states.SOC +=
-        _ΔSOC(ess, max(pNorm, 0), min(pNorm, 0), durationHour, temperatureDegreeC)
+        ΔSOC(ess, max(pNorm, 0), min(pNorm, 0), durationHour, temperatureDegreeC)
     ess.states.SOC = min(max(ess.states.SOC, 0), 1)
     ess.states.d += Δd(SOC(ess), pNorm, ess.specs.D, durationHour)
 end

@@ -6,6 +6,7 @@ The `EnergyStorageScheduling` provides type and functions related to the schedul
 module EnergyStorageScheduling
 
 using Dates
+using PyCall
 using ..CtrlEvalEngine
 
 export get_scheduler,
@@ -35,14 +36,7 @@ Schedule(
     tStart::Dates.DateTime;
     resolution::Dates.TimePeriod = Hour(1),
     SOC::Vector{Float64} = zeros(length(powerKw) + 1),
-    regCapKw::Union{Nothing,Vector{Float64}} = nothing,
-) = Schedule(
-    powerKw,
-    tStart,
-    resolution,
-    SOC,
-    isnothing(regCapKw) ? zeros(length(powerKw)) : regCapKw,
-)
+) = Schedule(powerKw, tStart, resolution, SOC, zeros(length(powerKw)))
 
 struct SchedulePeriod
     powerKw::Float64
@@ -90,17 +84,17 @@ using ..CtrlEvalEngine.EnergyStorageUseCases
 
 include("mock-scheduler.jl")
 include("optimization-scheduler.jl")
+include("mock-python-scheduler.jl")
 include("manual-scheduler.jl")
 include("RL-scheduler.jl")
 include("rule-based.jl")
 include("time-of-use.jl")
-include("user-defined.jl")
 
 struct IdleScheduler <: Scheduler
     interval::Dates.Period
 end
 
-schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime, ::Progress) =
+schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.DateTime) =
     Schedule([0.0], tStart; resolution = scheduler.interval, SOC = [SOC(ess), SOC(ess)])
 
 """
@@ -108,11 +102,7 @@ schedule(ess::EnergyStorageSystem, scheduler::IdleScheduler, _, tStart::Dates.Da
 
 Create a scheduler of appropriate type from the input dictionary
 """
-function get_scheduler(
-    schedulerConfig::Dict,
-    ess::EnergyStorageSystem,
-    useCases::AbstractArray{<:UseCase},
-)
+function get_scheduler(schedulerConfig::Dict)
     try
         schedulerType = schedulerConfig["type"]
         scheduler = if schedulerType == "mock"
@@ -160,7 +150,10 @@ function get_scheduler(
                     get(schedulerConfig, "scheduleResolutionHrs", 1),
                 ),
             )
-            RLScheduler(res, schedulerConfig, ess)
+            RLScheduler(
+                res,
+                schedulerConfig,
+            )
         elseif schedulerType == "idle"
             IdleScheduler(Hour(24))
         elseif schedulerType == "rule"
@@ -172,12 +165,9 @@ function get_scheduler(
                 ),
             )
             interval = Minute(
-                round(
-                    Int,
-                    convert(Minute, Hour(1)).value * schedulerConfig["optWindowLenHrs"],
-                ),
+                round(Int, convert(Minute, Hour(1)).value * schedulerConfig["optWindowLenHrs"]),
             )
-            RuleBasedScheduler(res, interval, schedulerConfig)
+            RuleBasedScheduler(res, interval)
         elseif schedulerType == "TOU"
             res = Minute(
                 round(
@@ -190,8 +180,6 @@ function get_scheduler(
                 round(Int, convert(Minute, Hour(1)).value * schedulerConfig["intervalHrs"]),
             )
             TimeOfUseScheduler(res, interval, schedulerConfig["ruleSet"])
-        elseif schedulerType == "userDefinedScheduler"
-            UserDefinedScheduler(schedulerConfig, ess, useCases)
         else
             throw(InvalidInput("Invalid scheduler type: $schedulerType"))
         end
@@ -203,6 +191,10 @@ function get_scheduler(
             rethrow()
         end
     end
+end
+
+function __init__()
+    @pyinclude(joinpath(@__DIR__, "RL.py"))
 end
 
 end

@@ -1,13 +1,13 @@
 using PlotlyLight
 using Dates
 using JSON
-
-PlotlyLight.preset.display.fullscreen!()
+using Cobweb: Page, save
 
 repeat_last(vec) = vcat(vec, [vec[end]])
 plot_interval(; y, kwargs...) =
     Config(; y = repeat_last(y), line = Config(; shape = :hv), kwargs...)
 
+Preset.PlotContainer.fillwindow!()
 plotOptions = Config(; toImageButtonOptions = Config(; format = :svg), responsive = true)
 
 outputFilename = ARGS[1]
@@ -61,4 +61,4 @@ for iSubPlot = 1:subPlots
 end
 
 timeCharts = Plot(traces, layout, plotOptions)
-PlotlyLight.save(timeCharts, "$outputFilename-time_charts.html")
+save(Page(timeCharts), "$outputFilename-time_charts.html")

@@ -64,7 +64,6 @@ function schedule(
     scheduler::TimeOfUseScheduler,
     useCases::AbstractVector{<:UseCase},
     tStart::Dates.DateTime,
-    ::Progress,
 )
     eaIdx = findfirst(uc -> uc isa EnergyArbitrage, useCases)
     if isnothing(eaIdx)

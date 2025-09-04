@@ -1,9 +1,6 @@
-FROM public.ecr.aws/docker/library/julia:1
+FROM public.ecr.aws/y1q8u1k0/base:latest
+
 COPY .aws/config /root/.aws/config
 
-WORKDIR /app
-COPY app/Project.toml /app/
-RUN julia --project=. -e "using Pkg; Pkg.update();"
-
-COPY app /app
-RUN julia --project=. -e "using Pkg; Pkg.precompile();"
+ADD app /app
+RUN julia --project=. -e "using Pkg; Pkg.Registry.update(); Pkg.instantiate(); Pkg.precompile();"

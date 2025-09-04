@@ -20,13 +20,9 @@ export evaluate_controller,
     get_period,
     extract,
     power,
-    Progress,
-    InvalidInput,
-    InitializationFailure
+    InvalidInput
 
 include("types.jl")
-
-cleanup(::Any) = nothing
 
 function get_setting(inputDict::Dict)
     simStart = Dates.DateTime(inputDict["simStart"])
@@ -250,8 +246,6 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
     useCases = get_use_cases(inputDict["selectedUseCasesCharacteristics"], setting)
     scheduler = EnergyStorageScheduling.get_scheduler(
         inputDict["selectedControlTypeCharacteristics"]["scheduler"],
-        ess,
-        useCases,
     )
     rtController = EnergyStorageRTControl.get_rt_controller(
         inputDict["selectedControlTypeCharacteristics"]["rtController"],
@@ -279,7 +273,7 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
     )
 
     while t < setting.simEnd
-        currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t, outputProgress)
+        currentSchedule = EnergyStorageScheduling.schedule(ess, scheduler, useCases, t)
         update_schedule_history!(outputProgress.schedule, currentSchedule)
         for schedulePeriod in currentSchedule
             schedulePeriodEnd = min(end_time(schedulePeriod), setting.simEnd)
@@ -323,9 +317,6 @@ function evaluate_controller(inputDict, BUCKET_NAME, JOB_ID; debug = false)
             end
         end
     end
-
-    cleanup(scheduler)
-    cleanup(rtController)
 
     @debug "Generating output..."
     return generate_output_dict(outputProgress, useCases, ess)

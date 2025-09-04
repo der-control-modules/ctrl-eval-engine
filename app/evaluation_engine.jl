@@ -29,8 +29,6 @@ catch e
     bt = catch_backtrace()
     if isa(e, InvalidInput)
         @error("Invalid input", exception = (e, bt))
-    elseif e isa InitializationFailure
-        @error("Failed to initialize a scheduler or real-time controller", exception = (e, bt))
     else
         @error("Something went wrong during evaluation", exception = (e, bt))
     end

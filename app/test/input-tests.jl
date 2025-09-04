@@ -58,17 +58,13 @@ end
 end
 
 @testset "Scheduler Input" begin
-    ess = LiIonBattery(
-        EnergyStorageSimulators.LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
-        EnergyStorageSimulators.LiIonBatteryStates(0.5, 0)
-    )
     @testset "MockScheduler" begin
         inputDict = JSON.parse("""
             {
                 "type": "mock"
             }""")
 
-        scheduler = get_scheduler(inputDict, ess, UseCase[])
+        scheduler = get_scheduler(inputDict)
         @test scheduler isa EnergyStorageScheduling.MockScheduler
 
         inputDict = JSON.parse("""
@@ -79,7 +75,7 @@ end
                 "sleepSeconds": 5.2
             }""")
 
-        scheduler = get_scheduler(inputDict, ess, UseCase[])
+        scheduler = get_scheduler(inputDict)
         @test scheduler isa EnergyStorageScheduling.MockScheduler
         @test scheduler.sleepSeconds == 5.2
     end
@@ -94,7 +90,7 @@ end
                 "endSocPct": 50
             }""")
 
-        scheduler = get_scheduler(inputDict, ess, UseCase[])
+        scheduler = get_scheduler(inputDict)
         @test scheduler isa EnergyStorageScheduling.OptScheduler
         @test scheduler.resolution == Hour(1)
         @test scheduler.optWindow == 24
@@ -113,7 +109,7 @@ end
                 "minNetLoadKw": 0
             }""")
 
-        scheduler = get_scheduler(inputDict, ess, UseCase[])
+        scheduler = get_scheduler(inputDict)
         @test scheduler isa EnergyStorageScheduling.OptScheduler
         @test scheduler.resolution == Minute(30)
         @test scheduler.optWindow == 49
@@ -157,5 +153,42 @@ end
         controller = get_rt_controller(inputDict, ess, UseCase[])
         @test controller isa EnergyStorageRTControl.PIDController
         @test controller.resolution == Millisecond(100)
+    end
+
+    @testset "AMAC" begin
+        ess = LiIonBattery(
+            EnergyStorageSimulators.LFP_LiIonBatterySpecs(500, 1000, 0.85, 2000),
+            EnergyStorageSimulators.LiIonBatteryStates(0.5, 0)
+        )
+
+        useCases = [
+            VariabilityMitigation(
+                FixedIntervalTimeSeries(
+                    now(),
+                    Minute(5),
+                    [60.0, 110.6, 200.0, 90.0, 20.0, 92.4, 150.7]
+                ),
+                300
+            )
+        ]
+
+        inputDict = JSON.parse("""
+            {
+                "type": "ama",
+                "referenceSocPct":50,
+                "maximumAllowableWindowSize": 2100,
+                "maximumAllowableVariabilityPct":50,
+                "referenceVariabilityPct": 10,
+                "activationThresholdVariabilityPct": 2,
+                "dampingParameter": 8
+            }"""
+        )
+        controller = get_rt_controller(inputDict, ess, useCases)
+        @test controller isa EnergyStorageRTControl.AMAController
+        @test !controller.passive
+
+        controller = get_rt_controller(inputDict, ess, UseCase[])
+        @test controller isa EnergyStorageRTControl.AMAController
+        @test controller.passive
     end
 end
