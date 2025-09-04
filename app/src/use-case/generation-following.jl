@@ -48,6 +48,8 @@ GenerationFollowing(input::Dict, tStart::DateTime, tEnd::DateTime) = GenerationF
     ),
 )
 
+use_case_name(ucGF::GenerationFollowing) = "Generation Following"
+
 function calculate_metrics(
     sh::ScheduleHistory,
     operation::OperationHistory,

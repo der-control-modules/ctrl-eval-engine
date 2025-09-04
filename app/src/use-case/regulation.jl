@@ -78,6 +78,8 @@ Regulation(input::Dict, tStart::DateTime, tEnd::DateTime) = begin
     )
 end
 
+use_case_name(ucReg::Regulation) = "Frequency Regulation"
+
 function regulation_income(
     regOperation::TimeSeries{<:RegulationOperationPoint},
     ucReg::Regulation,

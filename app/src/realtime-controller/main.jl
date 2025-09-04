@@ -7,7 +7,6 @@ module EnergyStorageRTControl
 
 using CtrlEvalEngine
 using Dates
-using PyCall
 using CtrlEvalEngine.EnergyStorageScheduling
 using CtrlEvalEngine.EnergyStorageUseCases
 using CtrlEvalEngine.EnergyStorageSimulators
@@ -47,6 +46,7 @@ include("pid.jl")
 include("amac.jl")
 include("rule-based.jl")
 include("mesa.jl")
+include("user-defined.jl")
 
 """
     get_rt_controller(inputDict::Dict, ess::EnergyStorageSystem, useCases::AbstractArray{<:UseCase})
@@ -74,6 +74,8 @@ function get_rt_controller(
             AMAController(config, ess, useCases)
         elseif controllerType == "realTimeRule"
             RuleBasedController(config)
+        elseif controllerType == "userDefinedRealTime"
+            UserDefinedRTController(config, ess, useCases)
         else
             throw(InvalidInput("Invalid real-time controller type: $controllerType"))
         end
@@ -85,10 +87,6 @@ function get_rt_controller(
             rethrow()
         end
     end
-end
-
-function __init__()
-    @pyinclude(joinpath(@__DIR__, "amac.py"))
 end
 
 end

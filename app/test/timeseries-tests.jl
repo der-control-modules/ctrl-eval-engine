@@ -9,8 +9,9 @@ using LinearAlgebra
         @test all(ts2.value .== [3, 4])
 
         ts3 = extract(ts1, DateTime(2022, 1, 1, 1, 30), DateTime(2022, 1, 1, 4, 30))
-        @test ts3 isa FixedIntervalTimeSeries
-        @test start_time(ts3) == DateTime(2022, 1, 1, 1, 0)
+        @test ts3 isa VariableIntervalTimeSeries
+        @test start_time(ts3) == DateTime(2022, 1, 1, 1, 30)
+        @test end_time(ts3) == DateTime(2022, 1, 1, 4, 30)
         @test all(ts3.value .== 2:5)
     end
 

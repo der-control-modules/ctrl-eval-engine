@@ -1,18 +1,57 @@
 
+using HTTP, HTTP.WebSockets, Sockets
+
 struct RLScheduler <: Scheduler
     resolution::Dates.Period
-    approach::String
-    epsilonUpdate::Float64
-    numIter::UInt
+    chIn::Channel{String}
+    chOut::Channel{String}
+    task::Any
 end
 
-function RLScheduler(res::Dates.Period, config::Dict)
-    RLScheduler(
-        res,
-        config["approach"],
-        get(config, "epsilonUpdate", 1.07),
-        round(UInt, get(config, "iteration", 4000)),
+function RLScheduler(res::Dates.Period, config::Dict, ess::EnergyStorageSystem)
+    chIn = Channel{String}()
+    chOut = Channel{String}()
+    # simple websocket client
+    task = @async WebSockets.open("ws://localhost:6000") do ws
+        # we can iterate the websocket
+        # where each iteration yields a received message
+        # iteration finishes when the websocket is closed
+        for msg in chOut
+            # do stuff with msg
+            send(ws, msg)
+            put!(chIn, receive(ws))
+        end
+        close(chIn)
+    end
+
+    essParameters = Dict(
+        "energy" => e_max(ess),
+        "power" => p_max(ess),
+        "efficiency" => ηRT(ess),
+        "soc_low" => e_min(ess) / e_max(ess),
+        "soc_high" => 1,
     )
+
+    put!(
+        chOut,
+        JSON.json(
+            Dict(
+                :type => "initialize",
+                :payload => Dict(
+                    config...,
+                    :essParameters => essParameters,
+                    :resolution_hrs => res / Hour(1),
+                ),
+            ),
+        ),
+    )
+    responseDict = JSON.parse(take!(chIn))
+    if haskey(responseDict, "error") ||
+       get(responseDict, "message", nothing) !== "Initialized"
+        throw(CtrlEvalEngine.InitializationFailure(get(responseDict, "error", "RL scheduler failed to initialize")))
+    end
+
+    RLScheduler(res, chIn, chOut, task)
 end
 
 function schedule(
@@ -20,20 +59,13 @@ function schedule(
     rlScheduler::RLScheduler,
     useCases::AbstractVector{<:UseCase},
     tStart::Dates.DateTime,
+    ::Progress,
 )
     eaIdx = findfirst(uc -> uc isa EnergyArbitrage, useCases)
     if isnothing(eaIdx)
         error("No supported use case is found by ML scheduler")
     end
     ucEA = useCases[eaIdx]
-    batteryParameters = Dict(
-        "energy" => e_max(ess),
-        "power" => p_max(ess),
-        "efficiency" => ηRT(ess),
-        "soc_low" => e_min(ess) / e_max(ess),
-        "soc_high" => 1,
-        "initial_soc" => SOC(ess),
-    )
 
     price = sample(
         forecast_price(ucEA),
@@ -43,20 +75,18 @@ function schedule(
             stop = tStart + Hour(24) - Millisecond(1),
         ),
     )
-    @debug "RL-scheduler" t = tStart resolution = rlScheduler.resolution price batteryParameters
-    _, batterySocs, battery_power = py"RL"(
-        price,
-        "energy_arbitrage",
-        rlScheduler.approach,
-        /(promote(rlScheduler.resolution, Hour(1))...),
-        batteryParameters,
-        rlScheduler.numIter,
-        rlScheduler.epsilonUpdate
-    )
+    @debug "RL-scheduler" t = tStart resolution = rlScheduler.resolution price
+    put!(rlScheduler.chOut, JSON.json(Dict(:price => price, :initial_soc => SOC(ess))))
+    scheduleDict = JSON.parse(take!(rlScheduler.chIn))
     return Schedule(
-        -battery_power,
+        float.(scheduleDict["powerKw"]),
         tStart;
         resolution = rlScheduler.resolution,
-        SOC = [SOC(ess), batterySocs...],
+        SOC = [SOC(ess), float.(scheduleDict["soc"])...],
     )
+end
+
+function CtrlEvalEngine.cleanup(rlScheduler::RLScheduler)
+    close(rlScheduler.chOut)
+    wait(rlScheduler.task)
 end

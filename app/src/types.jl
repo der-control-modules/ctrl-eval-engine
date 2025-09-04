@@ -283,6 +283,9 @@ struct FixedIntervalTimeSeries{R<:Dates.Period,V} <: TimeSeries{V}
     value::Vector{V}
 end
 
+VariableIntervalTimeSeries(ts::FixedIntervalTimeSeries) =
+    VariableIntervalTimeSeries(timestamps(ts), ts.value)
+
 Base.iterate(ts::FixedIntervalTimeSeries, index = 1) =
     index > length(ts) ? nothing :
     (
@@ -325,11 +328,20 @@ function extract(ts::FixedIntervalTimeSeries, tStart::DateTime, tEnd::DateTime)
         # some overlap time period
         idx1 = div(t1 - ts.tStart, ts.resolution) + 1
         idx2 = ceil(Int, (t2 - ts.tStart) / ts.resolution)
-        FixedIntervalTimeSeries(
-            ts.tStart + ts.resolution * (idx1 - 1),
-            ts.resolution,
-            ts.value[idx1:idx2],
-        )
+        if Dates.value((t1 - start_time(ts)) % ts.resolution) === 0 &&
+           Dates.value((t2 - start_time(ts)) % ts.resolution) === 0
+            # Both start and end are aligned with resolution
+            FixedIntervalTimeSeries(
+                ts.tStart + ts.resolution * (idx1 - 1),
+                ts.resolution,
+                ts.value[idx1:idx2],
+            )
+        else
+            VariableIntervalTimeSeries(
+                [t1, (ts.tStart .+ (ts.resolution .* (idx1:idx2-1)))..., t2],
+                ts.value[idx1:idx2],
+            )
+        end
     else
         FixedIntervalTimeSeries(tStart, ts.resolution, Float64[])
     end
@@ -366,6 +378,44 @@ get_index(ts::FixedIntervalTimeSeries, t::DateTime) = begin
 end
 
 integrate(ts::FixedIntervalTimeSeries) = sum(ts.value) * (ts.resolution / Hour(1))
+
+function is_aligned(ts1::FixedIntervalTimeSeries, ts2::FixedIntervalTimeSeries)
+    resSmaller, resLarger =
+        ts1.resolution ≤ ts2.resolution ? (ts1.resolution, ts2.resolution) :
+        (ts2.resolution, ts1.resolution)
+
+    if Dates.value(resLarger % resSmaller) === 0 &&
+       Dates.value((ts1.tStart - ts2.tStart) % resSmaller) === 0
+        true
+    else
+        false
+    end
+end
+
+function binary_operation(ts1::FixedIntervalTimeSeries, ts2::FixedIntervalTimeSeries, op)
+    if !is_aligned(ts1, ts2)
+        return binary_operation(VariableIntervalTimeSeries(ts1), ts2, op)
+    end
+    res = ts1.resolution ≤ ts2.resolution ? ts1.resolution : ts2.resolution
+    tStart = ts1.tStart ≤ ts2.tStart ? ts1.tStart : ts2.tStart
+    tEnd = end_time(ts1) ≤ end_time(ts2) ? end_time(ts2) : end_time(ts1)
+    vLength = (tEnd - tStart) ÷ res
+
+    v1 = zeros(eltype(ts1.value), vLength)
+    resMultiple1 = ts1.resolution ÷ res
+    iStart1 = (ts1.tStart - tStart) ÷ res + 1
+    vLength1 = length(ts1) * resMultiple1
+    v1[iStart1:iStart1+vLength1-1] = repeat(ts1.value; inner = resMultiple1)
+
+    v2 = zeros(eltype(ts2.value), vLength)
+    resMultiple2 = ts2.resolution ÷ res
+    iStart2 = (ts2.tStart - tStart) ÷ res + 1
+    vLength2 = length(ts2) * resMultiple2
+    v2[iStart2:iStart2+vLength2-1] = repeat(ts2.value; inner = resMultiple2)
+
+    v = op.(v1, v2)
+    FixedIntervalTimeSeries(tStart, res, v)
+end
 
 binary_operation(ts::FixedIntervalTimeSeries, x::Number, op) =
     FixedIntervalTimeSeries(ts.tStart, ts.resolution, op.(ts.value, x))
@@ -550,7 +600,6 @@ binary_operation(x::Number, ts::RepeatedTimeSeries, op) =
 Base.:minimum(ts::RepeatedTimeSeries) = minimum(get_values(ts))
 Base.:maximum(ts::RepeatedTimeSeries) = maximum(get_values(ts))
 
-
 struct SimSetting
     simStart::Dates.DateTime
     simEnd::Dates.DateTime
@@ -622,6 +671,12 @@ mutable struct InvalidInput <: Exception
 end
 
 Base.print(io::IO, e::InvalidInput) = print(io, "Invalid input: ", e.msg)
+
+struct InitializationFailure <: Exception
+    msg::String
+end
+
+Base.print(io::IO, e::InitializationFailure) = print(io, "Failed to initialize a scheduler or real-time controller: ", e.msg)
 
 abstract type BatteryInput end
 

@@ -19,7 +19,10 @@ export UseCase,
     LoadFollowing,
     VariabilityMitigation,
     PeakLimiting,
-    GenerationFollowing
+    GenerationFollowing,
+    DemandChargeReduction,
+    demand_charge,
+    demand_charge_periods_rates
 
 abstract type UseCase end
 
@@ -28,6 +31,12 @@ using CtrlEvalEngine
 using CtrlEvalEngine: SimSetting, Progress, ScheduleHistory, OperationHistory
 using LinearAlgebra
 using JuMP
+using JSON
+
+JSON.lower(uc::UseCase) = Dict(
+    :type => use_case_name(uc),
+    :data => Dict(key => getfield(uc, key) for key ∈ fieldnames(typeof(uc))),
+)
 
 include("energy-arbitrage.jl")
 include("regulation.jl")
@@ -35,6 +44,7 @@ include("variability-mitigation.jl")
 include("load-following.jl")
 include("peak-limiting.jl")
 include("generation-following.jl")
+include("demand-charge-reduction.jl")
 
 get_use_cases(inputDict::Dict, setting::SimSetting) = [
     if name === "Energy Arbitrage"
@@ -47,6 +57,8 @@ get_use_cases(inputDict::Dict, setting::SimSetting) = [
         GenerationFollowing(config["data"], setting.simStart, setting.simEnd)
     elseif name === "Frequency Regulation"
         Regulation(config, setting.simStart, setting.simEnd)
+    elseif name === "Demand Charge Reduction"
+        DemandChargeReduction(config["data"], setting.simStart, setting.simEnd)
     else
         throw(InvalidInput("Unknown use case: $name"))
     end for (name, config) in inputDict

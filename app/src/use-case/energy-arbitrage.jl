@@ -57,6 +57,8 @@ EnergyArbitrage(input::Dict, tStart::DateTime, tEnd::DateTime) = EnergyArbitrage
     end,
 )
 
+use_case_name(ucEA::EnergyArbitrage) = "Energy Arbitrage"
+
 forecast_price(ucEA::EnergyArbitrage) =
     isnothing(ucEA.forecastPrice) ? ucEA.actualPrice : ucEA.forecastPrice
 

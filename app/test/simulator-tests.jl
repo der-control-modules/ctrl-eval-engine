@@ -1,6 +1,7 @@
-
 using CtrlEvalEngine.EnergyStorageSimulators
 using Dates
+
+
 
 @testset "Simulators" begin
     @testset "Mock Simulator" begin
@@ -55,5 +56,54 @@ using Dates
         @test SOC(ess) > soc2
         
         @test SOH(ess) < 1
+    end
+
+    @testset "Hydrogen Energy Storage System" begin
+        ess = HydrogenEnergyStorageSystem(
+            EnergyStorageSimulators.HydrogenEnergyStorageSpecs(
+                EnergyStorageSimulators.ElectrolyzerSpecs(500.0, 55.5, 0.1),
+                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0, 0.005, 3.0, 570.0),
+                EnergyStorageSimulators.FuelCellSpecs(500.0, 0.5, 0.2, 40000.0)
+            ),
+            EnergyStorageSimulators.HydrogenEnergyStorageStates(25.0, 250.0, false, false, false)
+        )
+
+        @test SOC(ess) == 0.5
+        @test SOH(ess) == 1
+        @test p_max(ess) == 500
+        @test p_min(ess) == -500
+        @test e_max(ess) ≈ 550 * EnergyStorageSimulators.H2_KWH_PER_KG * 0.5
+        @test e_min(ess) == 0
+        @test energy_state(ess) ≈ 275 * EnergyStorageSimulators.H2_KWH_PER_KG * 0.5
+        @test ηRT(ess) ≈ 0.33498333333333336 atol=1e-4
+
+        operate!(ess, 2)
+        @test SOC(ess) < 0.5
+        soc1 = SOC(ess)
+
+        operate!(ess, -2)
+        @test SOC(ess) > soc1
+        soc2 = SOC(ess)
+
+        operate!(ess, -4, Minute(5))
+        @test SOC(ess) > soc2
+    end
+
+    @testset "HESS Low Pressure to Medium Pressure" begin
+        ess = HydrogenEnergyStorageSystem(
+            EnergyStorageSimulators.HydrogenEnergyStorageSpecs(
+                EnergyStorageSimulators.ElectrolyzerSpecs(500.0, 55.5, 0.1),
+                EnergyStorageSimulators.HydrogenStorageSpecs(50.0, 500.0, 0.005, 3.0, 570.0),
+                EnergyStorageSimulators.FuelCellSpecs(500.0, 0.5, 0.2, 40000.0)
+            ),
+            EnergyStorageSimulators.HydrogenEnergyStorageStates(45.0, 250.0, false, false, false)
+        )
+        
+        operate!(ess, -800.0, Hour(1))
+        
+        @test ess.states.lowPressureH2Kg ≈ 50.0
+        @test ess.states.mediumPressureH2Kg > 250.0
+        @test ess.states.electrolyzerOn == true
+        @test ess.states.compressorOn == true
     end
 end
