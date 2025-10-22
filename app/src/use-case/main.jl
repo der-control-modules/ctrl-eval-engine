@@ -22,7 +22,8 @@ export UseCase,
     GenerationFollowing,
     DemandChargeReduction,
     demand_charge,
-    demand_charge_periods_rates
+    demand_charge_periods_rates,
+    FrequencyResponse
 
 abstract type UseCase end
 
@@ -44,6 +45,7 @@ include("variability-mitigation.jl")
 include("load-following.jl")
 include("peak-limiting.jl")
 include("generation-following.jl")
+include("frequency-response.jl")
 include("demand-charge-reduction.jl")
 
 get_use_cases(inputDict::Dict, setting::SimSetting) = [
