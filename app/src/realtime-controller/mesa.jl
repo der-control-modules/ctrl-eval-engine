@@ -163,6 +163,7 @@ function control(
     return FixedIntervalTimeSeries(t, controller.resolution, [energyLimitedPower])
 end
 
+# Active Power Modes
 include("mesa-modes/mesa-active-power-limit-mode.jl")
 include("mesa-modes/mesa-active-power-smoothing-mode.jl")
 include("mesa-modes/mesa-active-response-mode.jl")
@@ -170,4 +171,18 @@ include("mesa-modes/mesa-agc-mode.jl")
 include("mesa-modes/mesa-charge-discharge-storage-mode.jl")
 include("mesa-modes/mesa-frequency-watt-mode.jl")
 include("mesa-modes/mesa-volt-watt-mode.jl")
+
+# Emergency Modes
+include("mesa-modes/emergency-modes/over-frequency-emergency-mode.jl")
+include("mesa-modes/emergency-modes/under-frequency-emergency-mode.jl")
+include("mesa-modes/emergency-modes/over-voltage-emergency-mode.jl")
+include("mesa-modes/emergency-modes/under-voltage-emergency-mode.jl")
+
+# Reactive Power Modes
+include("mesa-modes/reactive-power-modes/curve-utils.jl")
+include("mesa-modes/reactive-power-modes/volt-var-mode.jl")
+include("mesa-modes/reactive-power-modes/power-factor-mode.jl")
+include("mesa-modes/reactive-power-modes/reactive-power-limit-mode.jl")
+include("mesa-modes/reactive-power-modes/fixed-var-mode.jl")
+include("mesa-modes/reactive-power-modes/watt-var-mode.jl")
 # end
